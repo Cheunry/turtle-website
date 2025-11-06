@@ -1,171 +1,159 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-
-    <groupId>com.novel</groupId>    <!--修改groupId -->
-    <artifactId>novel-cloud</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
-    <packaging>pom</packaging> <!-- 关键：父模块打包方式为pom，如果不指定打包方式，则默认的打包方式为jar -->
-
-    <name>novel-cloud</name>
-    <description>小说平台微服务架构父项目</description>
-
-    <!--定义所有子模块-->
     <modules>
+
         <module>novel-core</module>
         <module>novel-gateway</module>
         <module>novel-user</module>
     </modules>
-
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.0.5</version>
+        <relativePath/> <!-- lookup parent from repository -->
+    </parent>
+    <groupId>com.novel</groupId>
+    <artifactId>turtle-website</artifactId>
+    <packaging>pom</packaging>
+    <version>1.0.0-SNAPSHOT</version>
+    <name>turtle-website</name>
+    <description>基于 Spring Cloud 2022 构建的微服务小说系统</description>
     <properties>
-        <maven.compiler.source>21</maven.compiler.source>
-        <maven.compiler.target>21</maven.compiler.target>
+        <java.version>21</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <spring-cloud.version>2022.0.1</spring-cloud.version>
+        <spring-cloud-alibaba.version>2022.0.0.0-RC1</spring-cloud-alibaba.version>
+        <mybatis-plus.version>3.5.3</mybatis-plus.version>
+        <jjwt.version>0.11.5</jjwt.version>
+        <xxl-job.version>2.3.1</xxl-job.version>
+        <elasticsearch.version>8.2.0</elasticsearch.version>
+        <shardingsphere-jdbc.version>5.1.1</shardingsphere-jdbc.version>
+        <redisson.version>3.19.1</redisson.version>
+        <spring-boot-admin.version>3.0.2</spring-boot-admin.version>
+        <springdoc-openapi.version>2.0.0</springdoc-openapi.version>
+        <spring-cloud-starter-bootstrap.version>3.1.1</spring-cloud-starter-bootstrap.version>
     </properties>
-
-<!--可以对子项目的版本号进行管理，子项目不再管理版本，可以直接引用-->
     <dependencyManagement>
         <dependencies>
-            <!--
-                Spring Cloud 依赖管理
-                作用：统一管理Spring Cloud生态中所有组件的版本
-                包含：Spring Cloud Gateway, OpenFeign, Config等核心组件
-            -->
             <dependency>
                 <groupId>org.springframework.cloud</groupId>
                 <artifactId>spring-cloud-dependencies</artifactId>
-                <version>2022.0.1</version>
+                <version>${spring-cloud.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
 
-            <!--
-                Spring Cloud Alibaba 依赖管理
-                作用：集成阿里巴巴微服务生态组件
-                包含：Nacos(服务发现/配置中心), Sentinel(流量控制), RocketMQ(消息队列)等
-            -->
             <dependency>
                 <groupId>com.alibaba.cloud</groupId>
                 <artifactId>spring-cloud-alibaba-dependencies</artifactId>
-                <version>2022.0.0.0-RC1</version>
+                <version>${spring-cloud-alibaba.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
 
-            <!--
-                Spring Cloud Bootstrap Starter
-                作用：提供bootstrap上下文支持，优先加载外部配置
-                功能：在应用启动前从配置中心获取配置，支持多环境隔离
-            -->
             <dependency>
                 <groupId>org.springframework.cloud</groupId>
                 <artifactId>spring-cloud-starter-bootstrap</artifactId>
-                <version>3.1.1</version>
+                <version>${spring-cloud-starter-bootstrap.version}</version>
             </dependency>
 
-<!--            &lt;!&ndash;-->
-<!--                MyBatis Plus Boot Starter-->
-<!--                作用：MyBatis增强工具包-->
-<!--                功能：简化CRUD操作，提供分页插件、代码生成器等增强功能-->
-<!--            &ndash;&gt;-->
-<!--            <dependency>-->
-<!--                <groupId>com.baomidou</groupId>-->
-<!--                <artifactId>mybatis-plus-boot-starter</artifactId>-->
-<!--                <version>${mybatis-plus.version}</version>-->
-<!--            </dependency>-->
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-boot-starter</artifactId>
+                <version>${mybatis-plus.version}</version>
+            </dependency>
 
-<!--            &lt;!&ndash;-->
-<!--                JJWT API-->
-<!--                作用：JWT(JSON Web Token)的API接口-->
-<!--                功能：定义JWT创建和解析的接口规范-->
-<!--            &ndash;&gt;-->
-<!--            <dependency>-->
-<!--                <groupId>io.jsonwebtoken</groupId>-->
-<!--                <artifactId>jjwt-api</artifactId>-->
-<!--                <version>${jjwt.version}</version>-->
-<!--            </dependency>-->
+            <dependency>
+                <groupId>io.jsonwebtoken</groupId>
+                <artifactId>jjwt-api</artifactId>
+                <version>${jjwt.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.jsonwebtoken</groupId>
+                <artifactId>jjwt-impl</artifactId>
+                <version>${jjwt.version}</version>
+                <scope>runtime</scope>
+            </dependency>
+            <dependency>
+                <groupId>io.jsonwebtoken</groupId>
+                <artifactId>jjwt-jackson</artifactId>
+                <version>${jjwt.version}</version>
+                <scope>runtime</scope>
+            </dependency>
 
-<!--            &lt;!&ndash;-->
-<!--                JJWT Implementation-->
-<!--                作用：JWT的核心实现-->
-<!--                功能：提供JWT令牌的具体生成和验证逻辑-->
-<!--            &ndash;&gt;-->
-<!--            <dependency>-->
-<!--                <groupId>io.jsonwebtoken</groupId>-->
-<!--                <artifactId>jjwt-impl</artifactId>-->
-<!--                <version>${jjwt.version}</version>-->
-<!--                <scope>runtime</scope>-->
-<!--            </dependency>-->
+            <dependency>
+                <groupId>co.elastic.clients</groupId>
+                <artifactId>elasticsearch-java</artifactId>
+                <version>${elasticsearch.version}</version>
+            </dependency>
 
-<!--            &lt;!&ndash;-->
-<!--                JJWT Jackson-->
-<!--                作用：JWT的Jackson序列化支持-->
-<!--                功能：提供JSON序列化/反序列化能力-->
-<!--            &ndash;&gt;-->
-<!--            <dependency>-->
-<!--                <groupId>io.jsonwebtoken</groupId>-->
-<!--                <artifactId>jjwt-jackson</artifactId>-->
-<!--                <version>${jjwt.version}</version>-->
-<!--                <scope>runtime</scope>-->
-<!--            </dependency>-->
+            <dependency>
+                <groupId>com.xuxueli</groupId>
+                <artifactId>xxl-job-core</artifactId>
+                <version>${xxl-job.version}</version>
+            </dependency>
 
-<!--            &lt;!&ndash;-->
-<!--                Elasticsearch Java Client-->
-<!--                作用：Elasticsearch官方Java客户端-->
-<!--                功能：提供与Elasticsearch集群通信的能力，支持DSL查询-->
-<!--            &ndash;&gt;-->
-<!--            <dependency>-->
-<!--                <groupId>co.elastic.clients</groupId>-->
-<!--                <artifactId>elasticsearch-java</artifactId>-->
-<!--                <version>${elasticsearch.version}</version>-->
-<!--            </dependency>-->
+            <dependency>
+                <groupId>org.apache.shardingsphere</groupId>
+                <artifactId>shardingsphere-jdbc-core-spring-boot-starter</artifactId>
+                <version>${shardingsphere-jdbc.version}</version>
+            </dependency>
 
-<!--            &lt;!&ndash;-->
-<!--                XXL-Job Core-->
-<!--                作用：分布式任务调度框架核心-->
-<!--                功能：提供分布式任务调度、分片执行、失败重试等能力-->
-<!--            &ndash;&gt;-->
-<!--            <dependency>-->
-<!--                <groupId>com.xuxueli</groupId>-->
-<!--                <artifactId>xxl-job-core</artifactId>-->
-<!--                <version>${xxl-job.version}</version>-->
-<!--            </dependency>-->
+            <dependency>
+                <groupId>org.redisson</groupId>
+                <artifactId>redisson-spring-boot-starter</artifactId>
+                <version>${redisson.version}</version>
+            </dependency>
 
-<!--            &lt;!&ndash;-->
-<!--                ShardingSphere JDBC Spring Boot Starter-->
-<!--                作用：分库分表解决方案-->
-<!--                功能：提供数据库水平分片、读写分离、数据加密等能力-->
-<!--            &ndash;&gt;-->
-<!--            <dependency>-->
-<!--                <groupId>org.apache.shardingsphere</groupId>-->
-<!--                <artifactId>shardingsphere-jdbc-core-spring-boot-starter</artifactId>-->
-<!--                <version>${shardingsphere-jdbc.version}</version>-->
-<!--            </dependency>-->
-
-<!--            &lt;!&ndash;-->
-<!--                Redisson Spring Boot Starter-->
-<!--                作用：Redis Java客户端和分布式服务-->
-<!--                功能：提供分布式锁、分布式集合、限流器等高级功能-->
-<!--            &ndash;&gt;-->
-<!--            <dependency>-->
-<!--                <groupId>org.redisson</groupId>-->
-<!--                <artifactId>redisson-spring-boot-starter</artifactId>-->
-<!--                <version>${redisson.version}</version>-->
-<!--            </dependency>-->
-
-<!--            &lt;!&ndash;-->
-<!--                Springdoc OpenAPI Starter WebMVC UI-->
-<!--                作用：OpenAPI 3.0文档生成工具-->
-<!--                功能：自动生成API文档，集成Swagger UI，支持接口测试-->
-<!--            &ndash;&gt;-->
-<!--            <dependency>-->
-<!--                <groupId>org.springdoc</groupId>-->
-<!--                <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>-->
-<!--                <version>${springdoc-openapi.version}</version>-->
-<!--            </dependency> -->
+            <dependency>
+                <groupId>org.springdoc</groupId>
+                <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+                <version>${springdoc-openapi.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <configuration>
+                        <!--指定 Java 编译器的 -source 参数 -->
+                        <source>${java.version}</source>
+                        <!--指定 Java 编译器的 -target 参数 -->
+                        <target>${java.version}</target>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+
+    <repositories>
+        <repository>
+            <id>aliyun</id>
+            <url>https://maven.aliyun.com/repository/public</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
+    <pluginRepositories>
+        <pluginRepository>
+            <id>aliyun</id>
+            <url>https://maven.aliyun.com/repository/public</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </pluginRepository>
+    </pluginRepositories>
 
 </project>
