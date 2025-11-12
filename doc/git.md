@@ -3,4 +3,4 @@ git add .
 git commit -m "消息备注"
 git push origin main
 
-
+git pull origin main
