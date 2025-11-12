@@ -8,9 +8,6 @@ import java.util.Objects;
 
 /**
  * Http Rest 响应工具及数据格式封装
- *
- * @author xiongxiaoyang
- * @date 2022/5/11
  */
 @Getter
 public class RestResp<T> {

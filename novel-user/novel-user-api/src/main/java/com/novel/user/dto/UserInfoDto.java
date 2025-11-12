@@ -6,6 +6,10 @@ import lombok.Data;
 import java.io.Serial;
 import java.io.Serializable;
 
+/**
+ * 用户信息 DTO
+ */
+
 @Data
 @Builder
 public class UserInfoDto implements Serializable {

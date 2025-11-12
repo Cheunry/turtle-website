@@ -32,7 +32,7 @@ import lombok.Data;
 public class UserLoginRespDto {
 
     @Schema(description = "用户ID")
-    private Long userId;
+    private Long uid;
 
     @Schema(description = "用户昵称")
     private String nickName;

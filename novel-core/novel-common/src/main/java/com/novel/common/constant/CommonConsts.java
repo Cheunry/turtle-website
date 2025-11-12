@@ -25,25 +25,48 @@ public class CommonConsts {
     /**
      * 性别常量
      */
+//    public enum SexEnum {
+//
+//        /**
+//         * 男
+//         */
+//        MALE(0, "男"),
+//
+//        /**
+//         * 女
+//         */
+//        FEMALE(1, "女");
+//        UNKNOWN(-1, "未知");
+//
+//        SexEnum(int code, String desc) {
+//            this.code = code;
+//            this.desc = desc;
+//        }
+//
+//        private int code;
+//        private String desc;
+//
+//        public int getCode() {
+//            return code;
+//        }
+//
+//        public String getDesc() {
+//            return desc;
+//        }
+//
+//    }
     public enum SexEnum {
-
-        /**
-         * 男
-         */
         MALE(0, "男"),
-
-        /**
-         * 女
-         */
-        FEMALE(1, "女");
+        FEMALE(1, "女"),
+        UNKNOWN(-1, "未知");  // 添加未知状态
 
         SexEnum(int code, String desc) {
             this.code = code;
             this.desc = desc;
         }
 
-        private int code;
-        private String desc;
+        private final int code;
+        private final String desc;
 
         public int getCode() {
             return code;
@@ -53,5 +76,21 @@ public class CommonConsts {
             return desc;
         }
 
+        // 添加根据code获取枚举的方法
+        public static SexEnum getByCode(Integer code) {
+            if (code == null) return UNKNOWN;
+
+            for (SexEnum sex : values()) {
+                if (sex.code == code) {
+                    return sex;
+                }
+            }
+            return UNKNOWN;
+        }
+
+        // 添加根据code获取描述的方法
+        public static String getDescByCode(Integer code) {
+            return getByCode(code).getDesc();
+        }
     }
 }

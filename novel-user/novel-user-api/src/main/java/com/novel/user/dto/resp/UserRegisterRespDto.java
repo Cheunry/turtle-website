@@ -7,6 +7,7 @@ import lombok.Data;
 @Data
 @Builder
 public class UserRegisterRespDto {
+
     @Schema(description = "用户ID")
     private Long uid;
 
