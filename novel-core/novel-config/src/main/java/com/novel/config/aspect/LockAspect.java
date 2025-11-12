@@ -39,7 +39,7 @@ public class LockAspect {
 
     private static final String KEY_SEPARATOR = "::";
 
-    @Around(value = "@annotation(io.github.xxyopen.novel.config.annotation.Lock)")
+    @Around(value = "@annotation(com.novel.config.annotation.Lock)")
     @SneakyThrows
     public Object doAround(ProceedingJoinPoint joinPoint) {
         MethodSignature methodSignature = (MethodSignature) joinPoint.getSignature();

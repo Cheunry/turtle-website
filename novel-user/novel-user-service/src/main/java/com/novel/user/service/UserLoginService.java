@@ -1,6 +1,5 @@
 package com.novel.user.service;
 
-import org.apache.catalina.User;
 import org.springframework.stereotype.Service;
 
 @Service

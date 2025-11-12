@@ -3,10 +3,10 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <modules>
-
         <module>novel-core</module>
         <module>novel-gateway</module>
         <module>novel-user</module>
+        <module>novel-resource</module>
     </modules>
     <parent>
         <groupId>org.springframework.boot</groupId>
@@ -21,7 +21,7 @@
     <name>turtle-website</name>
     <description>基于 Spring Cloud 2022 构建的微服务小说系统</description>
     <properties>
-        <java.version>21</java.version>
+        <java.version>17</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <spring-cloud.version>2022.0.1</spring-cloud.version>
         <spring-cloud-alibaba.version>2022.0.0.0-RC1</spring-cloud-alibaba.version>

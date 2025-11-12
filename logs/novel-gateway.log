@@ -1,0 +1,605 @@
+2025-11-12 00:01:04,270 INFO (LoggerUtils.java:60)- [aa696a43-492e-4fdf-bdd8-9bfb351f802a] Receive server push request, request = NotifySubscriberRequest, requestId = 9
+2025-11-12 00:01:04,279 INFO (ServiceInfoHolder.java:241)- removed ips(1) service: DEFAULT_GROUP@@novel-user-service -> [{"ip":"10.110.83.9","port":9060,"weight":1.0,"healthy":true,"enabled":true,"ephemeral":true,"clusterName":"DEFAULT","serviceName":"DEFAULT_GROUP@@novel-user-service","metadata":{"preserved.register.source":"SPRING_CLOUD"},"instanceHeartBeatInterval":5000,"instanceHeartBeatTimeOut":15000,"ipDeleteTimeout":30000}]
+2025-11-12 00:01:04,279 INFO (ServiceInfoHolder.java:169)- current ips:(0) service: DEFAULT_GROUP@@novel-user-service -> []
+2025-11-12 00:01:04,280 INFO (LoggerUtils.java:60)- [aa696a43-492e-4fdf-bdd8-9bfb351f802a] Ack server push request, request = NotifySubscriberRequest, requestId = 9
+2025-11-12 00:01:09,772 INFO (LoggerUtils.java:60)- [aa696a43-492e-4fdf-bdd8-9bfb351f802a] Receive server push request, request = NotifySubscriberRequest, requestId = 10
+2025-11-12 00:01:09,772 INFO (ServiceInfoHolder.java:235)- new ips(1) service: DEFAULT_GROUP@@novel-user-service -> [{"ip":"10.110.83.9","port":9060,"weight":1.0,"healthy":true,"enabled":true,"ephemeral":true,"clusterName":"DEFAULT","serviceName":"DEFAULT_GROUP@@novel-user-service","metadata":{"preserved.register.source":"SPRING_CLOUD"},"instanceHeartBeatInterval":5000,"instanceHeartBeatTimeOut":15000,"ipDeleteTimeout":30000}]
+2025-11-12 00:01:09,772 INFO (ServiceInfoHolder.java:169)- current ips:(1) service: DEFAULT_GROUP@@novel-user-service -> [{"ip":"10.110.83.9","port":9060,"weight":1.0,"healthy":true,"enabled":true,"ephemeral":true,"clusterName":"DEFAULT","serviceName":"DEFAULT_GROUP@@novel-user-service","metadata":{"preserved.register.source":"SPRING_CLOUD"},"instanceHeartBeatInterval":5000,"instanceHeartBeatTimeOut":15000,"ipDeleteTimeout":30000}]
+2025-11-12 00:01:09,772 INFO (LoggerUtils.java:60)- [aa696a43-492e-4fdf-bdd8-9bfb351f802a] Ack server push request, request = NotifySubscriberRequest, requestId = 10
+2025-11-12 00:01:21,194 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-12 00:01:21,195 INFO (LoggingFilter.java:21)- Path: /api/front/user/login
+2025-11-12 00:01:21,195 INFO (LoggingFilter.java:22)- Method: POST
+2025-11-12 00:01:21,195 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Content-Type:"application/json", Sec-Fetch-Site:"cross-site", Origin:"http://localhost:1024", X-Requested-With:"XMLHttpRequest", Content-Length:"46", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"null", Referer:"http://localhost:1024/", Sec-Fetch-Dest:"empty", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-12 00:01:21,195 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-12 00:01:21,392 INFO (LoggingFilter.java:29)- === GATEWAY RESPONSE ===
+2025-11-12 00:01:21,392 INFO (LoggingFilter.java:30)- Status: 500 INTERNAL_SERVER_ERROR
+2025-11-12 00:01:21,392 INFO (LoggingFilter.java:31)- From Gateway: true
+2025-11-12 00:01:22,621 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-12 00:01:22,621 INFO (LoggingFilter.java:21)- Path: /api/front/user/login
+2025-11-12 00:01:22,621 INFO (LoggingFilter.java:22)- Method: POST
+2025-11-12 00:01:22,621 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Content-Type:"application/json", Sec-Fetch-Site:"cross-site", Origin:"http://localhost:1024", X-Requested-With:"XMLHttpRequest", Content-Length:"46", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"null", Referer:"http://localhost:1024/", Sec-Fetch-Dest:"empty", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-12 00:01:22,622 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-12 00:01:22,691 INFO (LoggingFilter.java:29)- === GATEWAY RESPONSE ===
+2025-11-12 00:01:22,692 INFO (LoggingFilter.java:30)- Status: 500 INTERNAL_SERVER_ERROR
+2025-11-12 00:01:22,692 INFO (LoggingFilter.java:31)- From Gateway: true
+2025-11-12 00:01:23,562 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-12 00:01:23,563 INFO (LoggingFilter.java:21)- Path: /api/front/user/login
+2025-11-12 00:01:23,563 INFO (LoggingFilter.java:22)- Method: POST
+2025-11-12 00:01:23,563 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Content-Type:"application/json", Sec-Fetch-Site:"cross-site", Origin:"http://localhost:1024", X-Requested-With:"XMLHttpRequest", Content-Length:"46", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"null", Referer:"http://localhost:1024/", Sec-Fetch-Dest:"empty", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-12 00:01:23,563 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-12 00:01:23,630 INFO (LoggingFilter.java:29)- === GATEWAY RESPONSE ===
+2025-11-12 00:01:23,630 INFO (LoggingFilter.java:30)- Status: 500 INTERNAL_SERVER_ERROR
+2025-11-12 00:01:23,630 INFO (LoggingFilter.java:31)- From Gateway: true
+2025-11-12 00:02:56,838 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-12 00:02:56,838 INFO (LoggingFilter.java:21)- Path: /api/front/resource/img_verify_code
+2025-11-12 00:02:56,838 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-12 00:02:56,838 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"null", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-12 00:02:56,838 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-12 00:02:56,853 INFO (NamingClientProxyDelegate.java:167)- [SUBSCRIBE-SERVICE] service:novel-resource-service, group:DEFAULT_GROUP, clusters: 
+2025-11-12 00:02:56,882 INFO (ServiceInfoHolder.java:184)- init new ips(0) service: DEFAULT_GROUP@@novel-resource-service -> []
+2025-11-12 00:02:56,882 INFO (ServiceInfoHolder.java:169)- current ips:(0) service: DEFAULT_GROUP@@novel-resource-service -> []
+2025-11-12 00:02:56,883 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-resource-service
+2025-11-12 00:02:57,476 INFO (LoggerUtils.java:60)- [aa696a43-492e-4fdf-bdd8-9bfb351f802a] Receive server push request, request = NotifySubscriberRequest, requestId = 11
+2025-11-12 00:02:57,476 INFO (LoggerUtils.java:60)- [aa696a43-492e-4fdf-bdd8-9bfb351f802a] Ack server push request, request = NotifySubscriberRequest, requestId = 11
+2025-11-12 00:08:25,287 INFO (LoggerUtils.java:60)- [aa696a43-492e-4fdf-bdd8-9bfb351f802a] Receive server push request, request = NotifySubscriberRequest, requestId = 12
+2025-11-12 00:08:25,288 INFO (ServiceInfoHolder.java:241)- removed ips(1) service: DEFAULT_GROUP@@novel-user-service -> [{"ip":"10.110.83.9","port":9060,"weight":1.0,"healthy":true,"enabled":true,"ephemeral":true,"clusterName":"DEFAULT","serviceName":"DEFAULT_GROUP@@novel-user-service","metadata":{"preserved.register.source":"SPRING_CLOUD"},"instanceHeartBeatInterval":5000,"instanceHeartBeatTimeOut":15000,"ipDeleteTimeout":30000}]
+2025-11-12 00:08:25,288 INFO (ServiceInfoHolder.java:169)- current ips:(0) service: DEFAULT_GROUP@@novel-user-service -> []
+2025-11-12 00:08:25,289 INFO (LoggerUtils.java:60)- [aa696a43-492e-4fdf-bdd8-9bfb351f802a] Ack server push request, request = NotifySubscriberRequest, requestId = 12
+2025-11-12 00:08:29,992 INFO (LoggerUtils.java:60)- [aa696a43-492e-4fdf-bdd8-9bfb351f802a] Receive server push request, request = NotifySubscriberRequest, requestId = 13
+2025-11-12 00:08:29,993 INFO (ServiceInfoHolder.java:235)- new ips(1) service: DEFAULT_GROUP@@novel-user-service -> [{"ip":"10.110.83.9","port":9060,"weight":1.0,"healthy":true,"enabled":true,"ephemeral":true,"clusterName":"DEFAULT","serviceName":"DEFAULT_GROUP@@novel-user-service","metadata":{"preserved.register.source":"SPRING_CLOUD"},"instanceHeartBeatInterval":5000,"instanceHeartBeatTimeOut":15000,"ipDeleteTimeout":30000}]
+2025-11-12 00:08:29,993 INFO (ServiceInfoHolder.java:169)- current ips:(1) service: DEFAULT_GROUP@@novel-user-service -> [{"ip":"10.110.83.9","port":9060,"weight":1.0,"healthy":true,"enabled":true,"ephemeral":true,"clusterName":"DEFAULT","serviceName":"DEFAULT_GROUP@@novel-user-service","metadata":{"preserved.register.source":"SPRING_CLOUD"},"instanceHeartBeatInterval":5000,"instanceHeartBeatTimeOut":15000,"ipDeleteTimeout":30000}]
+2025-11-12 00:08:29,993 INFO (LoggerUtils.java:60)- [aa696a43-492e-4fdf-bdd8-9bfb351f802a] Ack server push request, request = NotifySubscriberRequest, requestId = 13
+2025-11-12 00:08:45,565 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-12 00:08:45,565 INFO (LoggingFilter.java:21)- Path: /api/front/resource/img_verify_code
+2025-11-12 00:08:45,565 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-12 00:08:45,565 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"null", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-12 00:08:45,566 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-12 00:08:45,567 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-resource-service
+2025-11-12 00:09:02,068 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-12 00:09:02,069 INFO (LoggingFilter.java:21)- Path: /api/front/user/login
+2025-11-12 00:09:02,069 INFO (LoggingFilter.java:22)- Method: POST
+2025-11-12 00:09:02,069 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Content-Type:"application/json", Sec-Fetch-Site:"cross-site", Origin:"http://localhost:1024", X-Requested-With:"XMLHttpRequest", Content-Length:"46", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"null", Referer:"http://localhost:1024/", Sec-Fetch-Dest:"empty", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-12 00:09:02,069 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-12 00:09:02,271 INFO (LoggingFilter.java:29)- === GATEWAY RESPONSE ===
+2025-11-12 00:09:02,271 INFO (LoggingFilter.java:30)- Status: 500 INTERNAL_SERVER_ERROR
+2025-11-12 00:09:02,271 INFO (LoggingFilter.java:31)- From Gateway: true
+2025-11-12 00:11:02,825 INFO (LoggerUtils.java:60)- [aa696a43-492e-4fdf-bdd8-9bfb351f802a] Receive server push request, request = NotifySubscriberRequest, requestId = 14
+2025-11-12 00:11:02,826 INFO (ServiceInfoHolder.java:241)- removed ips(1) service: DEFAULT_GROUP@@novel-user-service -> [{"ip":"10.110.83.9","port":9060,"weight":1.0,"healthy":true,"enabled":true,"ephemeral":true,"clusterName":"DEFAULT","serviceName":"DEFAULT_GROUP@@novel-user-service","metadata":{"preserved.register.source":"SPRING_CLOUD"},"instanceHeartBeatInterval":5000,"instanceHeartBeatTimeOut":15000,"ipDeleteTimeout":30000}]
+2025-11-12 00:11:02,826 INFO (ServiceInfoHolder.java:169)- current ips:(0) service: DEFAULT_GROUP@@novel-user-service -> []
+2025-11-12 00:11:02,829 INFO (LoggerUtils.java:60)- [aa696a43-492e-4fdf-bdd8-9bfb351f802a] Ack server push request, request = NotifySubscriberRequest, requestId = 14
+2025-11-12 00:11:07,682 INFO (LoggerUtils.java:60)- [aa696a43-492e-4fdf-bdd8-9bfb351f802a] Receive server push request, request = NotifySubscriberRequest, requestId = 15
+2025-11-12 00:11:07,683 INFO (ServiceInfoHolder.java:235)- new ips(1) service: DEFAULT_GROUP@@novel-user-service -> [{"ip":"10.110.83.9","port":9060,"weight":1.0,"healthy":true,"enabled":true,"ephemeral":true,"clusterName":"DEFAULT","serviceName":"DEFAULT_GROUP@@novel-user-service","metadata":{"preserved.register.source":"SPRING_CLOUD"},"instanceHeartBeatInterval":5000,"instanceHeartBeatTimeOut":15000,"ipDeleteTimeout":30000}]
+2025-11-12 00:11:07,683 INFO (ServiceInfoHolder.java:169)- current ips:(1) service: DEFAULT_GROUP@@novel-user-service -> [{"ip":"10.110.83.9","port":9060,"weight":1.0,"healthy":true,"enabled":true,"ephemeral":true,"clusterName":"DEFAULT","serviceName":"DEFAULT_GROUP@@novel-user-service","metadata":{"preserved.register.source":"SPRING_CLOUD"},"instanceHeartBeatInterval":5000,"instanceHeartBeatTimeOut":15000,"ipDeleteTimeout":30000}]
+2025-11-12 00:11:07,683 INFO (LoggerUtils.java:60)- [aa696a43-492e-4fdf-bdd8-9bfb351f802a] Ack server push request, request = NotifySubscriberRequest, requestId = 15
+2025-11-12 00:14:24,936 INFO (LoggerUtils.java:60)- [aa696a43-492e-4fdf-bdd8-9bfb351f802a] Receive server push request, request = NotifySubscriberRequest, requestId = 16
+2025-11-12 00:14:24,936 INFO (ServiceInfoHolder.java:241)- removed ips(1) service: DEFAULT_GROUP@@novel-user-service -> [{"ip":"10.110.83.9","port":9060,"weight":1.0,"healthy":true,"enabled":true,"ephemeral":true,"clusterName":"DEFAULT","serviceName":"DEFAULT_GROUP@@novel-user-service","metadata":{"preserved.register.source":"SPRING_CLOUD"},"instanceHeartBeatInterval":5000,"instanceHeartBeatTimeOut":15000,"ipDeleteTimeout":30000}]
+2025-11-12 00:14:24,936 INFO (ServiceInfoHolder.java:169)- current ips:(0) service: DEFAULT_GROUP@@novel-user-service -> []
+2025-11-12 00:14:24,936 INFO (LoggerUtils.java:60)- [aa696a43-492e-4fdf-bdd8-9bfb351f802a] Ack server push request, request = NotifySubscriberRequest, requestId = 16
+2025-11-12 00:14:29,539 INFO (LoggerUtils.java:60)- [aa696a43-492e-4fdf-bdd8-9bfb351f802a] Receive server push request, request = NotifySubscriberRequest, requestId = 17
+2025-11-12 00:14:29,539 INFO (ServiceInfoHolder.java:235)- new ips(1) service: DEFAULT_GROUP@@novel-user-service -> [{"ip":"10.110.83.9","port":9060,"weight":1.0,"healthy":true,"enabled":true,"ephemeral":true,"clusterName":"DEFAULT","serviceName":"DEFAULT_GROUP@@novel-user-service","metadata":{"preserved.register.source":"SPRING_CLOUD"},"instanceHeartBeatInterval":5000,"instanceHeartBeatTimeOut":15000,"ipDeleteTimeout":30000}]
+2025-11-12 00:14:29,539 INFO (ServiceInfoHolder.java:169)- current ips:(1) service: DEFAULT_GROUP@@novel-user-service -> [{"ip":"10.110.83.9","port":9060,"weight":1.0,"healthy":true,"enabled":true,"ephemeral":true,"clusterName":"DEFAULT","serviceName":"DEFAULT_GROUP@@novel-user-service","metadata":{"preserved.register.source":"SPRING_CLOUD"},"instanceHeartBeatInterval":5000,"instanceHeartBeatTimeOut":15000,"ipDeleteTimeout":30000}]
+2025-11-12 00:14:29,539 INFO (LoggerUtils.java:60)- [aa696a43-492e-4fdf-bdd8-9bfb351f802a] Ack server push request, request = NotifySubscriberRequest, requestId = 17
+2025-11-12 00:14:47,531 WARN (HttpClientBeanHolder.java:102)- [HttpClientBeanHolder] Start destroying common HttpClient
+2025-11-12 00:14:47,531 WARN (NotifyCenter.java:136)- [NotifyCenter] Start destroying Publisher
+2025-11-12 00:14:47,531 WARN (NotifyCenter.java:153)- [NotifyCenter] Destruction of the end
+2025-11-12 00:14:47,531 WARN (HttpClientBeanHolder.java:111)- [HttpClientBeanHolder] Destruction of the end
+2025-11-12 00:14:47,534 INFO (NacosServiceRegistry.java:95)- De-registering from Nacos Server now...
+2025-11-12 00:14:47,534 INFO (NamingGrpcClientProxy.java:216)- [DEREGISTER-SERVICE] public deregistering service novel-gateway with instance: Instance{instanceId='null', ip='10.110.83.9', port=8888, weight=1.0, healthy=true, enabled=true, ephemeral=true, clusterName='DEFAULT', serviceName='null', metadata={}}
+2025-11-12 00:14:47,562 INFO (NacosServiceRegistry.java:115)- De-registration finished.
+2025-11-12 00:14:47,562 INFO (ServiceInfoHolder.java:256)- com.alibaba.nacos.client.naming.cache.ServiceInfoHolder do shutdown begin
+2025-11-12 00:14:47,562 INFO (FailoverReactor.java:133)- com.alibaba.nacos.client.naming.backups.FailoverReactor do shutdown begin
+2025-11-12 00:14:47,562 INFO (FailoverReactor.java:135)- com.alibaba.nacos.client.naming.backups.FailoverReactor do shutdown stop
+2025-11-12 00:14:47,562 INFO (ServiceInfoHolder.java:258)- com.alibaba.nacos.client.naming.cache.ServiceInfoHolder do shutdown stop
+2025-11-12 00:14:47,562 INFO (NamingClientProxyDelegate.java:204)- com.alibaba.nacos.client.naming.remote.NamingClientProxyDelegate do shutdown begin
+2025-11-12 00:14:47,562 INFO (ServiceInfoUpdateService.java:143)- com.alibaba.nacos.client.naming.core.ServiceInfoUpdateService do shutdown begin
+2025-11-12 00:14:47,562 INFO (ServiceInfoUpdateService.java:145)- com.alibaba.nacos.client.naming.core.ServiceInfoUpdateService do shutdown stop
+2025-11-12 00:14:47,562 INFO (ServerListManager.java:194)- com.alibaba.nacos.client.naming.core.ServerListManager do shutdown begin
+2025-11-12 00:14:47,562 WARN (NamingHttpClientManager.java:74)- [NamingHttpClientManager] Start destroying NacosRestTemplate
+2025-11-12 00:14:47,562 WARN (NamingHttpClientManager.java:81)- [NamingHttpClientManager] Destruction of the end
+2025-11-12 00:14:47,562 INFO (ServerListManager.java:199)- com.alibaba.nacos.client.naming.core.ServerListManager do shutdown stop
+2025-11-12 00:14:47,562 INFO (NamingHttpClientProxy.java:484)- com.alibaba.nacos.client.naming.remote.http.NamingHttpClientProxy do shutdown begin
+2025-11-12 00:14:47,562 WARN (NamingHttpClientManager.java:74)- [NamingHttpClientManager] Start destroying NacosRestTemplate
+2025-11-12 00:14:47,562 WARN (NamingHttpClientManager.java:81)- [NamingHttpClientManager] Destruction of the end
+2025-11-12 00:14:47,562 INFO (NamingHttpClientProxy.java:486)- com.alibaba.nacos.client.naming.remote.http.NamingHttpClientProxy do shutdown stop
+2025-11-12 00:14:47,562 INFO (RpcClient.java:425)- Shutdown rpc client, set status to shutdown
+2025-11-12 00:14:47,563 INFO (RpcClient.java:427)- Shutdown client event executor java.util.concurrent.ScheduledThreadPoolExecutor@3277bea9[Running, pool size = 2, active threads = 2, queued tasks = 0, completed tasks = 0]
+2025-11-12 00:14:47,563 INFO (RpcClient.java:580)- Close current connection 1762876631315_221.212.116.7_14669
+2025-11-12 00:14:47,563 INFO (GrpcClient.java:140)- Shutdown grpc executor java.util.concurrent.ThreadPoolExecutor@52edfc7d[Running, pool size = 4, active threads = 0, queued tasks = 0, completed tasks = 394]
+2025-11-12 00:14:47,563 INFO (NamingGrpcRedoService.java:292)- Shutdown grpc redo service executor java.util.concurrent.ScheduledThreadPoolExecutor@371bcf68[Running, pool size = 1, active threads = 0, queued tasks = 1, completed tasks = 351]
+2025-11-12 00:14:47,564 INFO (CredentialWatcher.java:106)- [null] CredentialWatcher is stopped
+2025-11-12 00:14:47,564 INFO (CredentialService.java:100)- [null] CredentialService is freed
+2025-11-12 00:14:47,564 INFO (NamingClientProxyDelegate.java:211)- com.alibaba.nacos.client.naming.remote.NamingClientProxyDelegate do shutdown stop
+2025-11-12 00:14:50,692 WARN (NacosLogging.java:64)- Load Logback Configuration of Nacos fail, message: org/slf4j/impl/StaticLoggerBinder
+2025-11-12 00:14:50,693 WARN (NacosLogging.java:64)- Load Logback Configuration of Nacos fail, message: org/slf4j/impl/StaticLoggerBinder
+2025-11-12 00:14:50,697 INFO (LocalConfigInfoProcessor.java:68)- LOCAL_SNAPSHOT_PATH:/Users/cheunry/nacos/config
+2025-11-12 00:14:50,698 INFO (RpcClientFactory.java:94)- [RpcClientFactory] create a new rpc client of f22a70b8-7b26-4b6f-aa8c-fff51387cff8_config-0
+2025-11-12 00:14:50,702 INFO (LoggerUtils.java:60)- [f22a70b8-7b26-4b6f-aa8c-fff51387cff8_config-0] Register server push request handler:com.alibaba.nacos.client.config.impl.ClientWorker$ConfigRpcTransportClient$$Lambda$566/0x000000880136ab30
+2025-11-12 00:14:50,702 INFO (LoggerUtils.java:60)- [f22a70b8-7b26-4b6f-aa8c-fff51387cff8_config-0] Register server push request handler:com.alibaba.nacos.client.config.impl.ClientWorker$ConfigRpcTransportClient$$Lambda$567/0x000000880136af60
+2025-11-12 00:14:50,702 INFO (LoggerUtils.java:60)- [f22a70b8-7b26-4b6f-aa8c-fff51387cff8_config-0] Registry connection listener to current client:com.alibaba.nacos.client.config.impl.ClientWorker$ConfigRpcTransportClient$1
+2025-11-12 00:14:50,702 INFO (LoggerUtils.java:60)- [f22a70b8-7b26-4b6f-aa8c-fff51387cff8_config-0] RpcClient init, ServerListFactory = com.alibaba.nacos.client.config.impl.ClientWorker$ConfigRpcTransportClient$2
+2025-11-12 00:14:50,705 INFO (LoggerUtils.java:60)- [f22a70b8-7b26-4b6f-aa8c-fff51387cff8_config-0] Try to connect to server on start up, server: {serverIp = '120.53.89.103', server main port = 8848}
+2025-11-12 00:14:51,019 INFO (LoggerUtils.java:60)- [f22a70b8-7b26-4b6f-aa8c-fff51387cff8_config-0] Success to connect to server [120.53.89.103:8848] on start up, connectionId = 1762877691259_221.212.116.7_23831
+2025-11-12 00:14:51,019 INFO (LoggerUtils.java:60)- [f22a70b8-7b26-4b6f-aa8c-fff51387cff8_config-0] Notify connected event to listeners.
+2025-11-12 00:14:51,019 INFO (LoggerUtils.java:60)- [f22a70b8-7b26-4b6f-aa8c-fff51387cff8_config-0] Register server push request handler:com.alibaba.nacos.common.remote.client.RpcClient$ConnectResetRequestHandler
+2025-11-12 00:14:51,019 INFO (ClientWorker.java:638)- [f22a70b8-7b26-4b6f-aa8c-fff51387cff8_config-0] Connected,notify listen context...
+2025-11-12 00:14:51,019 INFO (LoggerUtils.java:60)- [f22a70b8-7b26-4b6f-aa8c-fff51387cff8_config-0] Register server push request handler:com.alibaba.nacos.common.remote.client.RpcClient$$Lambda$583/0x000000880149b858
+2025-11-12 00:14:51,029 INFO (Limiter.java:62)- limitTime:5.0
+2025-11-12 00:14:51,062 WARN (NacosPropertySourceBuilder.java:87)- Ignore the empty nacos configuration and get it based on dataId[novel-gateway] & group[DEFAULT_GROUP]
+2025-11-12 00:14:51,091 WARN (NacosPropertySourceBuilder.java:87)- Ignore the empty nacos configuration and get it based on dataId[novel-gateway.yml] & group[DEFAULT_GROUP]
+2025-11-12 00:14:51,119 WARN (NacosPropertySourceBuilder.java:87)- Ignore the empty nacos configuration and get it based on dataId[novel-gateway-dev.yml] & group[DEFAULT_GROUP]
+2025-11-12 00:14:51,119 INFO (PropertySourceBootstrapConfiguration.java:108)- Located property source: [BootstrapPropertySource {name='bootstrapProperties-novel-gateway-dev.yml,DEFAULT_GROUP'}, BootstrapPropertySource {name='bootstrapProperties-novel-gateway.yml,DEFAULT_GROUP'}, BootstrapPropertySource {name='bootstrapProperties-novel-gateway,DEFAULT_GROUP'}]
+2025-11-12 00:14:51,122 INFO (SpringApplication.java:638)- The following 1 profile is active: "dev"
+2025-11-12 00:14:51,341 INFO (GenericScope.java:282)- BeanFactory id=e5f1d161-439c-33af-a2e7-4c8e755f8ffa
+2025-11-12 00:14:51,350 INFO (PostProcessorRegistrationDelegate.java:409)- Bean 'org.springframework.cloud.client.loadbalancer.reactive.LoadBalancerBeanPostProcessorAutoConfiguration' of type [org.springframework.cloud.client.loadbalancer.reactive.LoadBalancerBeanPostProcessorAutoConfiguration] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying)
+2025-11-12 00:14:51,351 INFO (PostProcessorRegistrationDelegate.java:409)- Bean 'org.springframework.cloud.client.loadbalancer.reactive.LoadBalancerBeanPostProcessorAutoConfiguration$ReactorDeferringLoadBalancerFilterConfig' of type [org.springframework.cloud.client.loadbalancer.reactive.LoadBalancerBeanPostProcessorAutoConfiguration$ReactorDeferringLoadBalancerFilterConfig] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying)
+2025-11-12 00:14:51,351 INFO (PostProcessorRegistrationDelegate.java:409)- Bean 'reactorDeferringLoadBalancerExchangeFilterFunction' of type [org.springframework.cloud.client.loadbalancer.reactive.DeferringLoadBalancerExchangeFilterFunction] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying)
+2025-11-12 00:14:51,505 INFO (RouteDefinitionRouteLocator.java:89)- Loaded RoutePredicateFactory [After]
+2025-11-12 00:14:51,506 INFO (RouteDefinitionRouteLocator.java:89)- Loaded RoutePredicateFactory [Before]
+2025-11-12 00:14:51,506 INFO (RouteDefinitionRouteLocator.java:89)- Loaded RoutePredicateFactory [Between]
+2025-11-12 00:14:51,506 INFO (RouteDefinitionRouteLocator.java:89)- Loaded RoutePredicateFactory [Cookie]
+2025-11-12 00:14:51,506 INFO (RouteDefinitionRouteLocator.java:89)- Loaded RoutePredicateFactory [Header]
+2025-11-12 00:14:51,506 INFO (RouteDefinitionRouteLocator.java:89)- Loaded RoutePredicateFactory [Host]
+2025-11-12 00:14:51,506 INFO (RouteDefinitionRouteLocator.java:89)- Loaded RoutePredicateFactory [Method]
+2025-11-12 00:14:51,506 INFO (RouteDefinitionRouteLocator.java:89)- Loaded RoutePredicateFactory [Path]
+2025-11-12 00:14:51,506 INFO (RouteDefinitionRouteLocator.java:89)- Loaded RoutePredicateFactory [Query]
+2025-11-12 00:14:51,506 INFO (RouteDefinitionRouteLocator.java:89)- Loaded RoutePredicateFactory [ReadBody]
+2025-11-12 00:14:51,506 INFO (RouteDefinitionRouteLocator.java:89)- Loaded RoutePredicateFactory [RemoteAddr]
+2025-11-12 00:14:51,506 INFO (RouteDefinitionRouteLocator.java:89)- Loaded RoutePredicateFactory [XForwardedRemoteAddr]
+2025-11-12 00:14:51,506 INFO (RouteDefinitionRouteLocator.java:89)- Loaded RoutePredicateFactory [Weight]
+2025-11-12 00:14:51,506 INFO (RouteDefinitionRouteLocator.java:89)- Loaded RoutePredicateFactory [CloudFoundryRouteService]
+2025-11-12 00:14:51,574 INFO (EndpointLinksResolver.java:58)- Exposing 19 endpoint(s) beneath base path '/actuator'
+2025-11-12 00:14:51,641 WARN (LoadBalancerCacheAutoConfiguration.java:94)- Spring Cloud LoadBalancer is currently working with the default cache. While this cache implementation is useful for development and tests, it's recommended to use Caffeine cache in production.You can switch to using Caffeine cache, by adding it and org.springframework.cache.caffeine.CaffeineCacheManager to the classpath.
+2025-11-12 00:14:51,679 INFO (NettyWebServer.java:111)- Netty started on port 8888
+2025-11-12 00:14:51,683 INFO (SearchableProperties.java:197)- properties search order:PROPERTIES->JVM->ENV->DEFAULT_SETTING
+2025-11-12 00:14:51,683 INFO (InitUtils.java:61)- initializer namespace from System Property : null
+2025-11-12 00:14:51,683 INFO (InitUtils.java:65)- initializer namespace from System Environment :null
+2025-11-12 00:14:51,683 INFO (InitUtils.java:72)- initializer namespace from System Property :
+2025-11-12 00:14:51,685 INFO (ClientAuthPluginManager.java:56)- [ClientAuthPluginManager] Load ClientAuthService com.alibaba.nacos.client.auth.impl.NacosClientAuthServiceImpl success.
+2025-11-12 00:14:51,685 INFO (ClientAuthPluginManager.java:56)- [ClientAuthPluginManager] Load ClientAuthService com.alibaba.nacos.client.auth.ram.RamClientAuthServiceImpl success.
+2025-11-12 00:14:51,686 INFO (RpcClientFactory.java:94)- [RpcClientFactory] create a new rpc client of 49e50dd8-1c93-4b76-9e89-ef5e3574c43a
+2025-11-12 00:14:51,686 INFO (LoggerUtils.java:60)- [49e50dd8-1c93-4b76-9e89-ef5e3574c43a] RpcClient init, ServerListFactory = com.alibaba.nacos.client.naming.core.ServerListManager
+2025-11-12 00:14:51,686 INFO (LoggerUtils.java:60)- [49e50dd8-1c93-4b76-9e89-ef5e3574c43a] Registry connection listener to current client:com.alibaba.nacos.client.naming.remote.gprc.redo.NamingGrpcRedoService
+2025-11-12 00:14:51,686 INFO (LoggerUtils.java:60)- [49e50dd8-1c93-4b76-9e89-ef5e3574c43a] Register server push request handler:com.alibaba.nacos.client.naming.remote.gprc.NamingPushRequestHandler
+2025-11-12 00:14:51,686 INFO (LoggerUtils.java:60)- [49e50dd8-1c93-4b76-9e89-ef5e3574c43a] Try to connect to server on start up, server: {serverIp = '120.53.89.103', server main port = 8848}
+2025-11-12 00:14:51,875 INFO (LoggerUtils.java:60)- [49e50dd8-1c93-4b76-9e89-ef5e3574c43a] Success to connect to server [120.53.89.103:8848] on start up, connectionId = 1762877692126_221.212.116.7_25075
+2025-11-12 00:14:51,875 INFO (LoggerUtils.java:60)- [49e50dd8-1c93-4b76-9e89-ef5e3574c43a] Register server push request handler:com.alibaba.nacos.common.remote.client.RpcClient$ConnectResetRequestHandler
+2025-11-12 00:14:51,875 INFO (LoggerUtils.java:60)- [49e50dd8-1c93-4b76-9e89-ef5e3574c43a] Register server push request handler:com.alibaba.nacos.common.remote.client.RpcClient$$Lambda$583/0x000000880149b858
+2025-11-12 00:14:51,875 INFO (LoggerUtils.java:60)- [49e50dd8-1c93-4b76-9e89-ef5e3574c43a] Notify connected event to listeners.
+2025-11-12 00:14:51,875 INFO (NamingGrpcRedoService.java:78)- Grpc connection connect
+2025-11-12 00:14:51,876 INFO (NamingGrpcClientProxy.java:120)- [REGISTER-SERVICE] public registering service novel-gateway with instance Instance{instanceId='null', ip='10.110.83.9', port=8888, weight=1.0, healthy=true, enabled=true, ephemeral=true, clusterName='DEFAULT', serviceName='null', metadata={preserved.register.source=SPRING_CLOUD}}
+2025-11-12 00:14:51,908 INFO (NacosServiceRegistry.java:76)- nacos registry, DEFAULT_GROUP novel-gateway 10.110.83.9:8888 register finished
+2025-11-12 00:14:51,935 INFO (StartupInfoLogger.java:57)- Started NovelGatewayApplication in 1.538 seconds (process running for 1.708)
+2025-11-12 00:14:51,937 INFO (CacheData.java:67)- nacos.cache.data.init.snapshot = true 
+2025-11-12 00:14:51,937 INFO (ClientWorker.java:379)- [fixed-120.53.89.103_8848] [subscribe] novel-gateway-dev.yml+DEFAULT_GROUP
+2025-11-12 00:14:51,939 INFO (CacheData.java:197)- [fixed-120.53.89.103_8848] [add-listener] ok, tenant=, dataId=novel-gateway-dev.yml, group=DEFAULT_GROUP, cnt=1
+2025-11-12 00:14:51,939 INFO (NacosContextRefresher.java:129)- [Nacos Config] Listening config: dataId=novel-gateway-dev.yml, group=DEFAULT_GROUP
+2025-11-12 00:14:51,939 INFO (ClientWorker.java:379)- [fixed-120.53.89.103_8848] [subscribe] novel-gateway+DEFAULT_GROUP
+2025-11-12 00:14:51,939 INFO (CacheData.java:197)- [fixed-120.53.89.103_8848] [add-listener] ok, tenant=, dataId=novel-gateway, group=DEFAULT_GROUP, cnt=1
+2025-11-12 00:14:51,939 INFO (NacosContextRefresher.java:129)- [Nacos Config] Listening config: dataId=novel-gateway, group=DEFAULT_GROUP
+2025-11-12 00:14:51,939 INFO (ClientWorker.java:379)- [fixed-120.53.89.103_8848] [subscribe] novel-gateway.yml+DEFAULT_GROUP
+2025-11-12 00:14:51,939 INFO (CacheData.java:197)- [fixed-120.53.89.103_8848] [add-listener] ok, tenant=, dataId=novel-gateway.yml, group=DEFAULT_GROUP, cnt=1
+2025-11-12 00:14:51,940 INFO (NacosContextRefresher.java:129)- [Nacos Config] Listening config: dataId=novel-gateway.yml, group=DEFAULT_GROUP
+2025-11-12 00:15:02,499 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-12 00:15:02,500 INFO (LoggingFilter.java:21)- Path: /api/front/resource/img_verify_code
+2025-11-12 00:15:02,500 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-12 00:15:02,500 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"null", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-12 00:15:02,500 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-12 00:15:02,516 INFO (NamingClientProxyDelegate.java:167)- [SUBSCRIBE-SERVICE] service:novel-resource-service, group:DEFAULT_GROUP, clusters: 
+2025-11-12 00:15:02,546 INFO (ServiceInfoHolder.java:184)- init new ips(0) service: DEFAULT_GROUP@@novel-resource-service -> []
+2025-11-12 00:15:02,546 INFO (ServiceInfoHolder.java:169)- current ips:(0) service: DEFAULT_GROUP@@novel-resource-service -> []
+2025-11-12 00:15:02,549 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-resource-service
+2025-11-12 00:15:03,072 INFO (LoggerUtils.java:60)- [49e50dd8-1c93-4b76-9e89-ef5e3574c43a] Receive server push request, request = NotifySubscriberRequest, requestId = 18
+2025-11-12 00:15:03,072 INFO (LoggerUtils.java:60)- [49e50dd8-1c93-4b76-9e89-ef5e3574c43a] Ack server push request, request = NotifySubscriberRequest, requestId = 18
+2025-11-12 00:15:43,655 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-12 00:15:43,655 INFO (LoggingFilter.java:21)- Path: /api/front/user/login
+2025-11-12 00:15:43,655 INFO (LoggingFilter.java:22)- Method: POST
+2025-11-12 00:15:43,655 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Content-Type:"application/json", Sec-Fetch-Site:"cross-site", Origin:"http://localhost:1024", X-Requested-With:"XMLHttpRequest", Content-Length:"48", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"null", Referer:"http://localhost:1024/", Sec-Fetch-Dest:"empty", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-12 00:15:43,656 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-12 00:15:43,671 INFO (NamingClientProxyDelegate.java:167)- [SUBSCRIBE-SERVICE] service:novel-user-service, group:DEFAULT_GROUP, clusters: 
+2025-11-12 00:15:43,701 INFO (ServiceInfoHolder.java:184)- init new ips(1) service: DEFAULT_GROUP@@novel-user-service -> [{"ip":"10.110.83.9","port":9060,"weight":1.0,"healthy":true,"enabled":true,"ephemeral":true,"clusterName":"DEFAULT","serviceName":"DEFAULT_GROUP@@novel-user-service","metadata":{"preserved.register.source":"SPRING_CLOUD"},"ipDeleteTimeout":30000,"instanceHeartBeatInterval":5000,"instanceHeartBeatTimeOut":15000}]
+2025-11-12 00:15:43,701 INFO (ServiceInfoHolder.java:169)- current ips:(1) service: DEFAULT_GROUP@@novel-user-service -> [{"ip":"10.110.83.9","port":9060,"weight":1.0,"healthy":true,"enabled":true,"ephemeral":true,"clusterName":"DEFAULT","serviceName":"DEFAULT_GROUP@@novel-user-service","metadata":{"preserved.register.source":"SPRING_CLOUD"},"ipDeleteTimeout":30000,"instanceHeartBeatInterval":5000,"instanceHeartBeatTimeOut":15000}]
+2025-11-12 00:15:43,731 ERROR (DnsServerAddressStreamProviders.java:79)- Unable to load io.netty.resolver.dns.macos.MacOSDnsServerAddressStreamProvider, fallback to system defaults. This may result in incorrect DNS resolutions on MacOS. Check whether you have a dependency on 'io.netty:netty-resolver-dns-native-macos'. Use DEBUG level to see the full stack: java.lang.UnsatisfiedLinkError: failed to load the required native library
+2025-11-12 00:15:43,901 INFO (LoggingFilter.java:29)- === GATEWAY RESPONSE ===
+2025-11-12 00:15:43,901 INFO (LoggingFilter.java:30)- Status: 500 INTERNAL_SERVER_ERROR
+2025-11-12 00:15:43,901 INFO (LoggingFilter.java:31)- From Gateway: true
+2025-11-12 00:15:44,292 INFO (LoggerUtils.java:60)- [49e50dd8-1c93-4b76-9e89-ef5e3574c43a] Receive server push request, request = NotifySubscriberRequest, requestId = 19
+2025-11-12 00:15:44,293 INFO (LoggerUtils.java:60)- [49e50dd8-1c93-4b76-9e89-ef5e3574c43a] Ack server push request, request = NotifySubscriberRequest, requestId = 19
+2025-11-12 00:21:54,644 INFO (LoggerUtils.java:60)- [49e50dd8-1c93-4b76-9e89-ef5e3574c43a] Receive server push request, request = NotifySubscriberRequest, requestId = 20
+2025-11-12 00:21:54,648 INFO (ServiceInfoHolder.java:241)- removed ips(1) service: DEFAULT_GROUP@@novel-user-service -> [{"ip":"10.110.83.9","port":9060,"weight":1.0,"healthy":true,"enabled":true,"ephemeral":true,"clusterName":"DEFAULT","serviceName":"DEFAULT_GROUP@@novel-user-service","metadata":{"preserved.register.source":"SPRING_CLOUD"},"ipDeleteTimeout":30000,"instanceHeartBeatInterval":5000,"instanceHeartBeatTimeOut":15000}]
+2025-11-12 00:21:54,648 INFO (ServiceInfoHolder.java:169)- current ips:(0) service: DEFAULT_GROUP@@novel-user-service -> []
+2025-11-12 00:21:54,650 INFO (LoggerUtils.java:60)- [49e50dd8-1c93-4b76-9e89-ef5e3574c43a] Ack server push request, request = NotifySubscriberRequest, requestId = 20
+2025-11-12 00:21:59,451 INFO (LoggerUtils.java:60)- [49e50dd8-1c93-4b76-9e89-ef5e3574c43a] Receive server push request, request = NotifySubscriberRequest, requestId = 21
+2025-11-12 00:21:59,451 INFO (ServiceInfoHolder.java:235)- new ips(1) service: DEFAULT_GROUP@@novel-user-service -> [{"ip":"10.110.83.9","port":9060,"weight":1.0,"healthy":true,"enabled":true,"ephemeral":true,"clusterName":"DEFAULT","serviceName":"DEFAULT_GROUP@@novel-user-service","metadata":{"preserved.register.source":"SPRING_CLOUD"},"ipDeleteTimeout":30000,"instanceHeartBeatInterval":5000,"instanceHeartBeatTimeOut":15000}]
+2025-11-12 00:21:59,451 INFO (ServiceInfoHolder.java:169)- current ips:(1) service: DEFAULT_GROUP@@novel-user-service -> [{"ip":"10.110.83.9","port":9060,"weight":1.0,"healthy":true,"enabled":true,"ephemeral":true,"clusterName":"DEFAULT","serviceName":"DEFAULT_GROUP@@novel-user-service","metadata":{"preserved.register.source":"SPRING_CLOUD"},"ipDeleteTimeout":30000,"instanceHeartBeatInterval":5000,"instanceHeartBeatTimeOut":15000}]
+2025-11-12 00:21:59,451 INFO (LoggerUtils.java:60)- [49e50dd8-1c93-4b76-9e89-ef5e3574c43a] Ack server push request, request = NotifySubscriberRequest, requestId = 21
+2025-11-12 00:25:37,298 INFO (LoggerUtils.java:60)- [49e50dd8-1c93-4b76-9e89-ef5e3574c43a] Receive server push request, request = NotifySubscriberRequest, requestId = 22
+2025-11-12 00:25:37,298 INFO (ServiceInfoHolder.java:241)- removed ips(1) service: DEFAULT_GROUP@@novel-user-service -> [{"ip":"10.110.83.9","port":9060,"weight":1.0,"healthy":true,"enabled":true,"ephemeral":true,"clusterName":"DEFAULT","serviceName":"DEFAULT_GROUP@@novel-user-service","metadata":{"preserved.register.source":"SPRING_CLOUD"},"ipDeleteTimeout":30000,"instanceHeartBeatInterval":5000,"instanceHeartBeatTimeOut":15000}]
+2025-11-12 00:25:37,298 INFO (ServiceInfoHolder.java:169)- current ips:(0) service: DEFAULT_GROUP@@novel-user-service -> []
+2025-11-12 00:25:37,300 INFO (LoggerUtils.java:60)- [49e50dd8-1c93-4b76-9e89-ef5e3574c43a] Ack server push request, request = NotifySubscriberRequest, requestId = 22
+2025-11-12 00:25:41,701 INFO (LoggerUtils.java:60)- [49e50dd8-1c93-4b76-9e89-ef5e3574c43a] Receive server push request, request = NotifySubscriberRequest, requestId = 23
+2025-11-12 00:25:41,701 INFO (ServiceInfoHolder.java:235)- new ips(1) service: DEFAULT_GROUP@@novel-user-service -> [{"ip":"10.110.83.9","port":9060,"weight":1.0,"healthy":true,"enabled":true,"ephemeral":true,"clusterName":"DEFAULT","serviceName":"DEFAULT_GROUP@@novel-user-service","metadata":{"preserved.register.source":"SPRING_CLOUD"},"ipDeleteTimeout":30000,"instanceHeartBeatInterval":5000,"instanceHeartBeatTimeOut":15000}]
+2025-11-12 00:25:41,701 INFO (ServiceInfoHolder.java:169)- current ips:(1) service: DEFAULT_GROUP@@novel-user-service -> [{"ip":"10.110.83.9","port":9060,"weight":1.0,"healthy":true,"enabled":true,"ephemeral":true,"clusterName":"DEFAULT","serviceName":"DEFAULT_GROUP@@novel-user-service","metadata":{"preserved.register.source":"SPRING_CLOUD"},"ipDeleteTimeout":30000,"instanceHeartBeatInterval":5000,"instanceHeartBeatTimeOut":15000}]
+2025-11-12 00:25:41,701 INFO (LoggerUtils.java:60)- [49e50dd8-1c93-4b76-9e89-ef5e3574c43a] Ack server push request, request = NotifySubscriberRequest, requestId = 23
+2025-11-12 00:32:51,789 INFO (LoggerUtils.java:60)- [49e50dd8-1c93-4b76-9e89-ef5e3574c43a] Receive server push request, request = NotifySubscriberRequest, requestId = 24
+2025-11-12 00:32:51,789 INFO (ServiceInfoHolder.java:241)- removed ips(1) service: DEFAULT_GROUP@@novel-user-service -> [{"ip":"10.110.83.9","port":9060,"weight":1.0,"healthy":true,"enabled":true,"ephemeral":true,"clusterName":"DEFAULT","serviceName":"DEFAULT_GROUP@@novel-user-service","metadata":{"preserved.register.source":"SPRING_CLOUD"},"ipDeleteTimeout":30000,"instanceHeartBeatInterval":5000,"instanceHeartBeatTimeOut":15000}]
+2025-11-12 00:32:51,789 INFO (ServiceInfoHolder.java:169)- current ips:(0) service: DEFAULT_GROUP@@novel-user-service -> []
+2025-11-12 00:32:51,789 INFO (LoggerUtils.java:60)- [49e50dd8-1c93-4b76-9e89-ef5e3574c43a] Ack server push request, request = NotifySubscriberRequest, requestId = 24
+2025-11-12 00:32:56,092 INFO (LoggerUtils.java:60)- [49e50dd8-1c93-4b76-9e89-ef5e3574c43a] Receive server push request, request = NotifySubscriberRequest, requestId = 25
+2025-11-12 00:32:56,092 INFO (ServiceInfoHolder.java:235)- new ips(1) service: DEFAULT_GROUP@@novel-user-service -> [{"ip":"10.110.83.9","port":9060,"weight":1.0,"healthy":true,"enabled":true,"ephemeral":true,"clusterName":"DEFAULT","serviceName":"DEFAULT_GROUP@@novel-user-service","metadata":{"preserved.register.source":"SPRING_CLOUD"},"ipDeleteTimeout":30000,"instanceHeartBeatInterval":5000,"instanceHeartBeatTimeOut":15000}]
+2025-11-12 00:32:56,093 INFO (ServiceInfoHolder.java:169)- current ips:(1) service: DEFAULT_GROUP@@novel-user-service -> [{"ip":"10.110.83.9","port":9060,"weight":1.0,"healthy":true,"enabled":true,"ephemeral":true,"clusterName":"DEFAULT","serviceName":"DEFAULT_GROUP@@novel-user-service","metadata":{"preserved.register.source":"SPRING_CLOUD"},"ipDeleteTimeout":30000,"instanceHeartBeatInterval":5000,"instanceHeartBeatTimeOut":15000}]
+2025-11-12 00:32:56,093 INFO (LoggerUtils.java:60)- [49e50dd8-1c93-4b76-9e89-ef5e3574c43a] Ack server push request, request = NotifySubscriberRequest, requestId = 25
+2025-11-12 00:33:31,045 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-12 00:33:31,045 INFO (LoggingFilter.java:21)- Path: /api/front/user/login
+2025-11-12 00:33:31,045 INFO (LoggingFilter.java:22)- Method: POST
+2025-11-12 00:33:31,045 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Content-Type:"application/json", Sec-Fetch-Site:"cross-site", Origin:"http://localhost:1024", X-Requested-With:"XMLHttpRequest", Content-Length:"46", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"null", Referer:"http://localhost:1024/", Sec-Fetch-Dest:"empty", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-12 00:33:31,045 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-12 00:33:31,248 INFO (LoggingFilter.java:29)- === GATEWAY RESPONSE ===
+2025-11-12 00:33:31,248 INFO (LoggingFilter.java:30)- Status: 500 INTERNAL_SERVER_ERROR
+2025-11-12 00:33:31,248 INFO (LoggingFilter.java:31)- From Gateway: true
+2025-11-12 00:44:54,971 WARN (HttpClientBeanHolder.java:102)- [HttpClientBeanHolder] Start destroying common HttpClient
+2025-11-12 00:44:54,971 WARN (NotifyCenter.java:136)- [NotifyCenter] Start destroying Publisher
+2025-11-12 00:44:54,971 WARN (NotifyCenter.java:153)- [NotifyCenter] Destruction of the end
+2025-11-12 00:44:54,971 WARN (HttpClientBeanHolder.java:111)- [HttpClientBeanHolder] Destruction of the end
+2025-11-12 00:44:54,974 INFO (NacosServiceRegistry.java:95)- De-registering from Nacos Server now...
+2025-11-12 00:44:54,974 INFO (NamingGrpcClientProxy.java:216)- [DEREGISTER-SERVICE] public deregistering service novel-gateway with instance: Instance{instanceId='null', ip='10.110.83.9', port=8888, weight=1.0, healthy=true, enabled=true, ephemeral=true, clusterName='DEFAULT', serviceName='null', metadata={}}
+2025-11-12 00:44:55,001 INFO (NacosServiceRegistry.java:115)- De-registration finished.
+2025-11-12 00:44:55,002 INFO (ServiceInfoHolder.java:256)- com.alibaba.nacos.client.naming.cache.ServiceInfoHolder do shutdown begin
+2025-11-12 00:44:55,002 INFO (FailoverReactor.java:133)- com.alibaba.nacos.client.naming.backups.FailoverReactor do shutdown begin
+2025-11-12 00:44:55,002 INFO (FailoverReactor.java:135)- com.alibaba.nacos.client.naming.backups.FailoverReactor do shutdown stop
+2025-11-12 00:44:55,002 INFO (ServiceInfoHolder.java:258)- com.alibaba.nacos.client.naming.cache.ServiceInfoHolder do shutdown stop
+2025-11-12 00:44:55,002 INFO (NamingClientProxyDelegate.java:204)- com.alibaba.nacos.client.naming.remote.NamingClientProxyDelegate do shutdown begin
+2025-11-12 00:44:55,002 INFO (ServiceInfoUpdateService.java:143)- com.alibaba.nacos.client.naming.core.ServiceInfoUpdateService do shutdown begin
+2025-11-12 00:44:55,002 INFO (ServiceInfoUpdateService.java:145)- com.alibaba.nacos.client.naming.core.ServiceInfoUpdateService do shutdown stop
+2025-11-12 00:44:55,002 INFO (ServerListManager.java:194)- com.alibaba.nacos.client.naming.core.ServerListManager do shutdown begin
+2025-11-12 00:44:55,002 WARN (NamingHttpClientManager.java:74)- [NamingHttpClientManager] Start destroying NacosRestTemplate
+2025-11-12 00:44:55,002 WARN (NamingHttpClientManager.java:81)- [NamingHttpClientManager] Destruction of the end
+2025-11-12 00:44:55,002 INFO (ServerListManager.java:199)- com.alibaba.nacos.client.naming.core.ServerListManager do shutdown stop
+2025-11-12 00:44:55,002 INFO (NamingHttpClientProxy.java:484)- com.alibaba.nacos.client.naming.remote.http.NamingHttpClientProxy do shutdown begin
+2025-11-12 00:44:55,002 WARN (NamingHttpClientManager.java:74)- [NamingHttpClientManager] Start destroying NacosRestTemplate
+2025-11-12 00:44:55,002 WARN (NamingHttpClientManager.java:81)- [NamingHttpClientManager] Destruction of the end
+2025-11-12 00:44:55,002 INFO (NamingHttpClientProxy.java:486)- com.alibaba.nacos.client.naming.remote.http.NamingHttpClientProxy do shutdown stop
+2025-11-12 00:44:55,002 INFO (RpcClient.java:425)- Shutdown rpc client, set status to shutdown
+2025-11-12 00:44:55,002 INFO (RpcClient.java:427)- Shutdown client event executor java.util.concurrent.ScheduledThreadPoolExecutor@33dfbbe7[Running, pool size = 2, active threads = 2, queued tasks = 0, completed tasks = 0]
+2025-11-12 00:44:55,002 INFO (RpcClient.java:580)- Close current connection 1762877692126_221.212.116.7_25075
+2025-11-12 00:44:55,003 INFO (GrpcClient.java:140)- Shutdown grpc executor java.util.concurrent.ThreadPoolExecutor@678bb306[Running, pool size = 3, active threads = 0, queued tasks = 0, completed tasks = 567]
+2025-11-12 00:44:55,003 INFO (NamingGrpcRedoService.java:292)- Shutdown grpc redo service executor java.util.concurrent.ScheduledThreadPoolExecutor@72e07d75[Running, pool size = 1, active threads = 0, queued tasks = 1, completed tasks = 600]
+2025-11-12 00:44:55,003 INFO (CredentialWatcher.java:106)- [null] CredentialWatcher is stopped
+2025-11-12 00:44:55,003 INFO (CredentialService.java:100)- [null] CredentialService is freed
+2025-11-12 00:44:55,003 INFO (NamingClientProxyDelegate.java:211)- com.alibaba.nacos.client.naming.remote.NamingClientProxyDelegate do shutdown stop
+2025-11-12 12:04:25,057 WARN (NacosLogging.java:64)- Load Logback Configuration of Nacos fail, message: org/slf4j/impl/StaticLoggerBinder
+2025-11-12 12:04:25,057 WARN (NacosLogging.java:64)- Load Logback Configuration of Nacos fail, message: org/slf4j/impl/StaticLoggerBinder
+2025-11-12 12:04:25,061 INFO (LocalConfigInfoProcessor.java:68)- LOCAL_SNAPSHOT_PATH:/Users/cheunry/nacos/config
+2025-11-12 12:04:25,062 INFO (RpcClientFactory.java:94)- [RpcClientFactory] create a new rpc client of 523bc6fa-912f-476f-a0e1-afc33b5247d3_config-0
+2025-11-12 12:04:25,066 INFO (LoggerUtils.java:60)- [523bc6fa-912f-476f-a0e1-afc33b5247d3_config-0] Register server push request handler:com.alibaba.nacos.client.config.impl.ClientWorker$ConfigRpcTransportClient$$Lambda$582/0x0000008801395598
+2025-11-12 12:04:25,066 INFO (LoggerUtils.java:60)- [523bc6fa-912f-476f-a0e1-afc33b5247d3_config-0] Register server push request handler:com.alibaba.nacos.client.config.impl.ClientWorker$ConfigRpcTransportClient$$Lambda$583/0x00000088013959c8
+2025-11-12 12:04:25,066 INFO (LoggerUtils.java:60)- [523bc6fa-912f-476f-a0e1-afc33b5247d3_config-0] Registry connection listener to current client:com.alibaba.nacos.client.config.impl.ClientWorker$ConfigRpcTransportClient$1
+2025-11-12 12:04:25,066 INFO (LoggerUtils.java:60)- [523bc6fa-912f-476f-a0e1-afc33b5247d3_config-0] RpcClient init, ServerListFactory = com.alibaba.nacos.client.config.impl.ClientWorker$ConfigRpcTransportClient$2
+2025-11-12 12:04:25,068 INFO (LoggerUtils.java:60)- [523bc6fa-912f-476f-a0e1-afc33b5247d3_config-0] Try to connect to server on start up, server: {serverIp = '120.53.89.103', server main port = 8848}
+2025-11-12 12:04:25,400 INFO (LoggerUtils.java:60)- [523bc6fa-912f-476f-a0e1-afc33b5247d3_config-0] Success to connect to server [120.53.89.103:8848] on start up, connectionId = 1762920265397_222.171.7.84_3613
+2025-11-12 12:04:25,400 INFO (LoggerUtils.java:60)- [523bc6fa-912f-476f-a0e1-afc33b5247d3_config-0] Register server push request handler:com.alibaba.nacos.common.remote.client.RpcClient$ConnectResetRequestHandler
+2025-11-12 12:04:25,400 INFO (LoggerUtils.java:60)- [523bc6fa-912f-476f-a0e1-afc33b5247d3_config-0] Notify connected event to listeners.
+2025-11-12 12:04:25,401 INFO (LoggerUtils.java:60)- [523bc6fa-912f-476f-a0e1-afc33b5247d3_config-0] Register server push request handler:com.alibaba.nacos.common.remote.client.RpcClient$$Lambda$599/0x00000088014c3dc0
+2025-11-12 12:04:25,401 INFO (ClientWorker.java:638)- [523bc6fa-912f-476f-a0e1-afc33b5247d3_config-0] Connected,notify listen context...
+2025-11-12 12:04:25,417 INFO (Limiter.java:62)- limitTime:5.0
+2025-11-12 12:04:25,456 WARN (NacosPropertySourceBuilder.java:87)- Ignore the empty nacos configuration and get it based on dataId[novel-gateway] & group[DEFAULT_GROUP]
+2025-11-12 12:04:25,486 WARN (NacosPropertySourceBuilder.java:87)- Ignore the empty nacos configuration and get it based on dataId[novel-gateway.yml] & group[DEFAULT_GROUP]
+2025-11-12 12:04:25,595 WARN (NacosPropertySourceBuilder.java:87)- Ignore the empty nacos configuration and get it based on dataId[novel-gateway-dev.yml] & group[DEFAULT_GROUP]
+2025-11-12 12:04:25,596 INFO (PropertySourceBootstrapConfiguration.java:108)- Located property source: [BootstrapPropertySource {name='bootstrapProperties-novel-gateway-dev.yml,DEFAULT_GROUP'}, BootstrapPropertySource {name='bootstrapProperties-novel-gateway.yml,DEFAULT_GROUP'}, BootstrapPropertySource {name='bootstrapProperties-novel-gateway,DEFAULT_GROUP'}]
+2025-11-12 12:04:25,602 INFO (SpringApplication.java:638)- The following 1 profile is active: "dev"
+2025-11-12 12:04:25,861 INFO (GenericScope.java:282)- BeanFactory id=e5f1d161-439c-33af-a2e7-4c8e755f8ffa
+2025-11-12 12:04:25,874 INFO (PostProcessorRegistrationDelegate.java:409)- Bean 'org.springframework.cloud.client.loadbalancer.reactive.LoadBalancerBeanPostProcessorAutoConfiguration' of type [org.springframework.cloud.client.loadbalancer.reactive.LoadBalancerBeanPostProcessorAutoConfiguration] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying)
+2025-11-12 12:04:25,874 INFO (PostProcessorRegistrationDelegate.java:409)- Bean 'org.springframework.cloud.client.loadbalancer.reactive.LoadBalancerBeanPostProcessorAutoConfiguration$ReactorDeferringLoadBalancerFilterConfig' of type [org.springframework.cloud.client.loadbalancer.reactive.LoadBalancerBeanPostProcessorAutoConfiguration$ReactorDeferringLoadBalancerFilterConfig] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying)
+2025-11-12 12:04:25,875 INFO (PostProcessorRegistrationDelegate.java:409)- Bean 'reactorDeferringLoadBalancerExchangeFilterFunction' of type [org.springframework.cloud.client.loadbalancer.reactive.DeferringLoadBalancerExchangeFilterFunction] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying)
+2025-11-12 12:04:26,063 INFO (RouteDefinitionRouteLocator.java:89)- Loaded RoutePredicateFactory [After]
+2025-11-12 12:04:26,064 INFO (RouteDefinitionRouteLocator.java:89)- Loaded RoutePredicateFactory [Before]
+2025-11-12 12:04:26,064 INFO (RouteDefinitionRouteLocator.java:89)- Loaded RoutePredicateFactory [Between]
+2025-11-12 12:04:26,064 INFO (RouteDefinitionRouteLocator.java:89)- Loaded RoutePredicateFactory [Cookie]
+2025-11-12 12:04:26,064 INFO (RouteDefinitionRouteLocator.java:89)- Loaded RoutePredicateFactory [Header]
+2025-11-12 12:04:26,064 INFO (RouteDefinitionRouteLocator.java:89)- Loaded RoutePredicateFactory [Host]
+2025-11-12 12:04:26,064 INFO (RouteDefinitionRouteLocator.java:89)- Loaded RoutePredicateFactory [Method]
+2025-11-12 12:04:26,064 INFO (RouteDefinitionRouteLocator.java:89)- Loaded RoutePredicateFactory [Path]
+2025-11-12 12:04:26,064 INFO (RouteDefinitionRouteLocator.java:89)- Loaded RoutePredicateFactory [Query]
+2025-11-12 12:04:26,064 INFO (RouteDefinitionRouteLocator.java:89)- Loaded RoutePredicateFactory [ReadBody]
+2025-11-12 12:04:26,064 INFO (RouteDefinitionRouteLocator.java:89)- Loaded RoutePredicateFactory [RemoteAddr]
+2025-11-12 12:04:26,064 INFO (RouteDefinitionRouteLocator.java:89)- Loaded RoutePredicateFactory [XForwardedRemoteAddr]
+2025-11-12 12:04:26,064 INFO (RouteDefinitionRouteLocator.java:89)- Loaded RoutePredicateFactory [Weight]
+2025-11-12 12:04:26,064 INFO (RouteDefinitionRouteLocator.java:89)- Loaded RoutePredicateFactory [CloudFoundryRouteService]
+2025-11-12 12:04:26,133 INFO (EndpointLinksResolver.java:58)- Exposing 19 endpoint(s) beneath base path '/actuator'
+2025-11-12 12:04:26,185 WARN (LoadBalancerCacheAutoConfiguration.java:94)- Spring Cloud LoadBalancer is currently working with the default cache. While this cache implementation is useful for development and tests, it's recommended to use Caffeine cache in production.You can switch to using Caffeine cache, by adding it and org.springframework.cache.caffeine.CaffeineCacheManager to the classpath.
+2025-11-12 12:04:26,224 INFO (NettyWebServer.java:111)- Netty started on port 8888
+2025-11-12 12:04:26,230 INFO (SearchableProperties.java:197)- properties search order:PROPERTIES->JVM->ENV->DEFAULT_SETTING
+2025-11-12 12:04:26,230 INFO (InitUtils.java:61)- initializer namespace from System Property : null
+2025-11-12 12:04:26,230 INFO (InitUtils.java:65)- initializer namespace from System Environment :null
+2025-11-12 12:04:26,230 INFO (InitUtils.java:72)- initializer namespace from System Property :
+2025-11-12 12:04:26,232 INFO (ClientAuthPluginManager.java:56)- [ClientAuthPluginManager] Load ClientAuthService com.alibaba.nacos.client.auth.impl.NacosClientAuthServiceImpl success.
+2025-11-12 12:04:26,232 INFO (ClientAuthPluginManager.java:56)- [ClientAuthPluginManager] Load ClientAuthService com.alibaba.nacos.client.auth.ram.RamClientAuthServiceImpl success.
+2025-11-12 12:04:26,233 INFO (RpcClientFactory.java:94)- [RpcClientFactory] create a new rpc client of cdd9dabf-a82c-4de7-8952-a5c513ccdcb9
+2025-11-12 12:04:26,233 INFO (LoggerUtils.java:60)- [cdd9dabf-a82c-4de7-8952-a5c513ccdcb9] RpcClient init, ServerListFactory = com.alibaba.nacos.client.naming.core.ServerListManager
+2025-11-12 12:04:26,233 INFO (LoggerUtils.java:60)- [cdd9dabf-a82c-4de7-8952-a5c513ccdcb9] Registry connection listener to current client:com.alibaba.nacos.client.naming.remote.gprc.redo.NamingGrpcRedoService
+2025-11-12 12:04:26,233 INFO (LoggerUtils.java:60)- [cdd9dabf-a82c-4de7-8952-a5c513ccdcb9] Register server push request handler:com.alibaba.nacos.client.naming.remote.gprc.NamingPushRequestHandler
+2025-11-12 12:04:26,233 INFO (LoggerUtils.java:60)- [cdd9dabf-a82c-4de7-8952-a5c513ccdcb9] Try to connect to server on start up, server: {serverIp = '120.53.89.103', server main port = 8848}
+2025-11-12 12:04:26,566 INFO (LoggerUtils.java:60)- [cdd9dabf-a82c-4de7-8952-a5c513ccdcb9] Success to connect to server [120.53.89.103:8848] on start up, connectionId = 1762920266575_222.171.7.84_3790
+2025-11-12 12:04:26,567 INFO (LoggerUtils.java:60)- [cdd9dabf-a82c-4de7-8952-a5c513ccdcb9] Register server push request handler:com.alibaba.nacos.common.remote.client.RpcClient$ConnectResetRequestHandler
+2025-11-12 12:04:26,567 INFO (LoggerUtils.java:60)- [cdd9dabf-a82c-4de7-8952-a5c513ccdcb9] Notify connected event to listeners.
+2025-11-12 12:04:26,567 INFO (LoggerUtils.java:60)- [cdd9dabf-a82c-4de7-8952-a5c513ccdcb9] Register server push request handler:com.alibaba.nacos.common.remote.client.RpcClient$$Lambda$599/0x00000088014c3dc0
+2025-11-12 12:04:26,567 INFO (NamingGrpcRedoService.java:78)- Grpc connection connect
+2025-11-12 12:04:26,568 INFO (NamingGrpcClientProxy.java:120)- [REGISTER-SERVICE] public registering service novel-gateway with instance Instance{instanceId='null', ip='10.44.77.249', port=8888, weight=1.0, healthy=true, enabled=true, ephemeral=true, clusterName='DEFAULT', serviceName='null', metadata={preserved.register.source=SPRING_CLOUD}}
+2025-11-12 12:04:26,661 INFO (NacosServiceRegistry.java:76)- nacos registry, DEFAULT_GROUP novel-gateway 10.44.77.249:8888 register finished
+2025-11-12 12:04:26,702 INFO (StartupInfoLogger.java:57)- Started NovelGatewayApplication in 1.952 seconds (process running for 2.2)
+2025-11-12 12:04:26,704 INFO (CacheData.java:67)- nacos.cache.data.init.snapshot = true 
+2025-11-12 12:04:26,704 INFO (ClientWorker.java:379)- [fixed-120.53.89.103_8848] [subscribe] novel-gateway-dev.yml+DEFAULT_GROUP
+2025-11-12 12:04:26,707 INFO (CacheData.java:197)- [fixed-120.53.89.103_8848] [add-listener] ok, tenant=, dataId=novel-gateway-dev.yml, group=DEFAULT_GROUP, cnt=1
+2025-11-12 12:04:26,707 INFO (NacosContextRefresher.java:129)- [Nacos Config] Listening config: dataId=novel-gateway-dev.yml, group=DEFAULT_GROUP
+2025-11-12 12:04:26,707 INFO (ClientWorker.java:379)- [fixed-120.53.89.103_8848] [subscribe] novel-gateway+DEFAULT_GROUP
+2025-11-12 12:04:26,707 INFO (CacheData.java:197)- [fixed-120.53.89.103_8848] [add-listener] ok, tenant=, dataId=novel-gateway, group=DEFAULT_GROUP, cnt=1
+2025-11-12 12:04:26,707 INFO (NacosContextRefresher.java:129)- [Nacos Config] Listening config: dataId=novel-gateway, group=DEFAULT_GROUP
+2025-11-12 12:04:26,707 INFO (ClientWorker.java:379)- [fixed-120.53.89.103_8848] [subscribe] novel-gateway.yml+DEFAULT_GROUP
+2025-11-12 12:04:26,707 INFO (CacheData.java:197)- [fixed-120.53.89.103_8848] [add-listener] ok, tenant=, dataId=novel-gateway.yml, group=DEFAULT_GROUP, cnt=1
+2025-11-12 12:04:26,707 INFO (NacosContextRefresher.java:129)- [Nacos Config] Listening config: dataId=novel-gateway.yml, group=DEFAULT_GROUP
+2025-11-12 12:05:42,576 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-12 12:05:42,576 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-12 12:05:42,576 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-12 12:05:42,576 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-12 12:05:42,576 INFO (LoggingFilter.java:21)- Path: /api/front/news/latest_list
+2025-11-12 12:05:42,576 INFO (LoggingFilter.java:21)- Path: /api/front/book/newest_rank
+2025-11-12 12:05:42,576 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-12 12:05:42,576 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-12 12:05:42,576 INFO (LoggingFilter.java:21)- Path: /api/front/home/friend_Link/list
+2025-11-12 12:05:42,576 INFO (LoggingFilter.java:21)- Path: /api/front/book/visit_rank
+2025-11-12 12:05:42,576 INFO (LoggingFilter.java:21)- Path: /api/front/home/books
+2025-11-12 12:05:42,576 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-12 12:05:42,576 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-12 12:05:42,576 INFO (LoggingFilter.java:21)- Path: /api/front/book/update_rank
+2025-11-12 12:05:42,576 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-12 12:05:42,576 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-12 12:05:42,576 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-12 12:05:42,576 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-12 12:05:42,576 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"null", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-12 12:05:42,576 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"null", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-12 12:05:42,576 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"null", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-12 12:05:42,576 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"null", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-12 12:05:42,576 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"null", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-12 12:05:42,577 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-12 12:05:42,577 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-12 12:05:42,577 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-12 12:05:42,577 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-12 12:05:42,576 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"null", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-12 12:05:42,577 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-12 12:05:42,577 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-12 12:05:42,595 INFO (NamingClientProxyDelegate.java:167)- [SUBSCRIBE-SERVICE] service:novel-home-service, group:DEFAULT_GROUP, clusters: 
+2025-11-12 12:05:42,595 INFO (NamingClientProxyDelegate.java:167)- [SUBSCRIBE-SERVICE] service:novel-home-service, group:DEFAULT_GROUP, clusters: 
+2025-11-12 12:05:42,595 INFO (NamingClientProxyDelegate.java:167)- [SUBSCRIBE-SERVICE] service:novel-book-service, group:DEFAULT_GROUP, clusters: 
+2025-11-12 12:05:42,595 INFO (NamingClientProxyDelegate.java:167)- [SUBSCRIBE-SERVICE] service:novel-book-service, group:DEFAULT_GROUP, clusters: 
+2025-11-12 12:05:42,595 INFO (NamingClientProxyDelegate.java:167)- [SUBSCRIBE-SERVICE] service:novel-book-service, group:DEFAULT_GROUP, clusters: 
+2025-11-12 12:05:42,600 INFO (NamingClientProxyDelegate.java:167)- [SUBSCRIBE-SERVICE] service:novel-news-service, group:DEFAULT_GROUP, clusters: 
+2025-11-12 12:05:42,631 INFO (ServiceInfoHolder.java:184)- init new ips(0) service: DEFAULT_GROUP@@novel-book-service -> []
+2025-11-12 12:05:42,631 INFO (ServiceInfoHolder.java:184)- init new ips(0) service: DEFAULT_GROUP@@novel-home-service -> []
+2025-11-12 12:05:42,631 INFO (ServiceInfoHolder.java:184)- init new ips(0) service: DEFAULT_GROUP@@novel-book-service -> []
+2025-11-12 12:05:42,631 INFO (ServiceInfoHolder.java:169)- current ips:(0) service: DEFAULT_GROUP@@novel-home-service -> []
+2025-11-12 12:05:42,631 INFO (ServiceInfoHolder.java:169)- current ips:(0) service: DEFAULT_GROUP@@novel-book-service -> []
+2025-11-12 12:05:42,631 INFO (ServiceInfoHolder.java:169)- current ips:(0) service: DEFAULT_GROUP@@novel-book-service -> []
+2025-11-12 12:05:42,632 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-home-service
+2025-11-12 12:05:42,632 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-book-service
+2025-11-12 12:05:42,633 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-book-service
+2025-11-12 12:05:42,633 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-home-service
+2025-11-12 12:05:42,635 INFO (ServiceInfoHolder.java:184)- init new ips(0) service: DEFAULT_GROUP@@novel-news-service -> []
+2025-11-12 12:05:42,635 INFO (ServiceInfoHolder.java:169)- current ips:(0) service: DEFAULT_GROUP@@novel-news-service -> []
+2025-11-12 12:05:42,635 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-news-service
+2025-11-12 12:05:42,645 WARN (ConcurrentDiskUtil.java:152)- write DEFAULT_GROUP%40%40novel-book-service conflict;retry time: 1
+2025-11-12 12:05:42,645 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-book-service
+2025-11-12 12:05:43,165 INFO (LoggerUtils.java:60)- [cdd9dabf-a82c-4de7-8952-a5c513ccdcb9] Receive server push request, request = NotifySubscriberRequest, requestId = 28
+2025-11-12 12:05:43,166 INFO (LoggerUtils.java:60)- [cdd9dabf-a82c-4de7-8952-a5c513ccdcb9] Ack server push request, request = NotifySubscriberRequest, requestId = 28
+2025-11-12 12:05:43,168 INFO (LoggerUtils.java:60)- [cdd9dabf-a82c-4de7-8952-a5c513ccdcb9] Receive server push request, request = NotifySubscriberRequest, requestId = 27
+2025-11-12 12:05:43,168 INFO (LoggerUtils.java:60)- [cdd9dabf-a82c-4de7-8952-a5c513ccdcb9] Ack server push request, request = NotifySubscriberRequest, requestId = 27
+2025-11-12 12:05:43,170 INFO (LoggerUtils.java:60)- [cdd9dabf-a82c-4de7-8952-a5c513ccdcb9] Receive server push request, request = NotifySubscriberRequest, requestId = 26
+2025-11-12 12:05:43,170 INFO (LoggerUtils.java:60)- [cdd9dabf-a82c-4de7-8952-a5c513ccdcb9] Ack server push request, request = NotifySubscriberRequest, requestId = 26
+2025-11-12 12:05:45,639 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-12 12:05:45,639 INFO (LoggingFilter.java:21)- Path: /api/front/resource/img_verify_code
+2025-11-12 12:05:45,640 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-12 12:05:45,640 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"null", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-12 12:05:45,640 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-12 12:05:45,653 INFO (NamingClientProxyDelegate.java:167)- [SUBSCRIBE-SERVICE] service:novel-resource-service, group:DEFAULT_GROUP, clusters: 
+2025-11-12 12:05:45,772 INFO (ServiceInfoHolder.java:184)- init new ips(1) service: DEFAULT_GROUP@@novel-resource-service -> [{"ip":"10.44.77.249","port":9040,"weight":1.0,"healthy":true,"enabled":true,"ephemeral":true,"clusterName":"DEFAULT","serviceName":"DEFAULT_GROUP@@novel-resource-service","metadata":{"preserved.register.source":"SPRING_CLOUD"},"ipDeleteTimeout":30000,"instanceHeartBeatInterval":5000,"instanceHeartBeatTimeOut":15000}]
+2025-11-12 12:05:45,773 INFO (ServiceInfoHolder.java:169)- current ips:(1) service: DEFAULT_GROUP@@novel-resource-service -> [{"ip":"10.44.77.249","port":9040,"weight":1.0,"healthy":true,"enabled":true,"ephemeral":true,"clusterName":"DEFAULT","serviceName":"DEFAULT_GROUP@@novel-resource-service","metadata":{"preserved.register.source":"SPRING_CLOUD"},"ipDeleteTimeout":30000,"instanceHeartBeatInterval":5000,"instanceHeartBeatTimeOut":15000}]
+2025-11-12 12:05:45,809 ERROR (DnsServerAddressStreamProviders.java:79)- Unable to load io.netty.resolver.dns.macos.MacOSDnsServerAddressStreamProvider, fallback to system defaults. This may result in incorrect DNS resolutions on MacOS. Check whether you have a dependency on 'io.netty:netty-resolver-dns-native-macos'. Use DEBUG level to see the full stack: java.lang.UnsatisfiedLinkError: failed to load the required native library
+2025-11-12 12:05:46,199 INFO (LoggerUtils.java:60)- [cdd9dabf-a82c-4de7-8952-a5c513ccdcb9] Receive server push request, request = NotifySubscriberRequest, requestId = 29
+2025-11-12 12:05:46,200 INFO (LoggerUtils.java:60)- [cdd9dabf-a82c-4de7-8952-a5c513ccdcb9] Ack server push request, request = NotifySubscriberRequest, requestId = 29
+2025-11-12 12:05:49,382 INFO (LoggingFilter.java:29)- === GATEWAY RESPONSE ===
+2025-11-12 12:05:49,383 INFO (LoggingFilter.java:30)- Status: 200 OK
+2025-11-12 12:05:49,383 INFO (LoggingFilter.java:31)- From Gateway: true
+2025-11-12 12:06:03,487 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-12 12:06:03,488 INFO (LoggingFilter.java:21)- Path: /api/front/user/register
+2025-11-12 12:06:03,488 INFO (LoggingFilter.java:22)- Method: POST
+2025-11-12 12:06:03,488 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Content-Type:"application/json", Sec-Fetch-Site:"cross-site", Origin:"http://localhost:1024", X-Requested-With:"XMLHttpRequest", Content-Length:"2575", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"null", Referer:"http://localhost:1024/", Sec-Fetch-Dest:"empty", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-12 12:06:03,488 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-12 12:06:03,503 INFO (NamingClientProxyDelegate.java:167)- [SUBSCRIBE-SERVICE] service:novel-user-service, group:DEFAULT_GROUP, clusters: 
+2025-11-12 12:06:03,538 INFO (ServiceInfoHolder.java:184)- init new ips(1) service: DEFAULT_GROUP@@novel-user-service -> [{"ip":"10.44.77.249","port":9060,"weight":1.0,"healthy":true,"enabled":true,"ephemeral":true,"clusterName":"DEFAULT","serviceName":"DEFAULT_GROUP@@novel-user-service","metadata":{"preserved.register.source":"SPRING_CLOUD"},"ipDeleteTimeout":30000,"instanceHeartBeatInterval":5000,"instanceHeartBeatTimeOut":15000}]
+2025-11-12 12:06:03,539 INFO (ServiceInfoHolder.java:169)- current ips:(1) service: DEFAULT_GROUP@@novel-user-service -> [{"ip":"10.44.77.249","port":9060,"weight":1.0,"healthy":true,"enabled":true,"ephemeral":true,"clusterName":"DEFAULT","serviceName":"DEFAULT_GROUP@@novel-user-service","metadata":{"preserved.register.source":"SPRING_CLOUD"},"ipDeleteTimeout":30000,"instanceHeartBeatInterval":5000,"instanceHeartBeatTimeOut":15000}]
+2025-11-12 12:06:03,969 INFO (LoggingFilter.java:29)- === GATEWAY RESPONSE ===
+2025-11-12 12:06:03,969 INFO (LoggingFilter.java:30)- Status: 500 INTERNAL_SERVER_ERROR
+2025-11-12 12:06:03,969 INFO (LoggingFilter.java:31)- From Gateway: true
+2025-11-12 12:06:04,112 INFO (LoggerUtils.java:60)- [cdd9dabf-a82c-4de7-8952-a5c513ccdcb9] Receive server push request, request = NotifySubscriberRequest, requestId = 30
+2025-11-12 12:06:04,113 INFO (LoggerUtils.java:60)- [cdd9dabf-a82c-4de7-8952-a5c513ccdcb9] Ack server push request, request = NotifySubscriberRequest, requestId = 30
+2025-11-12 12:12:34,912 INFO (LoggerUtils.java:60)- [cdd9dabf-a82c-4de7-8952-a5c513ccdcb9] Receive server push request, request = NotifySubscriberRequest, requestId = 31
+2025-11-12 12:12:34,916 INFO (ServiceInfoHolder.java:241)- removed ips(1) service: DEFAULT_GROUP@@novel-user-service -> [{"ip":"10.44.77.249","port":9060,"weight":1.0,"healthy":true,"enabled":true,"ephemeral":true,"clusterName":"DEFAULT","serviceName":"DEFAULT_GROUP@@novel-user-service","metadata":{"preserved.register.source":"SPRING_CLOUD"},"ipDeleteTimeout":30000,"instanceHeartBeatInterval":5000,"instanceHeartBeatTimeOut":15000}]
+2025-11-12 12:12:34,916 INFO (ServiceInfoHolder.java:169)- current ips:(0) service: DEFAULT_GROUP@@novel-user-service -> []
+2025-11-12 12:12:34,918 INFO (LoggerUtils.java:60)- [cdd9dabf-a82c-4de7-8952-a5c513ccdcb9] Ack server push request, request = NotifySubscriberRequest, requestId = 31
+2025-11-12 12:12:41,115 INFO (LoggerUtils.java:60)- [cdd9dabf-a82c-4de7-8952-a5c513ccdcb9] Receive server push request, request = NotifySubscriberRequest, requestId = 32
+2025-11-12 12:12:41,116 INFO (ServiceInfoHolder.java:235)- new ips(1) service: DEFAULT_GROUP@@novel-user-service -> [{"ip":"10.44.77.249","port":9060,"weight":1.0,"healthy":true,"enabled":true,"ephemeral":true,"clusterName":"DEFAULT","serviceName":"DEFAULT_GROUP@@novel-user-service","metadata":{"preserved.register.source":"SPRING_CLOUD"},"ipDeleteTimeout":30000,"instanceHeartBeatInterval":5000,"instanceHeartBeatTimeOut":15000}]
+2025-11-12 12:12:41,116 INFO (ServiceInfoHolder.java:169)- current ips:(1) service: DEFAULT_GROUP@@novel-user-service -> [{"ip":"10.44.77.249","port":9060,"weight":1.0,"healthy":true,"enabled":true,"ephemeral":true,"clusterName":"DEFAULT","serviceName":"DEFAULT_GROUP@@novel-user-service","metadata":{"preserved.register.source":"SPRING_CLOUD"},"ipDeleteTimeout":30000,"instanceHeartBeatInterval":5000,"instanceHeartBeatTimeOut":15000}]
+2025-11-12 12:12:41,117 INFO (LoggerUtils.java:60)- [cdd9dabf-a82c-4de7-8952-a5c513ccdcb9] Ack server push request, request = NotifySubscriberRequest, requestId = 32
+2025-11-12 12:12:54,068 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-12 12:12:54,068 INFO (LoggingFilter.java:21)- Path: /api/front/resource/img_verify_code
+2025-11-12 12:12:54,068 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-12 12:12:54,068 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"null", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-12 12:12:54,068 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-12 12:12:54,109 INFO (LoggingFilter.java:29)- === GATEWAY RESPONSE ===
+2025-11-12 12:12:54,109 INFO (LoggingFilter.java:30)- Status: 200 OK
+2025-11-12 12:12:54,109 INFO (LoggingFilter.java:31)- From Gateway: true
+2025-11-12 12:13:06,642 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-12 12:13:06,643 INFO (LoggingFilter.java:21)- Path: /api/front/user/register
+2025-11-12 12:13:06,643 INFO (LoggingFilter.java:22)- Method: POST
+2025-11-12 12:13:06,643 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Content-Type:"application/json", Sec-Fetch-Site:"cross-site", Origin:"http://localhost:1024", X-Requested-With:"XMLHttpRequest", Content-Length:"2595", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"null", Referer:"http://localhost:1024/", Sec-Fetch-Dest:"empty", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-12 12:13:06,644 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-12 12:13:07,011 INFO (LoggingFilter.java:29)- === GATEWAY RESPONSE ===
+2025-11-12 12:13:07,011 INFO (LoggingFilter.java:30)- Status: 200 OK
+2025-11-12 12:13:07,011 INFO (LoggingFilter.java:31)- From Gateway: true
+2025-11-12 12:13:07,049 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-12 12:13:07,049 INFO (LoggingFilter.java:21)- Path: /api/front/news/latest_list
+2025-11-12 12:13:07,049 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-12 12:13:07,049 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI0In0.-V4U66jRpIQfnKma6SBy05HpGjaSuG6Htht7BdSSGl0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-12 12:13:07,049 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-12 12:13:07,050 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-12 12:13:07,050 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-news-service
+2025-11-12 12:13:07,050 INFO (LoggingFilter.java:21)- Path: /api/front/book/newest_rank
+2025-11-12 12:13:07,050 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-12 12:13:07,050 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI0In0.-V4U66jRpIQfnKma6SBy05HpGjaSuG6Htht7BdSSGl0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-12 12:13:07,050 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-12 12:13:07,050 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-12 12:13:07,050 INFO (LoggingFilter.java:21)- Path: /api/front/book/update_rank
+2025-11-12 12:13:07,050 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-12 12:13:07,051 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI0In0.-V4U66jRpIQfnKma6SBy05HpGjaSuG6Htht7BdSSGl0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-12 12:13:07,051 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-12 12:13:07,051 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-12 12:13:07,051 INFO (LoggingFilter.java:21)- Path: /api/front/home/friend_Link/list
+2025-11-12 12:13:07,051 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-12 12:13:07,051 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI0In0.-V4U66jRpIQfnKma6SBy05HpGjaSuG6Htht7BdSSGl0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-12 12:13:07,051 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-12 12:13:07,051 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-12 12:13:07,051 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-12 12:13:07,051 INFO (LoggingFilter.java:21)- Path: /api/front/book/visit_rank
+2025-11-12 12:13:07,051 INFO (LoggingFilter.java:21)- Path: /api/front/home/books
+2025-11-12 12:13:07,051 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-12 12:13:07,051 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-12 12:13:07,051 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI0In0.-V4U66jRpIQfnKma6SBy05HpGjaSuG6Htht7BdSSGl0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-12 12:13:07,051 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-12 12:13:07,051 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI0In0.-V4U66jRpIQfnKma6SBy05HpGjaSuG6Htht7BdSSGl0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-12 12:13:07,051 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-12 12:13:07,051 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-book-service
+2025-11-12 12:13:07,051 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-book-service
+2025-11-12 12:13:07,052 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-home-service
+2025-11-12 12:13:07,053 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-home-service
+2025-11-12 12:13:07,053 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-book-service
+2025-11-12 12:13:12,041 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-12 12:13:12,041 INFO (LoggingFilter.java:21)- Path: /api/front/user
+2025-11-12 12:13:12,042 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-12 12:13:12,042 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI0In0.-V4U66jRpIQfnKma6SBy05HpGjaSuG6Htht7BdSSGl0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-12 12:13:12,042 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-12 12:13:12,063 INFO (LoggingFilter.java:29)- === GATEWAY RESPONSE ===
+2025-11-12 12:13:12,064 INFO (LoggingFilter.java:30)- Status: 404 NOT_FOUND
+2025-11-12 12:13:12,064 INFO (LoggingFilter.java:31)- From Gateway: true
+2025-11-12 12:13:14,014 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-12 12:13:14,015 INFO (LoggingFilter.java:21)- Path: /api/front/user/comments
+2025-11-12 12:13:14,015 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-12 12:13:14,015 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI0In0.-V4U66jRpIQfnKma6SBy05HpGjaSuG6Htht7BdSSGl0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-12 12:13:14,015 INFO (LoggingFilter.java:24)- QueryParams: {pageNum=[0], pageSize=[10]}
+2025-11-12 12:13:14,025 INFO (LoggingFilter.java:29)- === GATEWAY RESPONSE ===
+2025-11-12 12:13:14,026 INFO (LoggingFilter.java:30)- Status: 404 NOT_FOUND
+2025-11-12 12:13:14,026 INFO (LoggingFilter.java:31)- From Gateway: true
+2025-11-12 12:13:14,599 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-12 12:13:14,599 INFO (LoggingFilter.java:21)- Path: /api/front/user
+2025-11-12 12:13:14,600 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-12 12:13:14,600 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI0In0.-V4U66jRpIQfnKma6SBy05HpGjaSuG6Htht7BdSSGl0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-12 12:13:14,600 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-12 12:13:14,607 INFO (LoggingFilter.java:29)- === GATEWAY RESPONSE ===
+2025-11-12 12:13:14,608 INFO (LoggingFilter.java:30)- Status: 404 NOT_FOUND
+2025-11-12 12:13:14,608 INFO (LoggingFilter.java:31)- From Gateway: true
+2025-11-12 12:14:05,492 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-12 12:14:05,492 INFO (LoggingFilter.java:21)- Path: /api/front/user/login
+2025-11-12 12:14:05,492 INFO (LoggingFilter.java:22)- Method: POST
+2025-11-12 12:14:05,493 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Content-Type:"application/json", Sec-Fetch-Site:"cross-site", Origin:"http://localhost:1024", X-Requested-With:"XMLHttpRequest", Content-Length:"46", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"null", Referer:"http://localhost:1024/", Sec-Fetch-Dest:"empty", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-12 12:14:05,493 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-12 12:14:05,575 INFO (LoggingFilter.java:29)- === GATEWAY RESPONSE ===
+2025-11-12 12:14:05,576 INFO (LoggingFilter.java:30)- Status: 500 INTERNAL_SERVER_ERROR
+2025-11-12 12:14:05,576 INFO (LoggingFilter.java:31)- From Gateway: true
+2025-11-12 12:14:30,866 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-12 12:14:30,867 INFO (LoggingFilter.java:21)- Path: /api/front/resource/img_verify_code
+2025-11-12 12:14:30,867 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-12 12:14:30,867 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"null", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-12 12:14:30,867 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-12 12:14:30,989 INFO (LoggingFilter.java:29)- === GATEWAY RESPONSE ===
+2025-11-12 12:14:30,989 INFO (LoggingFilter.java:30)- Status: 200 OK
+2025-11-12 12:14:30,989 INFO (LoggingFilter.java:31)- From Gateway: true
+2025-11-12 12:19:05,131 INFO (LoggerUtils.java:60)- [cdd9dabf-a82c-4de7-8952-a5c513ccdcb9] Receive server push request, request = NotifySubscriberRequest, requestId = 33
+2025-11-12 12:19:05,134 INFO (ServiceInfoHolder.java:241)- removed ips(1) service: DEFAULT_GROUP@@novel-user-service -> [{"ip":"10.44.77.249","port":9060,"weight":1.0,"healthy":true,"enabled":true,"ephemeral":true,"clusterName":"DEFAULT","serviceName":"DEFAULT_GROUP@@novel-user-service","metadata":{"preserved.register.source":"SPRING_CLOUD"},"ipDeleteTimeout":30000,"instanceHeartBeatInterval":5000,"instanceHeartBeatTimeOut":15000}]
+2025-11-12 12:19:05,135 INFO (ServiceInfoHolder.java:169)- current ips:(0) service: DEFAULT_GROUP@@novel-user-service -> []
+2025-11-12 12:19:05,135 INFO (LoggerUtils.java:60)- [cdd9dabf-a82c-4de7-8952-a5c513ccdcb9] Ack server push request, request = NotifySubscriberRequest, requestId = 33
+2025-11-12 12:19:25,845 INFO (LoggerUtils.java:60)- [cdd9dabf-a82c-4de7-8952-a5c513ccdcb9] Receive server push request, request = NotifySubscriberRequest, requestId = 34
+2025-11-12 12:19:25,845 INFO (ServiceInfoHolder.java:235)- new ips(1) service: DEFAULT_GROUP@@novel-user-service -> [{"ip":"10.44.77.249","port":9060,"weight":1.0,"healthy":true,"enabled":true,"ephemeral":true,"clusterName":"DEFAULT","serviceName":"DEFAULT_GROUP@@novel-user-service","metadata":{"preserved.register.source":"SPRING_CLOUD"},"ipDeleteTimeout":30000,"instanceHeartBeatInterval":5000,"instanceHeartBeatTimeOut":15000}]
+2025-11-12 12:19:25,846 INFO (ServiceInfoHolder.java:169)- current ips:(1) service: DEFAULT_GROUP@@novel-user-service -> [{"ip":"10.44.77.249","port":9060,"weight":1.0,"healthy":true,"enabled":true,"ephemeral":true,"clusterName":"DEFAULT","serviceName":"DEFAULT_GROUP@@novel-user-service","metadata":{"preserved.register.source":"SPRING_CLOUD"},"ipDeleteTimeout":30000,"instanceHeartBeatInterval":5000,"instanceHeartBeatTimeOut":15000}]
+2025-11-12 12:19:25,846 INFO (LoggerUtils.java:60)- [cdd9dabf-a82c-4de7-8952-a5c513ccdcb9] Ack server push request, request = NotifySubscriberRequest, requestId = 34
+2025-11-12 12:19:39,166 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-12 12:19:39,167 INFO (LoggingFilter.java:21)- Path: /api/front/user/login
+2025-11-12 12:19:39,167 INFO (LoggingFilter.java:22)- Method: POST
+2025-11-12 12:19:39,167 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Content-Type:"application/json", Sec-Fetch-Site:"cross-site", Origin:"http://localhost:1024", X-Requested-With:"XMLHttpRequest", Content-Length:"46", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"null", Referer:"http://localhost:1024/", Sec-Fetch-Dest:"empty", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-12 12:19:39,167 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-12 12:19:39,364 INFO (LoggingFilter.java:29)- === GATEWAY RESPONSE ===
+2025-11-12 12:19:39,364 INFO (LoggingFilter.java:30)- Status: 200 OK
+2025-11-12 12:19:39,364 INFO (LoggingFilter.java:31)- From Gateway: true
+2025-11-12 12:19:39,389 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-12 12:19:39,389 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-12 12:19:39,389 INFO (LoggingFilter.java:21)- Path: /api/front/book/visit_rank
+2025-11-12 12:19:39,389 INFO (LoggingFilter.java:21)- Path: /api/front/news/latest_list
+2025-11-12 12:19:39,389 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-12 12:19:39,389 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-12 12:19:39,389 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiIxIn0.bjqJ6Rp6PzZ0Y9Sjk53ITn2y-O6eilxNmcKtb2CKrg0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-12 12:19:39,389 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiIxIn0.bjqJ6Rp6PzZ0Y9Sjk53ITn2y-O6eilxNmcKtb2CKrg0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-12 12:19:39,389 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-12 12:19:39,389 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-12 12:19:39,389 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-book-service
+2025-11-12 12:19:39,390 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-12 12:19:39,390 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-news-service
+2025-11-12 12:19:39,390 INFO (LoggingFilter.java:21)- Path: /api/front/book/newest_rank
+2025-11-12 12:19:39,390 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-12 12:19:39,390 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiIxIn0.bjqJ6Rp6PzZ0Y9Sjk53ITn2y-O6eilxNmcKtb2CKrg0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-12 12:19:39,390 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-12 12:19:39,390 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-12 12:19:39,390 INFO (LoggingFilter.java:21)- Path: /api/front/book/update_rank
+2025-11-12 12:19:39,390 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-12 12:19:39,390 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-12 12:19:39,390 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-book-service
+2025-11-12 12:19:39,390 INFO (LoggingFilter.java:21)- Path: /api/front/home/friend_Link/list
+2025-11-12 12:19:39,390 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiIxIn0.bjqJ6Rp6PzZ0Y9Sjk53ITn2y-O6eilxNmcKtb2CKrg0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-12 12:19:39,390 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-12 12:19:39,390 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiIxIn0.bjqJ6Rp6PzZ0Y9Sjk53ITn2y-O6eilxNmcKtb2CKrg0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-12 12:19:39,390 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-12 12:19:39,391 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-12 12:19:39,391 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-12 12:19:39,391 INFO (LoggingFilter.java:21)- Path: /api/front/home/books
+2025-11-12 12:19:39,391 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-12 12:19:39,391 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiIxIn0.bjqJ6Rp6PzZ0Y9Sjk53ITn2y-O6eilxNmcKtb2CKrg0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-12 12:19:39,391 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-12 12:19:39,391 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-home-service
+2025-11-12 12:19:39,391 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-book-service
+2025-11-12 12:19:39,391 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-home-service
+2025-11-12 13:00:53,771 WARN (NotifyCenter.java:136)- [NotifyCenter] Start destroying Publisher
+2025-11-12 13:00:53,771 WARN (HttpClientBeanHolder.java:102)- [HttpClientBeanHolder] Start destroying common HttpClient
+2025-11-12 13:00:53,771 WARN (NotifyCenter.java:153)- [NotifyCenter] Destruction of the end
+2025-11-12 13:00:53,772 WARN (HttpClientBeanHolder.java:111)- [HttpClientBeanHolder] Destruction of the end
+2025-11-12 13:00:53,775 INFO (NacosServiceRegistry.java:95)- De-registering from Nacos Server now...
+2025-11-12 13:00:53,775 INFO (NamingGrpcClientProxy.java:216)- [DEREGISTER-SERVICE] public deregistering service novel-gateway with instance: Instance{instanceId='null', ip='10.44.77.249', port=8888, weight=1.0, healthy=true, enabled=true, ephemeral=true, clusterName='DEFAULT', serviceName='null', metadata={}}
+2025-11-12 13:00:53,812 INFO (NacosServiceRegistry.java:115)- De-registration finished.
+2025-11-12 13:00:53,812 INFO (ServiceInfoHolder.java:256)- com.alibaba.nacos.client.naming.cache.ServiceInfoHolder do shutdown begin
+2025-11-12 13:00:53,812 INFO (FailoverReactor.java:133)- com.alibaba.nacos.client.naming.backups.FailoverReactor do shutdown begin
+2025-11-12 13:00:53,812 INFO (FailoverReactor.java:135)- com.alibaba.nacos.client.naming.backups.FailoverReactor do shutdown stop
+2025-11-12 13:00:53,812 INFO (ServiceInfoHolder.java:258)- com.alibaba.nacos.client.naming.cache.ServiceInfoHolder do shutdown stop
+2025-11-12 13:00:53,813 INFO (NamingClientProxyDelegate.java:204)- com.alibaba.nacos.client.naming.remote.NamingClientProxyDelegate do shutdown begin
+2025-11-12 13:00:53,813 INFO (ServiceInfoUpdateService.java:143)- com.alibaba.nacos.client.naming.core.ServiceInfoUpdateService do shutdown begin
+2025-11-12 13:00:53,813 INFO (ServiceInfoUpdateService.java:145)- com.alibaba.nacos.client.naming.core.ServiceInfoUpdateService do shutdown stop
+2025-11-12 13:00:53,813 INFO (ServerListManager.java:194)- com.alibaba.nacos.client.naming.core.ServerListManager do shutdown begin
+2025-11-12 13:00:53,813 WARN (NamingHttpClientManager.java:74)- [NamingHttpClientManager] Start destroying NacosRestTemplate
+2025-11-12 13:00:53,813 WARN (NamingHttpClientManager.java:81)- [NamingHttpClientManager] Destruction of the end
+2025-11-12 13:00:53,813 INFO (ServerListManager.java:199)- com.alibaba.nacos.client.naming.core.ServerListManager do shutdown stop
+2025-11-12 13:00:53,813 INFO (NamingHttpClientProxy.java:484)- com.alibaba.nacos.client.naming.remote.http.NamingHttpClientProxy do shutdown begin
+2025-11-12 13:00:53,813 WARN (NamingHttpClientManager.java:74)- [NamingHttpClientManager] Start destroying NacosRestTemplate
+2025-11-12 13:00:53,813 WARN (NamingHttpClientManager.java:81)- [NamingHttpClientManager] Destruction of the end
+2025-11-12 13:00:53,813 INFO (NamingHttpClientProxy.java:486)- com.alibaba.nacos.client.naming.remote.http.NamingHttpClientProxy do shutdown stop
+2025-11-12 13:00:53,813 INFO (RpcClient.java:425)- Shutdown rpc client, set status to shutdown
+2025-11-12 13:00:53,813 INFO (RpcClient.java:427)- Shutdown client event executor java.util.concurrent.ScheduledThreadPoolExecutor@225a9d14[Running, pool size = 2, active threads = 2, queued tasks = 0, completed tasks = 0]
+2025-11-12 13:00:53,813 INFO (RpcClient.java:580)- Close current connection 1762920266575_222.171.7.84_3790
+2025-11-12 13:00:53,814 INFO (GrpcClient.java:140)- Shutdown grpc executor java.util.concurrent.ThreadPoolExecutor@63edbc5c[Running, pool size = 4, active threads = 0, queued tasks = 0, completed tasks = 397]
+2025-11-12 13:00:53,814 INFO (NamingGrpcRedoService.java:292)- Shutdown grpc redo service executor java.util.concurrent.ScheduledThreadPoolExecutor@177fe771[Running, pool size = 1, active threads = 0, queued tasks = 1, completed tasks = 334]
+2025-11-12 13:00:53,814 INFO (CredentialWatcher.java:106)- [null] CredentialWatcher is stopped
+2025-11-12 13:00:53,814 INFO (CredentialService.java:100)- [null] CredentialService is freed
+2025-11-12 13:00:53,814 INFO (NamingClientProxyDelegate.java:211)- com.alibaba.nacos.client.naming.remote.NamingClientProxyDelegate do shutdown stop
+2025-11-12 13:00:54,153 INFO (CredentialWatcher.java:165)- null No credential found
