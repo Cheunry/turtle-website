@@ -2,10 +2,12 @@ package com.novel.user.dao.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
+import lombok.Data;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
+@Data
 public class UserInfo implements Serializable {
     private static final long serialVersionUID = 1L;
 
@@ -14,17 +16,17 @@ public class UserInfo implements Serializable {
     private Long id;
 
 //    登录名
-    private String userName;
+    private String username;
 //    登录密码-加密
     private String password;
 //    加密盐值
     private String salt;
 //    昵称
-    private String niceName;
+    private String nickName;
 //    头像：存储头像图片路径或URL，所以类型为String
     private String userPhoto;
 //    0-男，1-女
-    private Integer sex;
+    private Integer userSex;
 //    用户账户余额（单位可选）
     private Long accountBalance;
 //    0-正常
@@ -38,12 +40,12 @@ public class UserInfo implements Serializable {
         this.id = id;
     }
 
-    public String getUserName() {
-        return userName;
+    public String getUsername() {
+        return username;
     }
 
-    public void setUserName(String userName) {
-        this.userName = userName;
+    public void setUsername(String username) {
+        this.username = username;
     }
 
     public String getPassword() {
@@ -62,12 +64,12 @@ public class UserInfo implements Serializable {
         this.salt = salt;
     }
 
-    public String getNiceName() {
-        return niceName;
+    public String getNikeName() {
+        return nickName;
     }
 
     public void setNiceName(String niceName) {
-        this.niceName = niceName;
+        this.nickName = niceName;
     }
 
     public String getUserPhoto() {
@@ -78,12 +80,12 @@ public class UserInfo implements Serializable {
         this.userPhoto = userPhoto;
     }
 
-    public Integer getSex() {
-        return sex;
+    public Integer getUserSex() {
+        return userSex;
     }
 
-    public void setSex(Integer sex) {
-        this.sex = sex;
+    public void setUserSex(Integer userSex) {
+        this.userSex = userSex;
     }
 
     public Long getAccountBalance() {
@@ -127,12 +129,12 @@ public class UserInfo implements Serializable {
     public String toString() {
         return "UserInfo{" +
                 "id=" + id +
-                ", userName='" + userName + '\'' +
+                ", userName='" + username + '\'' +
                 ", password='" + password + '\'' +
                 ", salt='" + salt + '\'' +
-                ", niceName='" + niceName + '\'' +
+                ", niceName='" + nickName + '\'' +
                 ", userPhoto='" + userPhoto + '\'' +
-                ", sex=" + sex +
+                ", userSex=" + userSex +
                 ", accountBalance=" + accountBalance +
                 ", status=" + status +
                 ", createTime=" + createTime +

@@ -12,8 +12,6 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 /**
  * 分布式锁 注解
  *
- * @author xiongxiaoyang
- * @date 2022/6/20
  */
 @Documented
 @Retention(RUNTIME)
