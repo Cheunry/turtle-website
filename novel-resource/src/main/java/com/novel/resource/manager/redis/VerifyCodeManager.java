@@ -29,10 +29,10 @@ public class VerifyCodeManager {
      * 生成图形验证码，并放入 Redis 中
      */
     public String genImgVerifyCode(String sessionId) throws IOException {
-        String verifyCode = ImgVerifyCodeUtils.getRandomVerifyCode(4);
-        String img = ImgVerifyCodeUtils.genVerifyCodeImg(verifyCode);
+        String verifyCode = ImgVerifyCodeUtils.getRandomVerifyCode(4);//实时生成验证码文本
+        String img = ImgVerifyCodeUtils.genVerifyCodeImg(verifyCode);//基于文本生成验证码的图片
         stringRedisTemplate.opsForValue().set(CacheConsts.IMG_VERIFY_CODE_CACHE_KEY + sessionId,
-                verifyCode, Duration.ofMinutes(5));
+                verifyCode, Duration.ofMinutes(5));//将验证码文本存入Redis
         return img;
     }
 

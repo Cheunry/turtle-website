@@ -17,7 +17,7 @@ public class UserInfoUptReqDto {
     private String nickName;
 
     @Schema(description = "头像地址")
-    @Pattern(regexp="^/[^\s]{10,}\\.(png|PNG|jpg|JPG|jpeg|JPEG|gif|GIF|bpm|BPM)$")
+    @Pattern(regexp = "^/[^\s]{10,}\\.(png|PNG|jpg|JPG|jpeg|JPEG|gif|GIF|bpm|BPM)$")
     private String userPhoto;
 
     @Schema(description = "性别")

@@ -4,10 +4,12 @@ import com.novel.common.auth.UserHolder;
 import com.novel.common.constant.ApiRouterConsts;
 import com.novel.common.constant.SystemConfigConsts;
 import com.novel.common.resp.RestResp;
+import com.novel.user.dto.req.UserInfoUptReqDto;
 import com.novel.user.dto.req.UserLoginReqDto;
 import com.novel.user.dto.req.UserRegisterReqDto;
 import com.novel.user.dto.resp.UserInfoRespDto;
 import com.novel.user.dto.resp.UserLoginRespDto;
+import com.novel.user.dto.resp.UserRegisterRespDto;
 import com.novel.user.service.UserService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -27,15 +29,15 @@ public class FrontUserController {
 
     @Operation(summary = "用户注册接口")
     @PostMapping("register")
-    public RestResp register(@Valid @RequestBody UserRegisterReqDto userRegisterReqDto) {
-        return userService.register(userRegisterReqDto);
+    public RestResp<UserRegisterRespDto> register(@Valid @RequestBody UserRegisterReqDto dto) {
+        return userService.register(dto);
     }
 
     @Operation(summary = "用户登录接口")
     @PostMapping("login")
-    public RestResp<UserLoginRespDto> login(@Valid @RequestBody UserLoginReqDto userLoginReqDto) {
-        System.out.println(userLoginReqDto);
-        return userService.login(userLoginReqDto);
+    public RestResp<UserLoginRespDto> login(@Valid @RequestBody UserLoginReqDto dto) {
+        System.out.println(dto);
+        return userService.login(dto);
     }
 
     @Operation(summary = "用户信息查询接口")
@@ -43,5 +45,14 @@ public class FrontUserController {
     public RestResp<UserInfoRespDto> getUserInfo() {
         return userService.getUserInfo(UserHolder.getUserId());
     }
+
+
+    @Operation(summary = "用户信息修改接口")
+    @PutMapping
+    public RestResp<Void> updateUserInfo(@Valid @RequestBody UserInfoUptReqDto dto) {
+        dto.setUserId(UserHolder.getUserId());
+        return userService.updateUserInfo(dto);
+    }
+
 
 }

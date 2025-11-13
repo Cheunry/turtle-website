@@ -117,15 +117,14 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public RestResp<Void> updateUserInfo(UserInfoUptReqDto userInfoUptReqDto) {
+    public RestResp<Void> updateUserInfo(UserInfoUptReqDto dto) {
         UserInfo userInfo = new UserInfo();
-        userInfo.setId(userInfoUptReqDto.getUserId());
-        userInfo.setNickName(userInfoUptReqDto.getNickName());
-        userInfo.setUserPhoto(userInfoUptReqDto.getUserPhoto());
-        userInfo.setUserSex(userInfoUptReqDto.getUserSex());
+        userInfo.setId(dto.getUserId());
+        log.info("要修改信息的用户ID: {}", dto.getUserId());
+        userInfo.setNickName(dto.getNickName());
+        userInfo.setUserPhoto(dto.getUserPhoto());
+        userInfo.setUserSex(dto.getUserSex());
         userInfoMapper.updateById(userInfo);
         return RestResp.ok();
     }
-
-
 }
