@@ -27,9 +27,6 @@ import java.util.Objects;
 
 /**
  * 资源（图片/视频/文档）相关服务实现类
- *
- * @author xiongxiaoyang
- * @date 2022/5/17
  */
 @Service
 @RequiredArgsConstructor
@@ -43,16 +40,24 @@ public class ResourceServiceImpl implements ResourceService {
 
     @Override
     public RestResp<ImgVerifyCodeRespDto> getImgVerifyCode() throws IOException {
+
         String sessionId = IdWorker.get32UUID();
+
         return RestResp.ok(ImgVerifyCodeRespDto.builder()
                 .sessionId(sessionId)
                 .img(verifyCodeManager.genImgVerifyCode(sessionId))
                 .build());
     }
 
+    /**
+     * 用于上传图片到本地文件夹
+     * @param file 文件夹的名字
+     * @return 给用户的反馈信息
+     */
     @SneakyThrows
     @Override
     public RestResp<String> uploadImage(MultipartFile file) {
+
         LocalDateTime now = LocalDateTime.now();
         String savePath =
                 SystemConfigConsts.IMAGE_UPLOAD_DIRECTORY
@@ -63,6 +68,7 @@ public class ResourceServiceImpl implements ResourceService {
         assert oriName != null;
         String saveFileName = IdWorker.get32UUID() + oriName.substring(oriName.lastIndexOf("."));
         File saveFile = new File(fileUploadPath + savePath, saveFileName);
+
         if (!saveFile.getParentFile().exists()) {
             boolean isSuccess = saveFile.getParentFile().mkdirs();
             if (!isSuccess) {
@@ -70,11 +76,13 @@ public class ResourceServiceImpl implements ResourceService {
             }
         }
         file.transferTo(saveFile);
+
         if (Objects.isNull(ImageIO.read(saveFile))) {
             // 上传的文件不是图片
             Files.delete(saveFile.toPath());
             throw new BusinessException(ErrorCodeEnum.USER_UPLOAD_FILE_TYPE_NOT_MATCH);
         }
+
         return RestResp.ok(savePath + File.separator + saveFileName);
     }
 

@@ -7,6 +7,8 @@
         <module>novel-gateway</module>
         <module>novel-user</module>
         <module>novel-resource</module>
+        <module>novel-home</module>
+        <module>novel-book</module>
     </modules>
     <parent>
         <groupId>org.springframework.boot</groupId>

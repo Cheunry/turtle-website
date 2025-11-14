@@ -46,13 +46,10 @@ public class FrontUserController {
         return userService.getUserInfo(UserHolder.getUserId());
     }
 
-
     @Operation(summary = "用户信息修改接口")
     @PutMapping
     public RestResp<Void> updateUserInfo(@Valid @RequestBody UserInfoUptReqDto dto) {
         dto.setUserId(UserHolder.getUserId());
         return userService.updateUserInfo(dto);
     }
-
-
 }
