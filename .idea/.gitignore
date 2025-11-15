@@ -7,5 +7,5 @@
 /dataSources/
 /dataSources.local.xml
 
-/doc/git.md
+doc/docker/.env
 
