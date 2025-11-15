@@ -10,10 +10,8 @@ import com.novel.config.exception.BusinessException;
 import com.novel.user.dao.entity.UserInfo;
 import com.novel.user.dao.mapper.UserInfoMapper;
 import com.novel.user.dto.req.UserInfoUptReqDto;
-import com.novel.user.dto.req.UserLoginReqDto;
 import com.novel.user.dto.req.UserRegisterReqDto;
 import com.novel.user.dto.resp.UserInfoRespDto;
-import com.novel.user.dto.resp.UserLoginRespDto;
 import com.novel.user.dto.resp.UserRegisterRespDto;
 import com.novel.user.manager.redis.VerifyCodeManager;
 import com.novel.user.service.UserService;
@@ -77,31 +75,6 @@ public class UserServiceImpl implements UserService {
 
     }
 
-    @Override
-    public RestResp<UserLoginRespDto> login(UserLoginReqDto dto) {
-        // 查询用户信息
-        QueryWrapper<UserInfo> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq(DatabaseConsts.UserInfoTable.COLUMN_USERNAME, dto.getUsername())
-                .last(DatabaseConsts.SqlEnum.LIMIT_1.getSql());
-        UserInfo userInfo = userInfoMapper.selectOne(queryWrapper);
-        if (Objects.isNull(userInfo)) {
-            // 用户不存在
-            throw new BusinessException(ErrorCodeEnum.USER_ACCOUNT_NOT_EXIST);
-        }
-
-        // 判断密码是否正确
-        if (!Objects.equals(userInfo.getPassword()
-                , DigestUtils.md5DigestAsHex(dto.getPassword().getBytes(StandardCharsets.UTF_8)))) {
-            // 密码错误
-            throw new BusinessException(ErrorCodeEnum.USER_PASSWORD_ERROR);
-        }
-
-        // 登录成功，生成JWT并返回
-        return RestResp.ok(UserLoginRespDto.builder()
-                .token(JwtUtils.generateToken(userInfo.getId(), SystemConfigConsts.NOVEL_FRONT_KEY))
-                .uid(userInfo.getId())
-                .nickName(userInfo.getNickName()).build());
-    }
 
     @Override
     public RestResp<UserInfoRespDto> getUserInfo(Long userId) {

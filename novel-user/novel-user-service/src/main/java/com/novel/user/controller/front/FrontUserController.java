@@ -10,6 +10,7 @@ import com.novel.user.dto.req.UserRegisterReqDto;
 import com.novel.user.dto.resp.UserInfoRespDto;
 import com.novel.user.dto.resp.UserLoginRespDto;
 import com.novel.user.dto.resp.UserRegisterRespDto;
+import com.novel.user.service.UserLoginService;
 import com.novel.user.service.UserService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -26,6 +27,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class FrontUserController {
     private final UserService userService;
+    private final UserLoginService userLoginService;
 
     @Operation(summary = "用户注册接口")
     @PostMapping("register")
@@ -37,7 +39,7 @@ public class FrontUserController {
     @PostMapping("login")
     public RestResp<UserLoginRespDto> login(@Valid @RequestBody UserLoginReqDto dto) {
         System.out.println(dto);
-        return userService.login(dto);
+        return userLoginService.login(dto);
     }
 
     @Operation(summary = "用户信息查询接口")

@@ -80,6 +80,15 @@ spring:
               # 分片算法的行表达式
               algorithm-expression: book_content$->{chapter_id % 10}
 
+--- #---------------------存储桶配置---------------------------
+tencent:
+  cos:
+    secret-id: ${TENCENT_COS_SECRET_ID}
+    secret-key: ${TENCENT_COS_SECRET_KEY}
+    region: ${TENCENT_COS_REGION}  # 冒号后是默认值
+    bucket-name: ${TENCENT_COS_BUCKET_NAME}
+    base-url: https://${tencent.cos.bucket-name}.cos.${tencent.cos.region}.myqcloud.com
+
 --- #---------------------中间件配置---------------------------
 spring:
   data:
