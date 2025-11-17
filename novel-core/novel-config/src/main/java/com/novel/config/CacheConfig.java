@@ -18,12 +18,12 @@ import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.cache.RedisCacheWriter;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.RedisSerializationContext;
+import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 /**
  * 缓存配置类
- *
- * @author xiongxiaoyang
- * @date 2022/5/12
  */
 @Configuration
 public class CacheConfig {
@@ -41,7 +41,7 @@ public class CacheConfig {
         for (var c : CacheConsts.CacheEnum.values()) {
             if (c.isLocal()) {
                 Caffeine<Object, Object> caffeine = Caffeine.newBuilder().recordStats()
-                    .maximumSize(c.getMaxSize());
+                        .maximumSize(c.getMaxSize());
                 if (c.getTtl() > 0) {
                     caffeine.expireAfterWrite(Duration.ofSeconds(c.getTtl()));
                 }
@@ -59,31 +59,42 @@ public class CacheConfig {
     @Bean
     public CacheManager redisCacheManager(RedisConnectionFactory connectionFactory) {
         RedisCacheWriter redisCacheWriter = RedisCacheWriter.nonLockingRedisCacheWriter(
-            connectionFactory);
+                connectionFactory);
+
+        RedisSerializationContext.SerializationPair<String> keyPair =
+                RedisSerializationContext.SerializationPair.fromSerializer(
+                        new StringRedisSerializer());
+        RedisSerializationContext.SerializationPair<Object> valuePair =
+                RedisSerializationContext.SerializationPair.fromSerializer(
+                        new GenericJackson2JsonRedisSerializer());
 
         RedisCacheConfiguration defaultCacheConfig = RedisCacheConfiguration.defaultCacheConfig()
-            .disableCachingNullValues().prefixCacheNameWith(CacheConsts.REDIS_CACHE_PREFIX);
+                .disableCachingNullValues()
+                .prefixCacheNameWith(CacheConsts.REDIS_CACHE_PREFIX)
+                .serializeKeysWith(keyPair)
+                .serializeValuesWith(valuePair);
+
+//        RedisCacheConfiguration defaultCacheConfig = RedisCacheConfiguration.defaultCacheConfig()
+//                .disableCachingNullValues()
+//                .prefixCacheNameWith(CacheConsts.REDIS_CACHE_PREFIX);
+
 
         Map<String, RedisCacheConfiguration> cacheMap = new LinkedHashMap<>(
-            CacheConsts.CacheEnum.values().length);
+                CacheConsts.CacheEnum.values().length);
         // 类型推断 var 非常适合 for 循环，JDK 10 引入，JDK 11 改进
         for (var c : CacheConsts.CacheEnum.values()) {
             if (c.isRemote()) {
                 if (c.getTtl() > 0) {
                     cacheMap.put(c.getName(),
-                        RedisCacheConfiguration.defaultCacheConfig().disableCachingNullValues()
-                            .prefixCacheNameWith(CacheConsts.REDIS_CACHE_PREFIX)
-                            .entryTtl(Duration.ofSeconds(c.getTtl())));
+                            defaultCacheConfig.entryTtl(Duration.ofSeconds(c.getTtl())));
                 } else {
-                    cacheMap.put(c.getName(),
-                        RedisCacheConfiguration.defaultCacheConfig().disableCachingNullValues()
-                            .prefixCacheNameWith(CacheConsts.REDIS_CACHE_PREFIX));
+                    cacheMap.put(c.getName(), defaultCacheConfig);
                 }
             }
         }
 
         RedisCacheManager redisCacheManager = new RedisCacheManager(redisCacheWriter,
-            defaultCacheConfig, cacheMap);
+                defaultCacheConfig, cacheMap);
         redisCacheManager.setTransactionAware(true);
         redisCacheManager.initializeCaches();
         return redisCacheManager;

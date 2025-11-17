@@ -15,8 +15,6 @@
     <modules>
         <module>novel-book-api</module>
         <module>novel-book-service</module>
-        <module>novel-book-api</module>
-        <module>novel-book-service</module>
     </modules>
 
     <dependencyManagement>

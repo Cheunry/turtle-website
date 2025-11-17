@@ -5,13 +5,11 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
-import java.io.Serializable;
 import java.time.LocalDateTime;
 
 @Data
 @TableName("user_info")
-public class UserInfo implements Serializable {
-    private static final long serialVersionUID = 1L;
+public class UserInfo {
 
 //    以下注解是MyBatis-plus注解，设置了id作为主键，采取主键自增策略，让数据库自动生成id
     @TableId(value = "id", type = IdType.AUTO)
