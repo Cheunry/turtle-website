@@ -69,11 +69,8 @@ public class CacheConfig {
         // 创建ObjectMapper并配置（参考 novel-user-service 的做法）
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
-        // 使用默认的 DefaultTyping（默认是 PROPERTY 格式，不指定第三个参数）
-        objectMapper.activateDefaultTyping(
-            LaissezFaireSubTypeValidator.instance,
-            ObjectMapper.DefaultTyping.NON_FINAL
-        );
+
+
         // 添加 Java 8 时间模块支持
         objectMapper.findAndRegisterModules();
         // 忽略未知属性
