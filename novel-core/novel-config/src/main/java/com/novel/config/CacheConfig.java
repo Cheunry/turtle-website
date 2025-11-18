@@ -1,5 +1,10 @@
 package com.novel.config;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.PropertyAccessor;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.novel.common.constant.CacheConsts;
 
@@ -18,7 +23,7 @@ import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.cache.RedisCacheWriter;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
@@ -61,23 +66,37 @@ public class CacheConfig {
         RedisCacheWriter redisCacheWriter = RedisCacheWriter.nonLockingRedisCacheWriter(
                 connectionFactory);
 
+        // 创建ObjectMapper并配置（参考 novel-user-service 的做法）
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
+        // 使用默认的 DefaultTyping（默认是 PROPERTY 格式，不指定第三个参数）
+        objectMapper.activateDefaultTyping(
+            LaissezFaireSubTypeValidator.instance,
+            ObjectMapper.DefaultTyping.NON_FINAL
+        );
+        // 添加 Java 8 时间模块支持
+        objectMapper.findAndRegisterModules();
+        // 忽略未知属性
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        // 允许空值处理
+        objectMapper.configure(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES, false);
+
+        // 使用 Jackson2JsonRedisSerializer（参考 novel-user-service）
+        Jackson2JsonRedisSerializer<Object> jsonRedisSerializer =
+                new Jackson2JsonRedisSerializer<>(objectMapper, Object.class);
+
         RedisSerializationContext.SerializationPair<String> keyPair =
                 RedisSerializationContext.SerializationPair.fromSerializer(
                         new StringRedisSerializer());
         RedisSerializationContext.SerializationPair<Object> valuePair =
                 RedisSerializationContext.SerializationPair.fromSerializer(
-                        new GenericJackson2JsonRedisSerializer());
+                        jsonRedisSerializer);
 
         RedisCacheConfiguration defaultCacheConfig = RedisCacheConfiguration.defaultCacheConfig()
                 .disableCachingNullValues()
                 .prefixCacheNameWith(CacheConsts.REDIS_CACHE_PREFIX)
                 .serializeKeysWith(keyPair)
                 .serializeValuesWith(valuePair);
-
-//        RedisCacheConfiguration defaultCacheConfig = RedisCacheConfiguration.defaultCacheConfig()
-//                .disableCachingNullValues()
-//                .prefixCacheNameWith(CacheConsts.REDIS_CACHE_PREFIX);
-
 
         Map<String, RedisCacheConfiguration> cacheMap = new LinkedHashMap<>(
                 CacheConsts.CacheEnum.values().length);
@@ -99,5 +118,4 @@ public class CacheConfig {
         redisCacheManager.initializeCaches();
         return redisCacheManager;
     }
-
 }

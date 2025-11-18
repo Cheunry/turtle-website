@@ -43,40 +43,42 @@ services:
 #    networks:
 #      - novelnet
 #
-#  novel-elasticsearch:
-#    container_name: novel-elasticsearch
-#    image: elasticsearch:${ELASTIC_VERSION}
-#    restart: always
-#    hostname: novel-elasticsearch
-#    environment:
-#      - "ES_JAVA_OPTS=-Xms125m -Xmx512m"
-#      - discovery.type=single-node
-#      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
-#      - KIBANA_PASSWORD=${KIBANA_PASSWORD}
-#      - xpack.security.http.ssl.enabled=false
-#    ports:
-#      - "9200:9200"
-#    depends_on:
-#      - novel-elasticsearch-setup
-#    networks:
-#      - novelnet
-#
-#  novel-kibana:
-#    container_name: novel-kibana
-#    image: kibana:${KIBANA_VERSION}
-#    restart: always
-#    hostname: novel-kibana
-#    environment:
-#      - ELASTICSEARCH_HOSTS=http://novel-elasticsearch:9200
-#      - ELASTICSEARCH_USERNAME=kibana_system
-#      - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD}
-#    #      - ELASTICSEARCH_SSL_VERIFICATIONMODE=none
-#    ports:
-#      - "5601:5601"
-#    depends_on:
-#      - novel-elasticsearch
-#    networks:
-#      - novelnet
+  novel-elasticsearch:
+    container_name: novel-elasticsearch
+    image: elasticsearch:${ELASTIC_VERSION}
+    restart: unless-stopped
+    hostname: novel-elasticsearch
+    environment:
+      - "ES_JAVA_OPTS=-Xms256m -Xmx1024m"
+      - discovery.type=single-node
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+      - KIBANA_PASSWORD=${KIBANA_PASSWORD}
+      - xpack.security.http.ssl.enabled=false
+    ports:
+      - "52578:9200"
+    volumes:
+      - ../volumes/elasticsearch/data # 持久化存储
+    depends_on:
+      - novel-elasticsearch-setup
+    networks:
+      - common-network
+
+  novel-kibana:
+    container_name: novel-kibana
+    image: kibana:${KIBANA_VERSION}
+    restart: always
+    hostname: novel-kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://novel-elasticsearch:9200
+      - ELASTICSEARCH_USERNAME=kibana_system
+      - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD}
+      - ELASTICSEARCH_SSL_VERIFICATIONMODE=none
+    ports:
+      - "52579:5601"
+    depends_on:
+      - novel-elasticsearch
+    networks:
+      - common-network
 #
 #  novel-xxl-job-admin:
 #    container_name: novel-xxl-job-admin

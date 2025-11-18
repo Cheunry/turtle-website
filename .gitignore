@@ -36,6 +36,8 @@ build/
 
 ### Mac OS ###
 .DS_Store.env
-.env
-doc/docker/.env
-novel-core/novel-config/src/main/resources/.env
+
+# 环境变量文件 - 忽略所有位置的 .env 文件
+**/.env
+**/resources/application-*
+**/bootstrap-*
