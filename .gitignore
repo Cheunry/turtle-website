@@ -1,13 +1,9 @@
-target/
+# Maven
+**/target/
 !.mvn/wrapper/maven-wrapper.jar
-!**/src/main/**/target/
-!**/src/test/**/target/
 
 ### IntelliJ IDEA ###
-.idea/modules.xml
-.idea/jarRepositories.xml
-.idea/compiler.xml
-.idea/libraries/
+.idea/
 *.iws
 *.iml
 *.ipr
@@ -35,15 +31,26 @@ build/
 .vscode/
 
 ### Mac OS ###
-.DS_Store.env
+.DS_Store
 
-# 忽略 doc 目录下的所有文件
-**/doc/*
-
-# 忽略 logs 目录下的所有文件
-**/logs/*
-
-# 环境变量文件 - 忽略所有位置的 .env 文件
+# 环境变量文件
 **/.env
 **/resources/application-*
 **/bootstrap-*
+
+# 忽略 doc 目录（如果不需要提交文档）
+# **/doc/
+
+# 忽略 logs 目录
+logs/
+**/logs/
+
+# 编译产物
+*.jar
+*.war
+*.ear
+*.class
+
+# 日志文件
+*.log
+*.log.*
