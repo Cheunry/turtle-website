@@ -37,13 +37,13 @@ build/
 ### Mac OS ###
 .DS_Store.env
 
-# 环境变量文件 - 忽略所有位置的 .env 文件
 # 忽略 doc 目录下的所有文件
-doc/
+**/doc/*
 
 # 忽略 logs 目录下的所有文件
-logs/
+**/logs/*
 
+# 环境变量文件 - 忽略所有位置的 .env 文件
 **/.env
 **/resources/application-*
 **/bootstrap-*
