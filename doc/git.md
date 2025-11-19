@@ -7,3 +7,9 @@ git pull origin main
 
 从提交历史中删除某文件但是保留本地文件
 git rm --cached doc/docker/.env
+
+# 从暂存区移除，但保留工作区修改
+git reset filename.txt
+
+# 从暂存区移除所有文件
+git reset
