@@ -13,8 +13,6 @@ import org.springframework.web.servlet.HandlerInterceptor;
 /**
  * Token 解析拦截器
  *
- * @author xiongxiaoyang
- * @date 2022/5/27
  */
 @Component
 @RequiredArgsConstructor
@@ -23,7 +21,7 @@ public class TokenParseInterceptor implements HandlerInterceptor {
     @SuppressWarnings("NullableProblems")
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response,
-        Object handler) throws Exception {
+                             Object handler) throws Exception {
         // 获取登录 JWT
         String token = request.getHeader(SystemConfigConsts.HTTP_AUTH_HEADER_NAME);
         if (StringUtils.hasText(token)) {
@@ -39,7 +37,7 @@ public class TokenParseInterceptor implements HandlerInterceptor {
     @SuppressWarnings("NullableProblems")
     @Override
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex)
-        throws Exception {
+            throws Exception {
         // 清理当前线程保存的用户数据
         UserHolder.clear();
         HandlerInterceptor.super.afterCompletion(request, response, handler, ex);

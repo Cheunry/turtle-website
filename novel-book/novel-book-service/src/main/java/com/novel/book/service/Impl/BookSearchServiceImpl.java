@@ -1,38 +1,51 @@
 package com.novel.book.service.Impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.novel.common.constant.DatabaseConsts;
 import com.novel.book.dao.entity.BookInfo;
 import com.novel.book.dao.mapper.BookInfoMapper;
-import com.novel.book.dto.req.BookSearchReqDto;
-import lombok.Getter;
+import com.novel.book.dto.resp.BookCategoryRespDto;
+import com.novel.book.dto.resp.BookInfoRespDto;
+import com.novel.book.manager.cache.BookCategoryCacheManager;
+import com.novel.book.manager.cache.BookInfoCacheManager;
+import com.novel.common.constant.DatabaseConsts;
+import com.novel.common.resp.RestResp;
 import com.novel.book.service.BookSearchService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
-@Getter
+@Service
+@RequiredArgsConstructor
 public class BookSearchServiceImpl implements BookSearchService {
 
 
+    private final BookInfoCacheManager bookInfoCacheManager;
+    private final BookCategoryCacheManager bookCategoryCacheManager;
     private final BookInfoMapper bookInfoMapper;
 
-    public BookSearchServiceImpl(BookInfoMapper bookInfoMapper) {
-        this.bookInfoMapper = bookInfoMapper;
+    @Override
+    public RestResp<BookInfoRespDto> getBookById(Long bookId) {
+        return RestResp.ok(bookInfoCacheManager.getBookInfo(bookId));
     }
 
     @Override
-    public List<BookInfo> searchByBookName(BookSearchReqDto dto) {
-        String inputString = dto.getInputString();
-        /*
-          QueryWrapper：可以理解为"SQL查询语句的构建器"
-          <BookInfo>：指定要查询的是"书籍信息"表
-          这行代码相当于：我要开始构建一个查询书籍表的SQL语句了
-         */
-        QueryWrapper<BookInfo> queryWrapper = new QueryWrapper<>();
-        queryWrapper.like(DatabaseConsts.BookTable.COLUMN_BOOK_NAME,inputString)
-                .orderByDesc(DatabaseConsts.BookTable.COLUMN_WORD_COUNT)
-                .last("limit 20");
-        return bookInfoMapper.selectList(queryWrapper);
+    public RestResp<List<BookCategoryRespDto>> listCategory(Integer workDirection) {
+        return RestResp.ok(bookCategoryCacheManager.listCategory(workDirection));
+    }
 
+    @Override
+    public RestResp<List<BookInfoRespDto>> listBookInfoByIds(List<Long> bookIds) {
+        QueryWrapper<BookInfo> queryWrapper = new QueryWrapper<>();
+        queryWrapper.in(DatabaseConsts.CommonColumnEnum.ID.getName(), bookIds);
+        return RestResp.ok(
+                bookInfoMapper.selectList(queryWrapper).stream().map(v -> BookInfoRespDto.builder()
+                        .id(v.getId())
+                        .bookName(v.getBookName())
+                        .authorName(v.getAuthorName())
+                        .picUrl(v.getPicUrl())
+                        .bookDesc(v.getBookDesc())
+                        .build()).collect(Collectors.toList()));
     }
 }

@@ -1,7 +1,7 @@
 package com.novel.home.manager.feign;
 
 import com.novel.book.dto.resp.BookInfoRespDto;
-import com.novel.book.manager.feign.ListBookFeign;
+import com.novel.book.manager.feign.BookFeign;
 import com.novel.common.constant.ErrorCodeEnum;
 import com.novel.common.resp.RestResp;
 import lombok.AllArgsConstructor;
@@ -17,10 +17,10 @@ import java.util.Objects;
 @Component
 @AllArgsConstructor
 public class HomeBookFeignManager {
-    private final ListBookFeign listBookFeign;
+    private final BookFeign bookFeign;
 
     public List<BookInfoRespDto> listBookInfoById (List<Long> bookIds) {
-        RestResp<List<BookInfoRespDto>> resp = listBookFeign.listBookInfoById(bookIds);
+        RestResp<List<BookInfoRespDto>> resp = bookFeign.listBookInfoByIds(bookIds);
         if(Objects.equals(ErrorCodeEnum.OK.getCode(), resp.getCode())) {
             return resp.getData();
         }

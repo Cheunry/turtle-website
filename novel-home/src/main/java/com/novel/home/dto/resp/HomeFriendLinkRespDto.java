@@ -3,8 +3,6 @@ package com.novel.home.dto.resp;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
-import java.io.Serializable;
-
 /**
  * 首页友情链接-响应Dto
  */
