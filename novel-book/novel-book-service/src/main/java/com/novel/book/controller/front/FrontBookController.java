@@ -5,6 +5,7 @@ import com.novel.book.dto.resp.BookCategoryRespDto;
 import com.novel.book.dto.resp.BookInfoRespDto;
 import com.novel.book.dto.resp.BookRankRespDto;
 import com.novel.book.manager.cache.BookRankCacheManager;
+import com.novel.book.service.BookListSearchService;
 import com.novel.book.service.BookSearchService;
 import com.novel.common.constant.ApiRouterConsts;
 import com.novel.common.resp.RestResp;
@@ -27,7 +28,7 @@ import java.util.List;
 public class FrontBookController {
 
     private final BookSearchService bookSearchService;
-    private final BookRankCacheManager bookRankCacheManager;
+    private final BookListSearchService bookListSearchService;
 
     /**
      * 小说分类列表查询接口
@@ -36,16 +37,17 @@ public class FrontBookController {
     @GetMapping("category/list")
     public RestResp<List<BookCategoryRespDto>> listCategory(
             @Parameter(description = "作品方向", required = true) Integer workDirection) {
-        return bookSearchService.listCategory(workDirection);
+        return bookListSearchService.listCategory(workDirection);
     }
+
 
     /**
      * 小说点击榜查询接口
      */
     @Operation(summary = "小说点击榜查询接口")
     @GetMapping("visit_rank")
-    public RestResp<List<BookRankRespDto>> listVisitRank() {
-        return RestResp.ok(bookRankCacheManager.listVisitRankBooks());
+    public RestResp<List<BookRankRespDto>> listVisitRankBooks() {
+        return bookListSearchService.listVisitRankBooks();
     }
 
     /**
@@ -53,8 +55,8 @@ public class FrontBookController {
      */
     @Operation(summary = "小说新书榜查询接口")
     @GetMapping("newest_rank")
-    public RestResp<List<BookRankRespDto>> listNewestRank() {
-        return RestResp.ok(bookRankCacheManager.listNewestRankBooks());
+    public RestResp<List<BookRankRespDto>> listNewestRankBooks() {
+        return bookListSearchService.listNewestRankBooks();
     }
 
     /**
@@ -62,8 +64,8 @@ public class FrontBookController {
      */
     @Operation(summary = "小说更新榜查询接口")
     @GetMapping("update_rank")
-    public RestResp<List<BookRankRespDto>> listUpdateRank() {
-        return RestResp.ok(bookRankCacheManager.listUpdateRankBooks());
+    public RestResp<List<BookRankRespDto>> listUpdateRankBooks() {
+        return bookListSearchService.listUpdateRankBooks();
     }
 
     /**

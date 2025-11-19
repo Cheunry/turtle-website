@@ -3,9 +3,7 @@ package com.novel.book.service.Impl;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.novel.book.dao.entity.BookInfo;
 import com.novel.book.dao.mapper.BookInfoMapper;
-import com.novel.book.dto.resp.BookCategoryRespDto;
 import com.novel.book.dto.resp.BookInfoRespDto;
-import com.novel.book.manager.cache.BookCategoryCacheManager;
 import com.novel.book.manager.cache.BookInfoCacheManager;
 import com.novel.common.constant.DatabaseConsts;
 import com.novel.common.resp.RestResp;
@@ -22,7 +20,6 @@ public class BookSearchServiceImpl implements BookSearchService {
 
 
     private final BookInfoCacheManager bookInfoCacheManager;
-    private final BookCategoryCacheManager bookCategoryCacheManager;
     private final BookInfoMapper bookInfoMapper;
 
     @Override
@@ -30,10 +27,6 @@ public class BookSearchServiceImpl implements BookSearchService {
         return RestResp.ok(bookInfoCacheManager.getBookInfo(bookId));
     }
 
-    @Override
-    public RestResp<List<BookCategoryRespDto>> listCategory(Integer workDirection) {
-        return RestResp.ok(bookCategoryCacheManager.listCategory(workDirection));
-    }
 
     @Override
     public RestResp<List<BookInfoRespDto>> listBookInfoByIds(List<Long> bookIds) {

@@ -1,15 +1,10 @@
 package com.novel.book.service;
-
-import com.novel.book.dao.entity.BookInfo;
-import com.novel.book.dto.req.BookSearchReqDto;
-import com.novel.book.dto.resp.BookCategoryRespDto;
 import com.novel.book.dto.resp.BookInfoRespDto;
 import com.novel.common.resp.RestResp;
 
 import java.util.List;
 
 public interface BookSearchService {
-
 
     /**
      * 小说信息查询
@@ -19,17 +14,9 @@ public interface BookSearchService {
      */
     RestResp<BookInfoRespDto> getBookById(Long bookId);
 
-    /**
-     * 小说分类列表查询
-     *
-     * @param workDirection 作品方向;0-男频 1-女频
-     * @return 分类列表
-     */
-    RestResp<List<BookCategoryRespDto>> listCategory(Integer workDirection);
-
 
     /**
-     * 批量查询小说信息
+     * 小说信息查询--批量
      *
      * @param bookIds 小说ID列表
      * @return 小说信息列表
