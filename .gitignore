@@ -38,8 +38,9 @@ build/
 **/resources/application-*
 **/bootstrap-*
 
-# 忽略 doc 目录（如果不需要提交文档）
-# **/doc/
+# 忽略 doc 目录
+doc/
+**/doc/
 
 # 忽略 logs 目录
 logs/
