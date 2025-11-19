@@ -13,3 +13,9 @@ git reset filename.txt
 
 # 从暂存区移除所有文件
 git reset
+
+# 查看暂存区中的所有文件
+git ls-files --stage
+
+# 简略查看暂存区文件
+git ls-files -s
