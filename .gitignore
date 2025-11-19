@@ -55,3 +55,4 @@ logs/
 # 日志文件
 *.log
 *.log.*
+.DS_Store
