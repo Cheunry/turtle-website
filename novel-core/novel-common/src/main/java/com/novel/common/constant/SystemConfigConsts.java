@@ -2,9 +2,6 @@ package com.novel.common.constant;
 
 /**
  * 系统配置相关常量
- *
- * @author xiongxiaoyang
- * @date 2022/5/12
  */
 public class SystemConfigConsts {
 
@@ -41,5 +38,7 @@ public class SystemConfigConsts {
      * 常量类实例化异常信息
      */
     public static final String CONST_INSTANCE_EXCEPTION_MSG = "Constant class";
+
+
 
 }

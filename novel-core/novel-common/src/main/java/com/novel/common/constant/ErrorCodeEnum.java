@@ -60,9 +60,17 @@ public enum ErrorCodeEnum {
     USER_ACCOUNT_NOT_EXIST("A0201", "用户账号不存在"),
 
     /**
+     * 登录限制
+     */
+    USER_LOGIN_LIMIT("A0202", "登录尝试次数过多，请稍后再试"),
+
+    /**
      * 用户密码错误
      */
     USER_PASSWORD_ERROR("A0210", "用户密码错误"),
+
+
+
 
     /**
      * 二级宏观错误码，用户请求参数错误

@@ -1,19 +1,17 @@
 package com.novel.user.service;
 
-import org.springframework.stereotype.Service;
+import com.novel.common.resp.RestResp;
+import com.novel.user.dto.UserInfoDto;
+import com.novel.user.dto.req.UserLoginReqDto;
+import com.novel.user.dto.resp.UserLoginRespDto;
 
-@Service
-public class UserLoginService {
-    public UserLoginService() {
+public interface UserLoginService {
+    /**
+     * 用户登录
+     *
+     * @param dto 登录参数
+     * @return JWT + 昵称
+     */
+    RestResp<UserLoginRespDto> login(UserLoginReqDto dto);
 
-    }
-
-    public  String login(String username, String password) {
-        if(username == null || password == null) {
-            return "fuck u";
-        } else if(username == "pie") {
-            return "pie fuck me";
-        }
-        return "你不是小饼，不能提供服务";
-    }
 }

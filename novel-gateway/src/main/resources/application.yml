@@ -21,10 +21,6 @@ spring:
           uri: lb://novel-resource-service
           predicates:
             - Path=/api/front/resource/**
-        - id: novel-resource-image
-          uri: lb://novel-resource-service
-          predicates:
-            - Path=/image/**
         - id: novel-user-front
           uri: lb://novel-user-service
           predicates:

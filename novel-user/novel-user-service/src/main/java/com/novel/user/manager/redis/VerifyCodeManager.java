@@ -1,7 +1,6 @@
 package com.novel.user.manager.redis;
 
 import com.novel.common.constant.CacheConsts;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
@@ -9,11 +8,14 @@ import org.springframework.stereotype.Component;
 import java.util.Objects;
 
 @Component
-@RequiredArgsConstructor
 @Slf4j
 public class VerifyCodeManager {
 
     private final StringRedisTemplate stringRedisTemplate;
+
+    public VerifyCodeManager(StringRedisTemplate stringRedisTemplate) {
+        this.stringRedisTemplate = stringRedisTemplate;
+    }
 
     /**
      * 校验图形验证码

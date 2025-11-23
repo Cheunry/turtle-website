@@ -9,24 +9,22 @@ import com.novel.common.resp.RestResp;
 import com.novel.config.exception.BusinessException;
 import com.novel.user.dao.entity.UserInfo;
 import com.novel.user.dao.mapper.UserInfoMapper;
-import com.novel.user.dto.req.UserLoginReqDto;
 import com.novel.user.dto.req.UserRegisterReqDto;
-import com.novel.user.dto.resp.UserInfoRespDto;
-import com.novel.user.dto.resp.UserLoginRespDto;
 import com.novel.user.dto.resp.UserRegisterRespDto;
 import com.novel.user.manager.redis.VerifyCodeManager;
-import com.novel.user.service.UserService;
+import com.novel.user.service.UserRegisterService;
+import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
-import java.util.Objects;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
-public class UserServiceImpl implements UserService {
+public class UserRegisterServiceImpl implements UserRegisterService {
 
     private final UserInfoMapper userInfoMapper;
 
@@ -71,43 +69,7 @@ public class UserServiceImpl implements UserService {
                         .uid(userInfo.getId())
                         .build()
         );
-    }
-
-
-    @Override
-    public RestResp<UserLoginRespDto> login(UserLoginReqDto userLoginReqDto) {
-//        查询用户信息
-        QueryWrapper<UserInfo> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq(DatabaseConsts.UserInfoTable.COLUMN_USERNAME, userLoginReqDto.getUsername())
-                .last(DatabaseConsts.SqlEnum.LIMIT_1.getSql());
-        UserInfo userInfo = userInfoMapper.selectOne(queryWrapper);
-//        用户不存在
-        if (Objects.isNull(userInfo)) {
-            throw new BusinessException(ErrorCodeEnum.USER_ACCOUNT_NOT_EXIST);
-        }
-//        判断密码是否正确
-        if(!Objects.equals(userInfo.getPassword(),
-                DigestUtils.md5DigestAsHex(userLoginReqDto.getPassword().getBytes(StandardCharsets.UTF_8)))) {
-            throw new BusinessException(ErrorCodeEnum.USER_PASSWORD_ERROR);
-        }
-
-//        登录成功
-        return RestResp.ok(UserLoginRespDto.builder()
-                .token(JwtUtils.generateToken(userInfo.getId(), SystemConfigConsts.NOVEL_FRONT_KEY))
-                .userId(userInfo.getId())
-                .nickName(userInfo.getNickName())
-                .build()
-        );
 
     }
 
-    public RestResp<UserInfoRespDto> getUserInfo(Long userId) {
-        UserInfo userInfo = userInfoMapper.selectById(userId);
-        return RestResp.ok(UserInfoRespDto.builder()
-                .nickName(userInfo.getUsername())
-                .userSex(userInfo.getUserSex())
-                .userPhoto(userInfo.getUserPhoto())
-                .build()
-        );
-    }
 }

@@ -6,6 +6,6 @@
     <file url="file://$PROJECT_DIR$/doc/sql/init.sql" value="36fce95c-f910-4766-903a-b48a6793d234" />
     <file url="file://$PROJECT_DIR$/doc/sql/insert.sql" value="36fce95c-f910-4766-903a-b48a6793d234" />
     <file url="file://$PROJECT_DIR$/doc/sql/novel_struc.sql" value="36fce95c-f910-4766-903a-b48a6793d234" />
-    <file url="file://$PROJECT_DIR$/doc/sql/turtle.sql" value="36fce95c-f910-4766-903a-b48a6793d234" />
+    <file url="file://$PROJECT_DIR$/novel-book/novel-book-service/src/main/resources/mapper/BookInfoMapper.xml" value="36fce95c-f910-4766-903a-b48a6793d234" />
   </component>
 </project>

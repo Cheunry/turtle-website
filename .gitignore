@@ -1,13 +1,9 @@
-target/
+# Maven
+**/target/
 !.mvn/wrapper/maven-wrapper.jar
-!**/src/main/**/target/
-!**/src/test/**/target/
 
 ### IntelliJ IDEA ###
-.idea/modules.xml
-.idea/jarRepositories.xml
-.idea/compiler.xml
-.idea/libraries/
+.idea/
 *.iws
 *.iml
 *.ipr
@@ -36,3 +32,23 @@ build/
 
 ### Mac OS ###
 .DS_Store
+
+# 环境变量文件
+**/.env
+**/application.yml
+**/bootstrap.yml
+
+
+# 忽略 logs 目录
+logs/
+**/logs/
+
+# 编译产物
+*.jar
+*.war
+*.ear
+*.class
+
+# 日志文件
+*.log
+*.log.*
