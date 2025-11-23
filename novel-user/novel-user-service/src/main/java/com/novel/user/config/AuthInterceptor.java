@@ -1,13 +1,12 @@
 package com.novel.user.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.novel.common.auth.JwtUtils;
 import com.novel.common.auth.UserHolder;
 import com.novel.common.constant.ErrorCodeEnum;
 import com.novel.common.constant.SystemConfigConsts;
 import com.novel.config.exception.BusinessException;
 import com.novel.user.dto.UserInfoDto;
-import com.novel.user.manager.cache.UserInfoCacheManager;
+import com.novel.user.manager.cache.UserCacheManager;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -28,7 +27,7 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class AuthInterceptor implements HandlerInterceptor {
 
-    private final UserInfoCacheManager userInfoCacheManager;
+    private final UserCacheManager userCacheManager;
     private final CacheManager redisCacheManager;
 
     /**
@@ -51,7 +50,7 @@ public class AuthInterceptor implements HandlerInterceptor {
             // token 解析失败
             throw new BusinessException(ErrorCodeEnum.USER_LOGIN_EXPIRED);
         }
-        UserInfoDto userInfoDto = userInfoCacheManager.getUserAndPutToCache(userId);
+        UserInfoDto userInfoDto = userCacheManager.getUserAndPutToCache(userId);
 
         if (Objects.isNull(userInfoDto)) {
             // 用户不存在

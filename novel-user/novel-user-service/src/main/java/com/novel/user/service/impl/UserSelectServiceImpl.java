@@ -4,7 +4,7 @@ import com.novel.common.resp.RestResp;
 import com.novel.user.dao.entity.UserInfo;
 import com.novel.user.dao.mapper.UserInfoMapper;
 import com.novel.user.dto.resp.UserInfoRespDto;
-import com.novel.user.manager.cache.UserInfoCacheManager;
+import com.novel.user.manager.cache.UserCacheManager;
 import com.novel.user.service.UserSelectService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -16,12 +16,12 @@ import java.util.Objects;
 public class UserSelectServiceImpl implements UserSelectService {
 
     private final UserInfoMapper userInfoMapper;
-    private final UserInfoCacheManager userInfoCacheManager;
+    private final UserCacheManager userCacheManager;
 
     @Override
     public RestResp<UserInfoRespDto> getUserInfo(Long userId) {
 
-        userInfoCacheManager.getUserOrPutToCache(userId);
+        userCacheManager.getUserOrPutToCache(userId);
 
         UserInfo userInfo = userInfoMapper.selectById(userId);
 

@@ -19,7 +19,7 @@ import java.util.Objects;
 @Service
 @Component
 @RequiredArgsConstructor
-public class UserInfoCacheManager {
+public class UserCacheManager {
 
     private final UserInfoMapper userInfoMapper;
 
