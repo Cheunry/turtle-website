@@ -8,6 +8,7 @@ import com.novel.common.constant.CacheConsts;
 import com.novel.common.constant.DatabaseConsts;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -21,8 +22,8 @@ public class BookCategoryCacheManager {
     /**
      * 根据作品方向查询小说分类列表，并放入缓存中
      */
-    @Cacheable(cacheManager = CacheConsts.REDIS_CACHE_MANAGER_PLAIN,
-            value = CacheConsts.BOOK_CATEGORY_LIST_CACHE_NAME)
+//    @Cacheable(cacheManager = CacheConsts.REDIS_CACHE_MANAGER_PLAIN,
+//            value = CacheConsts.BOOK_CATEGORY_LIST_CACHE_NAME)
     public List<BookCategoryRespDto> listCategory(Integer workDirection) {
         QueryWrapper<BookCategory> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq(DatabaseConsts.BookCategoryTable.COLUMN_WORK_DIRECTION, workDirection);

@@ -1,13 +1,19 @@
 package com.novel.book.manager.cache;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.novel.book.dao.entity.BookInfo;
 import com.novel.book.dao.mapper.BookInfoMapper;
 import com.novel.book.dto.resp.BookRankRespDto;
 import com.novel.common.constant.CacheConsts;
 import com.novel.common.constant.DatabaseConsts;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cache.annotation.Cacheable;
+import com.novel.config.RedisConfig;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 import java.util.List;
 
@@ -17,22 +23,33 @@ public class BookRankCacheManager {
 
     private final BookInfoMapper bookInfoMapper;
 
+//    private final RedisTemplate<String, String> stringRedisTemplate;
+//
+//
+//    public BookRankCacheManager(BookInfoMapper bookInfoMapper,
+//                                @Qualifier("stringRedisTemplate") RedisTemplate<String, String> stringRedisTemplate) {
+//        this.bookInfoMapper = bookInfoMapper;
+//        this.stringRedisTemplate = stringRedisTemplate;
+//    }
+
+
     /**
      * 查询小说点击榜列表，并放入缓存中
      */
-    @Cacheable(cacheManager = CacheConsts.REDIS_CACHE_MANAGER_PLAIN,
-            value = CacheConsts.BOOK_VISIT_RANK_CACHE_NAME)
+//    @Cacheable(cacheManager = CacheConsts.REDIS_CACHE_MANAGER_PLAIN,
+//            value = CacheConsts.BOOK_VISIT_RANK_CACHE_NAME)
     public List<BookRankRespDto> listVisitRankBooks() {
         QueryWrapper<BookInfo> bookInfoQueryWrapper = new QueryWrapper<>();
         bookInfoQueryWrapper.orderByDesc(DatabaseConsts.BookTable.COLUMN_VISIT_COUNT);
+
         return listRankBooks(bookInfoQueryWrapper);
     }
 
     /**
      * 查询小说新书榜列表，并放入缓存中
      */
-    @Cacheable(cacheManager = CacheConsts.REDIS_CACHE_MANAGER_PLAIN,
-            value = CacheConsts.BOOK_NEWEST_RANK_CACHE_NAME)
+//    @Cacheable(cacheManager = CacheConsts.REDIS_CACHE_MANAGER_PLAIN,
+//            value = CacheConsts.BOOK_NEWEST_RANK_CACHE_NAME)
     public List<BookRankRespDto> listNewestRankBooks() {
         QueryWrapper<BookInfo> bookInfoQueryWrapper = new QueryWrapper<>();
         bookInfoQueryWrapper
@@ -44,8 +61,8 @@ public class BookRankCacheManager {
     /**
      * 查询小说更新榜列表，并放入缓存中
      */
-    @Cacheable(cacheManager = CacheConsts.REDIS_CACHE_MANAGER_PLAIN,
-            value = CacheConsts.BOOK_UPDATE_RANK_CACHE_NAME)
+//    @Cacheable(cacheManager = CacheConsts.REDIS_CACHE_MANAGER_PLAIN,
+//            value = CacheConsts.BOOK_UPDATE_RANK_CACHE_NAME)
     public List<BookRankRespDto> listUpdateRankBooks() {
         QueryWrapper<BookInfo> bookInfoQueryWrapper = new QueryWrapper<>();
         bookInfoQueryWrapper

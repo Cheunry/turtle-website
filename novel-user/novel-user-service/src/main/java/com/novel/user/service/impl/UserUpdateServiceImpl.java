@@ -46,4 +46,5 @@ public class UserUpdateServiceImpl implements UserUpdateService {
 
         return RestResp.ok();
     }
+
 }

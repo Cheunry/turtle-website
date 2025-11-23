@@ -132,7 +132,7 @@ public class CacheConfig {
         RedisCacheWriter redisCacheWriter = RedisCacheWriter.nonLockingRedisCacheWriter(
                 connectionFactory);
 
-        // 创建ObjectMapper并配置（参考 novel-user-service 的做法）
+        // 创建ObjectMapper并配置
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
 
