@@ -2,10 +2,12 @@ package com.novel.book.controller.front;
 
 
 import com.novel.book.dto.resp.BookCategoryRespDto;
+import com.novel.book.dto.resp.BookContentAboutRespDto;
 import com.novel.book.dto.resp.BookInfoRespDto;
 import com.novel.book.dto.resp.BookRankRespDto;
 import com.novel.book.manager.cache.BookRankCacheManager;
 import com.novel.book.service.BookListSearchService;
+import com.novel.book.service.BookReadService;
 import com.novel.book.service.BookSearchService;
 import com.novel.common.constant.ApiRouterConsts;
 import com.novel.common.resp.RestResp;
@@ -29,6 +31,7 @@ public class FrontBookController {
 
     private final BookSearchService bookSearchService;
     private final BookListSearchService bookListSearchService;
+    private final BookReadService bookReadService;
 
     /**
      * 小说分类列表查询接口
@@ -39,7 +42,6 @@ public class FrontBookController {
             @Parameter(description = "作品方向", required = true) Integer workDirection) {
         return bookListSearchService.listCategory(workDirection);
     }
-
 
     /**
      * 小说点击榜查询接口
@@ -77,4 +79,15 @@ public class FrontBookController {
             @Parameter(description = "小说 ID") @PathVariable("id") Long bookId) {
         return bookSearchService.getBookById(bookId);
     }
+
+    /**
+     * 小说内容相关信息查询接口
+     */
+    @Operation(summary = "小说内容相关信息查询接口")
+    @GetMapping("content/{chapterId}")
+    public RestResp<BookContentAboutRespDto> getBookContentAbout(
+            @Parameter(description = "章节ID") @PathVariable("chapterId") Long chapterId) {
+        return bookReadService.getBookContentAbout(chapterId);
+    }
+
 }

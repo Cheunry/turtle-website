@@ -6,7 +6,6 @@ import lombok.Data;
 
 /**
  * 小说分类 响应DTO
-
  */
 @Data
 @Builder

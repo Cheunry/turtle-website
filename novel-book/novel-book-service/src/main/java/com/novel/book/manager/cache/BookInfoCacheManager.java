@@ -31,8 +31,8 @@ public class BookInfoCacheManager {
  *          存在则直接从缓存中取，
      *      否则执行方法体中的逻辑后缓存结果）
      */
-    @Cacheable(cacheManager = CacheConsts.REDIS_CACHE_MANAGER_PLAIN,
-            value = CacheConsts.BOOK_INFO_CACHE_NAME)
+//    @Cacheable(cacheManager = CacheConsts.REDIS_CACHE_MANAGER_PLAIN,
+//            value = CacheConsts.BOOK_INFO_CACHE_NAME)
     public BookInfoRespDto getBookInfo(Long id) {
         return cachePutBookInfo(id);
     }
@@ -41,8 +41,8 @@ public class BookInfoCacheManager {
      * 缓存小说信息
      * （不管缓存中是否存在都执行方法体中的逻辑，然后缓存起来）
      */
-    @CachePut(cacheManager = CacheConsts.REDIS_CACHE_MANAGER_PLAIN,
-            value = CacheConsts.BOOK_INFO_CACHE_NAME)
+//    @CachePut(cacheManager = CacheConsts.REDIS_CACHE_MANAGER_PLAIN,
+//            value = CacheConsts.BOOK_INFO_CACHE_NAME)
     public BookInfoRespDto cachePutBookInfo(Long id) {
         // 查询基础信息
         BookInfo bookInfo = bookInfoMapper.selectById(id);
@@ -72,8 +72,8 @@ public class BookInfoCacheManager {
                 .build();
     }
 
-    @CacheEvict(cacheManager = CacheConsts.REDIS_CACHE_MANAGER_PLAIN,
-            value = CacheConsts.BOOK_INFO_CACHE_NAME)
+//    @CacheEvict(cacheManager = CacheConsts.REDIS_CACHE_MANAGER_PLAIN,
+//            value = CacheConsts.BOOK_INFO_CACHE_NAME)
     public void evictBookInfoCache(Long ignoredId) {
         // 调用此方法自动清除小说信息的缓存
     }
