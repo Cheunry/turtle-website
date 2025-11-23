@@ -11,12 +11,11 @@ import com.novel.user.dao.entity.UserInfo;
 import com.novel.user.dao.mapper.UserInfoMapper;
 import com.novel.user.dto.req.UserLoginReqDto;
 import com.novel.user.dto.resp.UserLoginRespDto;
-import com.novel.user.manager.cache.UserInfoCacheManager;
+import com.novel.user.manager.cache.UserCacheManager;
 import com.novel.user.manager.redis.RedisKeyConstants;
 import com.novel.user.service.UserLoginService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
@@ -32,14 +31,12 @@ public class UserLoginServiceImpl implements UserLoginService {
     private final UserInfoMapper userInfoMapper;
 
     private final RedisTemplate<String, Object> redisTemplate;
-//    private final UserInfoCacheManager userInfoCacheManager;
 
 
     public UserLoginServiceImpl(UserInfoMapper userInfoMapper,
-                                @Qualifier("turtleRedisTemplate") RedisTemplate<String, Object> redisTemplate, UserInfoCacheManager userInfoCacheManager){
+                                @Qualifier("turtleRedisTemplate") RedisTemplate<String, Object> redisTemplate, UserCacheManager userCacheManager){
         this.userInfoMapper = userInfoMapper;
         this.redisTemplate = redisTemplate;
-//        this.userInfoCacheManager = userInfoCacheManager;
     }
 
     @Override
@@ -76,7 +73,6 @@ public class UserLoginServiceImpl implements UserLoginService {
         }
 
         // 登录成功，清除失败记录并生成token
-//        userInfoCacheManager.getUserAndPutToCache(userInfo.getId());
         clearLoginFailureRecord(username);
         return buildLoginSuccessResponse(userInfo);
     }

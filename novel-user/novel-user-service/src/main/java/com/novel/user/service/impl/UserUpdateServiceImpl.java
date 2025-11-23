@@ -4,7 +4,7 @@ import com.novel.common.resp.RestResp;
 import com.novel.user.dao.entity.UserInfo;
 import com.novel.user.dao.mapper.UserInfoMapper;
 import com.novel.user.dto.req.UserInfoUptReqDto;
-import com.novel.user.manager.cache.UserInfoCacheManager;
+import com.novel.user.manager.cache.UserCacheManager;
 import com.novel.user.service.UserUpdateService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -16,11 +16,11 @@ import java.time.LocalDateTime;
 public class UserUpdateServiceImpl implements UserUpdateService {
 
     private final UserInfoMapper userInfoMapper;
-    private final UserInfoCacheManager userInfoCacheManager;
+    private final UserCacheManager userCacheManager;
 
-    public UserUpdateServiceImpl(UserInfoMapper userInfoMapper, UserInfoCacheManager userInfoCacheManager) {
+    public UserUpdateServiceImpl(UserInfoMapper userInfoMapper, UserCacheManager userCacheManager) {
         this.userInfoMapper = userInfoMapper;
-        this.userInfoCacheManager = userInfoCacheManager;
+        this.userCacheManager = userCacheManager;
     }
 
 
@@ -39,9 +39,10 @@ public class UserUpdateServiceImpl implements UserUpdateService {
         userInfoMapper.updateById(userInfo);
 
         //  删除redis中对应的key
-        userInfoCacheManager.evictUserInfo(userInfo.getId());
+        userCacheManager.evictUserInfo(userInfo.getId());
 
-//        userInfoCacheManager.getUserAndPutToCache(userInfo.getId());
+        //  向redis中放入新的key
+        userCacheManager.getUserAndPutToCache(userInfo.getId());
 
         return RestResp.ok();
     }

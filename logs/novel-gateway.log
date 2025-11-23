@@ -1693,3 +1693,570 @@
 2025-11-23 12:02:47,775 INFO (CredentialService.java:100)- [null] CredentialService is freed
 2025-11-23 12:02:47,776 INFO (NamingClientProxyDelegate.java:211)- com.alibaba.nacos.client.naming.remote.NamingClientProxyDelegate do shutdown stop
 2025-11-23 12:02:48,240 INFO (CredentialWatcher.java:165)- null No credential found
+2025-11-23 14:26:46,212 WARN (NacosLogging.java:64)- Load Logback Configuration of Nacos fail, message: org/slf4j/impl/StaticLoggerBinder
+2025-11-23 14:26:46,214 WARN (NacosLogging.java:64)- Load Logback Configuration of Nacos fail, message: org/slf4j/impl/StaticLoggerBinder
+2025-11-23 14:26:46,221 INFO (LocalConfigInfoProcessor.java:68)- LOCAL_SNAPSHOT_PATH:/Users/cheunry/nacos/config
+2025-11-23 14:26:46,223 INFO (RpcClientFactory.java:94)- [RpcClientFactory] create a new rpc client of 97913f1c-312f-4811-b4c0-a1663a2d7182_config-0
+2025-11-23 14:26:46,229 INFO (LoggerUtils.java:60)- [97913f1c-312f-4811-b4c0-a1663a2d7182_config-0] Register server push request handler:com.alibaba.nacos.client.config.impl.ClientWorker$ConfigRpcTransportClient$$Lambda$566/0x000000700136b568
+2025-11-23 14:26:46,229 INFO (LoggerUtils.java:60)- [97913f1c-312f-4811-b4c0-a1663a2d7182_config-0] Register server push request handler:com.alibaba.nacos.client.config.impl.ClientWorker$ConfigRpcTransportClient$$Lambda$567/0x000000700136b998
+2025-11-23 14:26:46,229 INFO (LoggerUtils.java:60)- [97913f1c-312f-4811-b4c0-a1663a2d7182_config-0] Registry connection listener to current client:com.alibaba.nacos.client.config.impl.ClientWorker$ConfigRpcTransportClient$1
+2025-11-23 14:26:46,230 INFO (LoggerUtils.java:60)- [97913f1c-312f-4811-b4c0-a1663a2d7182_config-0] RpcClient init, ServerListFactory = com.alibaba.nacos.client.config.impl.ClientWorker$ConfigRpcTransportClient$2
+2025-11-23 14:26:46,232 INFO (LoggerUtils.java:60)- [97913f1c-312f-4811-b4c0-a1663a2d7182_config-0] Try to connect to server on start up, server: {serverIp = '120.53.89.103', server main port = 8848}
+2025-11-23 14:26:46,775 INFO (LoggerUtils.java:60)- [97913f1c-312f-4811-b4c0-a1663a2d7182_config-0] Success to connect to server [120.53.89.103:8848] on start up, connectionId = 1763879206631_222.171.7.80_52388
+2025-11-23 14:26:46,776 INFO (LoggerUtils.java:60)- [97913f1c-312f-4811-b4c0-a1663a2d7182_config-0] Register server push request handler:com.alibaba.nacos.common.remote.client.RpcClient$ConnectResetRequestHandler
+2025-11-23 14:26:46,776 INFO (LoggerUtils.java:60)- [97913f1c-312f-4811-b4c0-a1663a2d7182_config-0] Notify connected event to listeners.
+2025-11-23 14:26:46,776 INFO (ClientWorker.java:638)- [97913f1c-312f-4811-b4c0-a1663a2d7182_config-0] Connected,notify listen context...
+2025-11-23 14:26:46,776 INFO (LoggerUtils.java:60)- [97913f1c-312f-4811-b4c0-a1663a2d7182_config-0] Register server push request handler:com.alibaba.nacos.common.remote.client.RpcClient$$Lambda$598/0x00000070014a4988
+2025-11-23 14:26:46,791 INFO (Limiter.java:62)- limitTime:5.0
+2025-11-23 14:26:46,827 WARN (NacosPropertySourceBuilder.java:87)- Ignore the empty nacos configuration and get it based on dataId[novel-gateway] & group[DEFAULT_GROUP]
+2025-11-23 14:26:46,857 WARN (NacosPropertySourceBuilder.java:87)- Ignore the empty nacos configuration and get it based on dataId[novel-gateway.yml] & group[DEFAULT_GROUP]
+2025-11-23 14:26:46,888 WARN (NacosPropertySourceBuilder.java:87)- Ignore the empty nacos configuration and get it based on dataId[novel-gateway-dev.yml] & group[DEFAULT_GROUP]
+2025-11-23 14:26:46,889 INFO (PropertySourceBootstrapConfiguration.java:108)- Located property source: [BootstrapPropertySource {name='bootstrapProperties-novel-gateway-dev.yml,DEFAULT_GROUP'}, BootstrapPropertySource {name='bootstrapProperties-novel-gateway.yml,DEFAULT_GROUP'}, BootstrapPropertySource {name='bootstrapProperties-novel-gateway,DEFAULT_GROUP'}]
+2025-11-23 14:26:46,892 INFO (SpringApplication.java:638)- The following 1 profile is active: "dev"
+2025-11-23 14:26:47,332 INFO (GenericScope.java:282)- BeanFactory id=e5f1d161-439c-33af-a2e7-4c8e755f8ffa
+2025-11-23 14:26:47,353 INFO (PostProcessorRegistrationDelegate.java:409)- Bean 'org.springframework.cloud.client.loadbalancer.reactive.LoadBalancerBeanPostProcessorAutoConfiguration' of type [org.springframework.cloud.client.loadbalancer.reactive.LoadBalancerBeanPostProcessorAutoConfiguration] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying)
+2025-11-23 14:26:47,354 INFO (PostProcessorRegistrationDelegate.java:409)- Bean 'org.springframework.cloud.client.loadbalancer.reactive.LoadBalancerBeanPostProcessorAutoConfiguration$ReactorDeferringLoadBalancerFilterConfig' of type [org.springframework.cloud.client.loadbalancer.reactive.LoadBalancerBeanPostProcessorAutoConfiguration$ReactorDeferringLoadBalancerFilterConfig] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying)
+2025-11-23 14:26:47,355 INFO (PostProcessorRegistrationDelegate.java:409)- Bean 'reactorDeferringLoadBalancerExchangeFilterFunction' of type [org.springframework.cloud.client.loadbalancer.reactive.DeferringLoadBalancerExchangeFilterFunction] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying)
+2025-11-23 14:26:47,699 INFO (RouteDefinitionRouteLocator.java:89)- Loaded RoutePredicateFactory [After]
+2025-11-23 14:26:47,699 INFO (RouteDefinitionRouteLocator.java:89)- Loaded RoutePredicateFactory [Before]
+2025-11-23 14:26:47,699 INFO (RouteDefinitionRouteLocator.java:89)- Loaded RoutePredicateFactory [Between]
+2025-11-23 14:26:47,700 INFO (RouteDefinitionRouteLocator.java:89)- Loaded RoutePredicateFactory [Cookie]
+2025-11-23 14:26:47,700 INFO (RouteDefinitionRouteLocator.java:89)- Loaded RoutePredicateFactory [Header]
+2025-11-23 14:26:47,700 INFO (RouteDefinitionRouteLocator.java:89)- Loaded RoutePredicateFactory [Host]
+2025-11-23 14:26:47,700 INFO (RouteDefinitionRouteLocator.java:89)- Loaded RoutePredicateFactory [Method]
+2025-11-23 14:26:47,700 INFO (RouteDefinitionRouteLocator.java:89)- Loaded RoutePredicateFactory [Path]
+2025-11-23 14:26:47,700 INFO (RouteDefinitionRouteLocator.java:89)- Loaded RoutePredicateFactory [Query]
+2025-11-23 14:26:47,700 INFO (RouteDefinitionRouteLocator.java:89)- Loaded RoutePredicateFactory [ReadBody]
+2025-11-23 14:26:47,700 INFO (RouteDefinitionRouteLocator.java:89)- Loaded RoutePredicateFactory [RemoteAddr]
+2025-11-23 14:26:47,700 INFO (RouteDefinitionRouteLocator.java:89)- Loaded RoutePredicateFactory [XForwardedRemoteAddr]
+2025-11-23 14:26:47,700 INFO (RouteDefinitionRouteLocator.java:89)- Loaded RoutePredicateFactory [Weight]
+2025-11-23 14:26:47,700 INFO (RouteDefinitionRouteLocator.java:89)- Loaded RoutePredicateFactory [CloudFoundryRouteService]
+2025-11-23 14:26:47,828 INFO (EndpointLinksResolver.java:58)- Exposing 19 endpoint(s) beneath base path '/actuator'
+2025-11-23 14:26:47,947 WARN (LoadBalancerCacheAutoConfiguration.java:94)- Spring Cloud LoadBalancer is currently working with the default cache. While this cache implementation is useful for development and tests, it's recommended to use Caffeine cache in production.You can switch to using Caffeine cache, by adding it and org.springframework.cache.caffeine.CaffeineCacheManager to the classpath.
+2025-11-23 14:26:48,025 INFO (NettyWebServer.java:111)- Netty started on port 8888
+2025-11-23 14:26:48,034 INFO (SearchableProperties.java:197)- properties search order:PROPERTIES->JVM->ENV->DEFAULT_SETTING
+2025-11-23 14:26:48,034 INFO (InitUtils.java:61)- initializer namespace from System Property : null
+2025-11-23 14:26:48,035 INFO (InitUtils.java:65)- initializer namespace from System Environment :null
+2025-11-23 14:26:48,035 INFO (InitUtils.java:72)- initializer namespace from System Property :
+2025-11-23 14:26:48,038 INFO (ClientAuthPluginManager.java:56)- [ClientAuthPluginManager] Load ClientAuthService com.alibaba.nacos.client.auth.impl.NacosClientAuthServiceImpl success.
+2025-11-23 14:26:48,038 INFO (ClientAuthPluginManager.java:56)- [ClientAuthPluginManager] Load ClientAuthService com.alibaba.nacos.client.auth.ram.RamClientAuthServiceImpl success.
+2025-11-23 14:26:48,039 INFO (RpcClientFactory.java:94)- [RpcClientFactory] create a new rpc client of 6578ec2a-7ff6-4033-aff9-1abc87f46ace
+2025-11-23 14:26:48,040 INFO (LoggerUtils.java:60)- [6578ec2a-7ff6-4033-aff9-1abc87f46ace] RpcClient init, ServerListFactory = com.alibaba.nacos.client.naming.core.ServerListManager
+2025-11-23 14:26:48,040 INFO (LoggerUtils.java:60)- [6578ec2a-7ff6-4033-aff9-1abc87f46ace] Registry connection listener to current client:com.alibaba.nacos.client.naming.remote.gprc.redo.NamingGrpcRedoService
+2025-11-23 14:26:48,040 INFO (LoggerUtils.java:60)- [6578ec2a-7ff6-4033-aff9-1abc87f46ace] Register server push request handler:com.alibaba.nacos.client.naming.remote.gprc.NamingPushRequestHandler
+2025-11-23 14:26:48,041 INFO (LoggerUtils.java:60)- [6578ec2a-7ff6-4033-aff9-1abc87f46ace] Try to connect to server on start up, server: {serverIp = '120.53.89.103', server main port = 8848}
+2025-11-23 14:26:48,316 INFO (LoggerUtils.java:60)- [6578ec2a-7ff6-4033-aff9-1abc87f46ace] Success to connect to server [120.53.89.103:8848] on start up, connectionId = 1763879208236_222.171.7.80_52453
+2025-11-23 14:26:48,316 INFO (LoggerUtils.java:60)- [6578ec2a-7ff6-4033-aff9-1abc87f46ace] Register server push request handler:com.alibaba.nacos.common.remote.client.RpcClient$ConnectResetRequestHandler
+2025-11-23 14:26:48,316 INFO (LoggerUtils.java:60)- [6578ec2a-7ff6-4033-aff9-1abc87f46ace] Register server push request handler:com.alibaba.nacos.common.remote.client.RpcClient$$Lambda$598/0x00000070014a4988
+2025-11-23 14:26:48,316 INFO (LoggerUtils.java:60)- [6578ec2a-7ff6-4033-aff9-1abc87f46ace] Notify connected event to listeners.
+2025-11-23 14:26:48,317 INFO (NamingGrpcRedoService.java:78)- Grpc connection connect
+2025-11-23 14:26:48,317 INFO (NamingGrpcClientProxy.java:120)- [REGISTER-SERVICE] public registering service novel-gateway with instance Instance{instanceId='null', ip='10.44.86.207', port=8888, weight=1.0, healthy=true, enabled=true, ephemeral=true, clusterName='DEFAULT', serviceName='null', metadata={preserved.register.source=SPRING_CLOUD}}
+2025-11-23 14:26:48,357 INFO (NacosServiceRegistry.java:76)- nacos registry, DEFAULT_GROUP novel-gateway 10.44.86.207:8888 register finished
+2025-11-23 14:26:48,399 INFO (StartupInfoLogger.java:57)- Started NovelGatewayApplication in 2.699 seconds (process running for 2.962)
+2025-11-23 14:26:48,401 INFO (CacheData.java:67)- nacos.cache.data.init.snapshot = true 
+2025-11-23 14:26:48,401 INFO (ClientWorker.java:379)- [fixed-120.53.89.103_8848] [subscribe] novel-gateway-dev.yml+DEFAULT_GROUP
+2025-11-23 14:26:48,404 INFO (CacheData.java:197)- [fixed-120.53.89.103_8848] [add-listener] ok, tenant=, dataId=novel-gateway-dev.yml, group=DEFAULT_GROUP, cnt=1
+2025-11-23 14:26:48,405 INFO (NacosContextRefresher.java:129)- [Nacos Config] Listening config: dataId=novel-gateway-dev.yml, group=DEFAULT_GROUP
+2025-11-23 14:26:48,405 INFO (ClientWorker.java:379)- [fixed-120.53.89.103_8848] [subscribe] novel-gateway+DEFAULT_GROUP
+2025-11-23 14:26:48,405 INFO (CacheData.java:197)- [fixed-120.53.89.103_8848] [add-listener] ok, tenant=, dataId=novel-gateway, group=DEFAULT_GROUP, cnt=1
+2025-11-23 14:26:48,405 INFO (NacosContextRefresher.java:129)- [Nacos Config] Listening config: dataId=novel-gateway, group=DEFAULT_GROUP
+2025-11-23 14:26:48,405 INFO (ClientWorker.java:379)- [fixed-120.53.89.103_8848] [subscribe] novel-gateway.yml+DEFAULT_GROUP
+2025-11-23 14:26:48,405 INFO (CacheData.java:197)- [fixed-120.53.89.103_8848] [add-listener] ok, tenant=, dataId=novel-gateway.yml, group=DEFAULT_GROUP, cnt=1
+2025-11-23 14:26:48,405 INFO (NacosContextRefresher.java:129)- [Nacos Config] Listening config: dataId=novel-gateway.yml, group=DEFAULT_GROUP
+2025-11-23 14:27:00,853 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:27:00,853 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:27:00,853 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:27:00,853 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:27:00,853 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:27:00,853 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:27:00,853 INFO (LoggingFilter.java:21)- Path: /api/front/book/visit_rank
+2025-11-23 14:27:00,853 INFO (LoggingFilter.java:21)- Path: /api/front/news/latest_list
+2025-11-23 14:27:00,853 INFO (LoggingFilter.java:21)- Path: /api/front/book/update_rank
+2025-11-23 14:27:00,853 INFO (LoggingFilter.java:21)- Path: /api/front/book/newest_rank
+2025-11-23 14:27:00,853 INFO (LoggingFilter.java:21)- Path: /api/front/home/friend_Link/list
+2025-11-23 14:27:00,853 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:27:00,853 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:27:00,853 INFO (LoggingFilter.java:21)- Path: /api/front/home/books
+2025-11-23 14:27:00,853 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:27:00,853 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:27:00,853 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:27:00,853 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:27:00,853 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:27:00,853 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:27:00,854 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:27:00,853 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:27:00,854 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:27:00,855 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:27:00,854 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:27:00,855 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:27:00,855 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:27:00,855 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:27:00,855 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:27:00,855 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:27:00,884 INFO (NamingClientProxyDelegate.java:167)- [SUBSCRIBE-SERVICE] service:novel-book-service, group:DEFAULT_GROUP, clusters: 
+2025-11-23 14:27:00,888 INFO (NamingClientProxyDelegate.java:167)- [SUBSCRIBE-SERVICE] service:novel-book-service, group:DEFAULT_GROUP, clusters: 
+2025-11-23 14:27:00,888 INFO (NamingClientProxyDelegate.java:167)- [SUBSCRIBE-SERVICE] service:novel-book-service, group:DEFAULT_GROUP, clusters: 
+2025-11-23 14:27:00,888 INFO (NamingClientProxyDelegate.java:167)- [SUBSCRIBE-SERVICE] service:novel-home-service, group:DEFAULT_GROUP, clusters: 
+2025-11-23 14:27:00,888 INFO (NamingClientProxyDelegate.java:167)- [SUBSCRIBE-SERVICE] service:novel-home-service, group:DEFAULT_GROUP, clusters: 
+2025-11-23 14:27:00,899 INFO (NamingClientProxyDelegate.java:167)- [SUBSCRIBE-SERVICE] service:novel-news-service, group:DEFAULT_GROUP, clusters: 
+2025-11-23 14:27:00,922 INFO (ServiceInfoHolder.java:184)- init new ips(0) service: DEFAULT_GROUP@@novel-book-service -> []
+2025-11-23 14:27:00,922 INFO (ServiceInfoHolder.java:184)- init new ips(0) service: DEFAULT_GROUP@@novel-book-service -> []
+2025-11-23 14:27:00,922 INFO (ServiceInfoHolder.java:184)- init new ips(0) service: DEFAULT_GROUP@@novel-book-service -> []
+2025-11-23 14:27:00,922 INFO (ServiceInfoHolder.java:184)- init new ips(0) service: DEFAULT_GROUP@@novel-home-service -> []
+2025-11-23 14:27:00,922 INFO (ServiceInfoHolder.java:169)- current ips:(0) service: DEFAULT_GROUP@@novel-book-service -> []
+2025-11-23 14:27:00,922 INFO (ServiceInfoHolder.java:169)- current ips:(0) service: DEFAULT_GROUP@@novel-book-service -> []
+2025-11-23 14:27:00,922 INFO (ServiceInfoHolder.java:169)- current ips:(0) service: DEFAULT_GROUP@@novel-home-service -> []
+2025-11-23 14:27:00,922 INFO (ServiceInfoHolder.java:169)- current ips:(0) service: DEFAULT_GROUP@@novel-book-service -> []
+2025-11-23 14:27:00,923 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-home-service
+2025-11-23 14:27:00,926 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-book-service
+2025-11-23 14:27:00,926 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-home-service
+2025-11-23 14:27:00,931 INFO (ServiceInfoHolder.java:184)- init new ips(0) service: DEFAULT_GROUP@@novel-news-service -> []
+2025-11-23 14:27:00,931 INFO (ServiceInfoHolder.java:169)- current ips:(0) service: DEFAULT_GROUP@@novel-news-service -> []
+2025-11-23 14:27:00,931 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-news-service
+2025-11-23 14:27:00,936 WARN (ConcurrentDiskUtil.java:152)- write DEFAULT_GROUP%40%40novel-book-service conflict;retry time: 1
+2025-11-23 14:27:00,936 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-book-service
+2025-11-23 14:27:00,937 WARN (ConcurrentDiskUtil.java:152)- write DEFAULT_GROUP%40%40novel-book-service conflict;retry time: 1
+2025-11-23 14:27:00,937 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-book-service
+2025-11-23 14:27:01,450 INFO (LoggerUtils.java:60)- [6578ec2a-7ff6-4033-aff9-1abc87f46ace] Receive server push request, request = NotifySubscriberRequest, requestId = 1415
+2025-11-23 14:27:01,451 INFO (LoggerUtils.java:60)- [6578ec2a-7ff6-4033-aff9-1abc87f46ace] Ack server push request, request = NotifySubscriberRequest, requestId = 1415
+2025-11-23 14:27:01,453 INFO (LoggerUtils.java:60)- [6578ec2a-7ff6-4033-aff9-1abc87f46ace] Receive server push request, request = NotifySubscriberRequest, requestId = 1417
+2025-11-23 14:27:01,453 INFO (LoggerUtils.java:60)- [6578ec2a-7ff6-4033-aff9-1abc87f46ace] Ack server push request, request = NotifySubscriberRequest, requestId = 1417
+2025-11-23 14:27:01,454 INFO (LoggerUtils.java:60)- [6578ec2a-7ff6-4033-aff9-1abc87f46ace] Receive server push request, request = NotifySubscriberRequest, requestId = 1416
+2025-11-23 14:27:01,455 INFO (LoggerUtils.java:60)- [6578ec2a-7ff6-4033-aff9-1abc87f46ace] Ack server push request, request = NotifySubscriberRequest, requestId = 1416
+2025-11-23 14:27:02,583 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:27:02,585 INFO (LoggingFilter.java:21)- Path: /api/front/user
+2025-11-23 14:27:02,585 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:27:02,585 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:27:02,586 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:27:02,599 INFO (NamingClientProxyDelegate.java:167)- [SUBSCRIBE-SERVICE] service:novel-user-service, group:DEFAULT_GROUP, clusters: 
+2025-11-23 14:27:02,709 INFO (ServiceInfoHolder.java:184)- init new ips(1) service: DEFAULT_GROUP@@novel-user-service -> [{"ip":"10.44.86.207","port":9060,"weight":1.0,"healthy":true,"enabled":true,"ephemeral":true,"clusterName":"DEFAULT","serviceName":"DEFAULT_GROUP@@novel-user-service","metadata":{"preserved.register.source":"SPRING_CLOUD"},"instanceHeartBeatInterval":5000,"instanceHeartBeatTimeOut":15000,"ipDeleteTimeout":30000}]
+2025-11-23 14:27:02,709 INFO (ServiceInfoHolder.java:169)- current ips:(1) service: DEFAULT_GROUP@@novel-user-service -> [{"ip":"10.44.86.207","port":9060,"weight":1.0,"healthy":true,"enabled":true,"ephemeral":true,"clusterName":"DEFAULT","serviceName":"DEFAULT_GROUP@@novel-user-service","metadata":{"preserved.register.source":"SPRING_CLOUD"},"instanceHeartBeatInterval":5000,"instanceHeartBeatTimeOut":15000,"ipDeleteTimeout":30000}]
+2025-11-23 14:27:02,751 ERROR (DnsServerAddressStreamProviders.java:79)- Unable to load io.netty.resolver.dns.macos.MacOSDnsServerAddressStreamProvider, fallback to system defaults. This may result in incorrect DNS resolutions on MacOS. Check whether you have a dependency on 'io.netty:netty-resolver-dns-native-macos'. Use DEBUG level to see the full stack: java.lang.UnsatisfiedLinkError: failed to load the required native library
+2025-11-23 14:27:03,121 INFO (LoggingFilter.java:29)- === GATEWAY RESPONSE ===
+2025-11-23 14:27:03,121 INFO (LoggingFilter.java:30)- Status: 200 OK
+2025-11-23 14:27:03,121 INFO (LoggingFilter.java:31)- From Gateway: true
+2025-11-23 14:27:03,208 INFO (LoggerUtils.java:60)- [6578ec2a-7ff6-4033-aff9-1abc87f46ace] Receive server push request, request = NotifySubscriberRequest, requestId = 1418
+2025-11-23 14:27:03,209 INFO (LoggerUtils.java:60)- [6578ec2a-7ff6-4033-aff9-1abc87f46ace] Ack server push request, request = NotifySubscriberRequest, requestId = 1418
+2025-11-23 14:27:05,588 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:27:05,588 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:27:05,588 INFO (LoggingFilter.java:21)- Path: /api/front/book/visit_rank
+2025-11-23 14:27:05,588 INFO (LoggingFilter.java:21)- Path: /api/front/news/latest_list
+2025-11-23 14:27:05,588 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:27:05,588 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:27:05,588 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:27:05,588 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:27:05,588 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:27:05,588 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:27:05,589 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:27:05,589 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:27:05,589 INFO (LoggingFilter.java:21)- Path: /api/front/home/friend_Link/list
+2025-11-23 14:27:05,589 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:27:05,589 INFO (LoggingFilter.java:21)- Path: /api/front/book/update_rank
+2025-11-23 14:27:05,589 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:27:05,589 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-book-service
+2025-11-23 14:27:05,589 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:27:05,589 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-news-service
+2025-11-23 14:27:05,589 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:27:05,589 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:27:05,589 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:27:05,589 INFO (LoggingFilter.java:21)- Path: /api/front/home/books
+2025-11-23 14:27:05,589 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:27:05,589 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:27:05,589 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:27:05,589 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:27:05,589 INFO (LoggingFilter.java:21)- Path: /api/front/book/newest_rank
+2025-11-23 14:27:05,589 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:27:05,589 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:27:05,589 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:27:05,589 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:27:05,590 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-home-service
+2025-11-23 14:27:05,590 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-book-service
+2025-11-23 14:27:05,590 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-home-service
+2025-11-23 14:27:05,591 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-book-service
+2025-11-23 14:27:07,057 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:27:07,057 INFO (LoggingFilter.java:21)- Path: /api/front/user
+2025-11-23 14:27:07,057 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:27:07,057 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:27:07,057 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:27:07,232 INFO (LoggingFilter.java:29)- === GATEWAY RESPONSE ===
+2025-11-23 14:27:07,232 INFO (LoggingFilter.java:30)- Status: 200 OK
+2025-11-23 14:27:07,233 INFO (LoggingFilter.java:31)- From Gateway: true
+2025-11-23 14:27:11,241 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:27:11,241 INFO (LoggingFilter.java:21)- Path: /api/front/resource/image
+2025-11-23 14:27:11,241 INFO (LoggingFilter.java:22)- Method: POST
+2025-11-23 14:27:11,241 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"*/*", Content-Type:"multipart/form-data; boundary=----WebKitFormBoundaryo0sn5irOtRBZZQ99", Sec-Fetch-Site:"cross-site", Origin:"http://localhost:1024", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Referer:"http://localhost:1024/", Sec-Fetch-Dest:"empty", Content-Length:"3361205", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:27:11,241 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:27:11,254 INFO (NamingClientProxyDelegate.java:167)- [SUBSCRIBE-SERVICE] service:novel-resource-service, group:DEFAULT_GROUP, clusters: 
+2025-11-23 14:27:11,290 INFO (ServiceInfoHolder.java:184)- init new ips(1) service: DEFAULT_GROUP@@novel-resource-service -> [{"ip":"10.44.86.207","port":9040,"weight":1.0,"healthy":true,"enabled":true,"ephemeral":true,"clusterName":"DEFAULT","serviceName":"DEFAULT_GROUP@@novel-resource-service","metadata":{"preserved.register.source":"SPRING_CLOUD"},"instanceHeartBeatInterval":5000,"instanceHeartBeatTimeOut":15000,"ipDeleteTimeout":30000}]
+2025-11-23 14:27:11,290 INFO (ServiceInfoHolder.java:169)- current ips:(1) service: DEFAULT_GROUP@@novel-resource-service -> [{"ip":"10.44.86.207","port":9040,"weight":1.0,"healthy":true,"enabled":true,"ephemeral":true,"clusterName":"DEFAULT","serviceName":"DEFAULT_GROUP@@novel-resource-service","metadata":{"preserved.register.source":"SPRING_CLOUD"},"instanceHeartBeatInterval":5000,"instanceHeartBeatTimeOut":15000,"ipDeleteTimeout":30000}]
+2025-11-23 14:27:11,814 INFO (LoggerUtils.java:60)- [6578ec2a-7ff6-4033-aff9-1abc87f46ace] Receive server push request, request = NotifySubscriberRequest, requestId = 1419
+2025-11-23 14:27:11,814 INFO (LoggerUtils.java:60)- [6578ec2a-7ff6-4033-aff9-1abc87f46ace] Ack server push request, request = NotifySubscriberRequest, requestId = 1419
+2025-11-23 14:27:13,976 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:27:13,976 INFO (LoggingFilter.java:21)- Path: /api/front/user
+2025-11-23 14:27:13,976 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:27:13,976 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:27:13,977 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:27:14,153 INFO (LoggingFilter.java:29)- === GATEWAY RESPONSE ===
+2025-11-23 14:27:14,154 INFO (LoggingFilter.java:30)- Status: 200 OK
+2025-11-23 14:27:14,154 INFO (LoggingFilter.java:31)- From Gateway: true
+2025-11-23 14:27:15,425 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:27:15,426 INFO (LoggingFilter.java:21)- Path: /api/front/user
+2025-11-23 14:27:15,426 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:27:15,426 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:27:15,426 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:27:15,588 INFO (LoggingFilter.java:29)- === GATEWAY RESPONSE ===
+2025-11-23 14:27:15,588 INFO (LoggingFilter.java:30)- Status: 200 OK
+2025-11-23 14:27:15,589 INFO (LoggingFilter.java:31)- From Gateway: true
+2025-11-23 14:27:16,247 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:27:16,247 INFO (LoggingFilter.java:21)- Path: /api/front/user
+2025-11-23 14:27:16,247 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:27:16,247 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:27:16,247 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:27:16,413 INFO (LoggingFilter.java:29)- === GATEWAY RESPONSE ===
+2025-11-23 14:27:16,414 INFO (LoggingFilter.java:30)- Status: 200 OK
+2025-11-23 14:27:16,414 INFO (LoggingFilter.java:31)- From Gateway: true
+2025-11-23 14:27:27,898 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:27:27,899 INFO (LoggingFilter.java:21)- Path: /api/front/user
+2025-11-23 14:27:27,900 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:27:27,900 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:27:27,900 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:27:28,074 INFO (LoggingFilter.java:29)- === GATEWAY RESPONSE ===
+2025-11-23 14:27:28,074 INFO (LoggingFilter.java:30)- Status: 200 OK
+2025-11-23 14:27:28,074 INFO (LoggingFilter.java:31)- From Gateway: true
+2025-11-23 14:27:28,827 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:27:28,827 INFO (LoggingFilter.java:21)- Path: /api/front/user
+2025-11-23 14:27:28,827 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:27:28,827 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:27:28,827 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:27:28,987 INFO (LoggingFilter.java:29)- === GATEWAY RESPONSE ===
+2025-11-23 14:27:28,987 INFO (LoggingFilter.java:30)- Status: 200 OK
+2025-11-23 14:27:28,987 INFO (LoggingFilter.java:31)- From Gateway: true
+2025-11-23 14:27:32,047 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:27:32,047 INFO (LoggingFilter.java:21)- Path: /api/front/resource/image
+2025-11-23 14:27:32,047 INFO (LoggingFilter.java:22)- Method: POST
+2025-11-23 14:27:32,047 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"*/*", Content-Type:"multipart/form-data; boundary=----WebKitFormBoundaryxQTD2m10MZuPeOTh", Sec-Fetch-Site:"cross-site", Origin:"http://localhost:1024", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Referer:"http://localhost:1024/", Sec-Fetch-Dest:"empty", Content-Length:"3361205", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:27:32,047 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:27:34,758 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:27:34,758 INFO (LoggingFilter.java:21)- Path: /api/front/user
+2025-11-23 14:27:34,758 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:27:34,758 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:27:34,758 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:27:34,918 INFO (LoggingFilter.java:29)- === GATEWAY RESPONSE ===
+2025-11-23 14:27:34,918 INFO (LoggingFilter.java:30)- Status: 200 OK
+2025-11-23 14:27:34,918 INFO (LoggingFilter.java:31)- From Gateway: true
+2025-11-23 14:27:35,586 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:27:35,587 INFO (LoggingFilter.java:21)- Path: /api/front/user
+2025-11-23 14:27:35,587 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:27:35,587 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:27:35,587 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:27:35,753 INFO (LoggingFilter.java:29)- === GATEWAY RESPONSE ===
+2025-11-23 14:27:35,754 INFO (LoggingFilter.java:30)- Status: 200 OK
+2025-11-23 14:27:35,754 INFO (LoggingFilter.java:31)- From Gateway: true
+2025-11-23 14:27:36,177 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:27:36,177 INFO (LoggingFilter.java:21)- Path: /api/front/user
+2025-11-23 14:27:36,177 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:27:36,178 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:27:36,178 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:27:36,315 INFO (LoggingFilter.java:29)- === GATEWAY RESPONSE ===
+2025-11-23 14:27:36,315 INFO (LoggingFilter.java:30)- Status: 200 OK
+2025-11-23 14:27:36,315 INFO (LoggingFilter.java:31)- From Gateway: true
+2025-11-23 14:27:36,737 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:27:36,738 INFO (LoggingFilter.java:21)- Path: /api/front/user
+2025-11-23 14:27:36,738 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:27:36,738 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:27:36,738 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:27:36,871 INFO (LoggingFilter.java:29)- === GATEWAY RESPONSE ===
+2025-11-23 14:27:36,872 INFO (LoggingFilter.java:30)- Status: 200 OK
+2025-11-23 14:27:36,872 INFO (LoggingFilter.java:31)- From Gateway: true
+2025-11-23 14:27:37,293 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:27:37,294 INFO (LoggingFilter.java:21)- Path: /api/front/user
+2025-11-23 14:27:37,294 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:27:37,294 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:27:37,294 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:27:37,425 INFO (LoggingFilter.java:29)- === GATEWAY RESPONSE ===
+2025-11-23 14:27:37,425 INFO (LoggingFilter.java:30)- Status: 200 OK
+2025-11-23 14:27:37,425 INFO (LoggingFilter.java:31)- From Gateway: true
+2025-11-23 14:27:37,824 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:27:37,824 INFO (LoggingFilter.java:21)- Path: /api/front/user
+2025-11-23 14:27:37,824 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:27:37,824 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:27:37,824 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:27:37,945 INFO (LoggingFilter.java:29)- === GATEWAY RESPONSE ===
+2025-11-23 14:27:37,946 INFO (LoggingFilter.java:30)- Status: 200 OK
+2025-11-23 14:27:37,946 INFO (LoggingFilter.java:31)- From Gateway: true
+2025-11-23 14:27:38,258 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:27:38,258 INFO (LoggingFilter.java:21)- Path: /api/front/user
+2025-11-23 14:27:38,259 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:27:38,259 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:27:38,259 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:27:38,384 INFO (LoggingFilter.java:29)- === GATEWAY RESPONSE ===
+2025-11-23 14:27:38,384 INFO (LoggingFilter.java:30)- Status: 200 OK
+2025-11-23 14:27:38,384 INFO (LoggingFilter.java:31)- From Gateway: true
+2025-11-23 14:27:38,646 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:27:38,646 INFO (LoggingFilter.java:21)- Path: /api/front/user
+2025-11-23 14:27:38,646 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:27:38,646 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:27:38,646 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:27:39,131 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:27:39,131 INFO (LoggingFilter.java:21)- Path: /api/front/user
+2025-11-23 14:27:39,131 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:27:39,132 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:27:39,132 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:27:39,276 INFO (LoggingFilter.java:29)- === GATEWAY RESPONSE ===
+2025-11-23 14:27:39,276 INFO (LoggingFilter.java:30)- Status: 200 OK
+2025-11-23 14:27:39,277 INFO (LoggingFilter.java:31)- From Gateway: true
+2025-11-23 14:27:40,052 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:27:40,052 INFO (LoggingFilter.java:21)- Path: /api/front/user
+2025-11-23 14:27:40,052 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:27:40,052 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:27:40,052 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:27:40,210 INFO (LoggingFilter.java:29)- === GATEWAY RESPONSE ===
+2025-11-23 14:27:40,210 INFO (LoggingFilter.java:30)- Status: 200 OK
+2025-11-23 14:27:40,210 INFO (LoggingFilter.java:31)- From Gateway: true
+2025-11-23 14:27:42,303 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:27:42,303 INFO (LoggingFilter.java:21)- Path: /api/front/news/latest_list
+2025-11-23 14:27:42,303 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:27:42,304 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:27:42,304 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:27:42,304 INFO (LoggingFilter.java:21)- Path: /api/front/book/visit_rank
+2025-11-23 14:27:42,304 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:27:42,304 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:27:42,304 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:27:42,304 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:27:42,304 INFO (LoggingFilter.java:21)- Path: /api/front/book/newest_rank
+2025-11-23 14:27:42,304 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:27:42,304 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:27:42,305 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:27:42,305 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:27:42,305 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-book-service
+2025-11-23 14:27:42,305 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-book-service
+2025-11-23 14:27:42,305 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-news-service
+2025-11-23 14:27:42,306 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:27:42,306 INFO (LoggingFilter.java:21)- Path: /api/front/home/friend_Link/list
+2025-11-23 14:27:42,307 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:27:42,307 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:27:42,307 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:27:42,307 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:27:42,307 INFO (LoggingFilter.java:21)- Path: /api/front/home/books
+2025-11-23 14:27:42,307 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:27:42,307 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:27:42,307 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-home-service
+2025-11-23 14:27:42,307 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:27:42,307 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:27:42,307 INFO (LoggingFilter.java:21)- Path: /api/front/book/update_rank
+2025-11-23 14:27:42,307 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:27:42,307 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:27:42,308 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:27:42,308 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-book-service
+2025-11-23 14:27:42,308 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-home-service
+2025-11-23 14:27:43,517 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:27:43,517 INFO (LoggingFilter.java:21)- Path: /api/front/user
+2025-11-23 14:27:43,517 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:27:43,517 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:27:43,517 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:27:43,688 INFO (LoggingFilter.java:29)- === GATEWAY RESPONSE ===
+2025-11-23 14:27:43,688 INFO (LoggingFilter.java:30)- Status: 200 OK
+2025-11-23 14:27:43,688 INFO (LoggingFilter.java:31)- From Gateway: true
+2025-11-23 14:27:44,848 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:27:44,848 INFO (LoggingFilter.java:21)- Path: /api/front/user/comments
+2025-11-23 14:27:44,848 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:27:44,848 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:27:44,848 INFO (LoggingFilter.java:24)- QueryParams: {pageNum=[0], pageSize=[10]}
+2025-11-23 14:27:44,970 INFO (LoggingFilter.java:29)- === GATEWAY RESPONSE ===
+2025-11-23 14:27:44,970 INFO (LoggingFilter.java:30)- Status: 404 NOT_FOUND
+2025-11-23 14:27:44,971 INFO (LoggingFilter.java:31)- From Gateway: true
+2025-11-23 14:27:45,531 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:27:45,531 INFO (LoggingFilter.java:21)- Path: /api/front/user
+2025-11-23 14:27:45,531 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:27:45,531 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:27:45,531 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:27:45,700 INFO (LoggingFilter.java:29)- === GATEWAY RESPONSE ===
+2025-11-23 14:27:45,700 INFO (LoggingFilter.java:30)- Status: 200 OK
+2025-11-23 14:27:45,700 INFO (LoggingFilter.java:31)- From Gateway: true
+2025-11-23 14:27:58,980 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:27:58,981 INFO (LoggingFilter.java:21)- Path: /api/front/user/login
+2025-11-23 14:27:58,981 INFO (LoggingFilter.java:22)- Method: POST
+2025-11-23 14:27:58,981 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Content-Type:"application/json", Sec-Fetch-Site:"cross-site", Origin:"http://localhost:1024", X-Requested-With:"XMLHttpRequest", Content-Length:"46", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"null", Referer:"http://localhost:1024/", Sec-Fetch-Dest:"empty", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:27:58,981 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:27:59,208 INFO (LoggingFilter.java:29)- === GATEWAY RESPONSE ===
+2025-11-23 14:27:59,208 INFO (LoggingFilter.java:30)- Status: 200 OK
+2025-11-23 14:27:59,208 INFO (LoggingFilter.java:31)- From Gateway: true
+2025-11-23 14:27:59,233 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:27:59,233 INFO (LoggingFilter.java:21)- Path: /api/front/news/latest_list
+2025-11-23 14:27:59,233 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:27:59,233 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:27:59,233 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:27:59,233 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:27:59,233 INFO (LoggingFilter.java:21)- Path: /api/front/book/visit_rank
+2025-11-23 14:27:59,233 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:27:59,233 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:27:59,234 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:27:59,234 INFO (LoggingFilter.java:21)- Path: /api/front/book/newest_rank
+2025-11-23 14:27:59,234 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:27:59,234 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:27:59,234 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-news-service
+2025-11-23 14:27:59,234 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:27:59,234 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:27:59,234 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-book-service
+2025-11-23 14:27:59,235 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:27:59,235 INFO (LoggingFilter.java:21)- Path: /api/front/book/update_rank
+2025-11-23 14:27:59,235 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:27:59,235 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-book-service
+2025-11-23 14:27:59,235 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:27:59,235 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:27:59,236 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:27:59,236 INFO (LoggingFilter.java:21)- Path: /api/front/home/friend_Link/list
+2025-11-23 14:27:59,236 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:27:59,236 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:27:59,236 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-book-service
+2025-11-23 14:27:59,236 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:27:59,236 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:27:59,237 INFO (LoggingFilter.java:21)- Path: /api/front/home/books
+2025-11-23 14:27:59,237 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:27:59,237 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:27:59,237 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:27:59,237 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-home-service
+2025-11-23 14:27:59,237 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-home-service
+2025-11-23 14:28:00,262 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:28:00,263 INFO (LoggingFilter.java:21)- Path: /api/front/user
+2025-11-23 14:28:00,263 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:28:00,263 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:28:00,263 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:28:00,425 INFO (LoggingFilter.java:29)- === GATEWAY RESPONSE ===
+2025-11-23 14:28:00,425 INFO (LoggingFilter.java:30)- Status: 200 OK
+2025-11-23 14:28:00,425 INFO (LoggingFilter.java:31)- From Gateway: true
+2025-11-23 14:28:30,621 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:28:30,621 INFO (LoggingFilter.java:21)- Path: /api/front/user
+2025-11-23 14:28:30,621 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:28:30,621 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:28:30,621 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:28:30,784 INFO (LoggingFilter.java:29)- === GATEWAY RESPONSE ===
+2025-11-23 14:28:30,784 INFO (LoggingFilter.java:30)- Status: 200 OK
+2025-11-23 14:28:30,784 INFO (LoggingFilter.java:31)- From Gateway: true
+2025-11-23 14:28:31,563 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:28:31,566 INFO (LoggingFilter.java:21)- Path: /api/front/user
+2025-11-23 14:28:31,566 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:28:31,566 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:28:31,566 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:28:31,722 INFO (LoggingFilter.java:29)- === GATEWAY RESPONSE ===
+2025-11-23 14:28:31,722 INFO (LoggingFilter.java:30)- Status: 200 OK
+2025-11-23 14:28:31,722 INFO (LoggingFilter.java:31)- From Gateway: true
+2025-11-23 14:29:15,833 INFO (LoggerUtils.java:60)- [6578ec2a-7ff6-4033-aff9-1abc87f46ace] Receive server push request, request = NotifySubscriberRequest, requestId = 1420
+2025-11-23 14:29:15,836 INFO (ServiceInfoHolder.java:241)- removed ips(1) service: DEFAULT_GROUP@@novel-user-service -> [{"ip":"10.44.86.207","port":9060,"weight":1.0,"healthy":true,"enabled":true,"ephemeral":true,"clusterName":"DEFAULT","serviceName":"DEFAULT_GROUP@@novel-user-service","metadata":{"preserved.register.source":"SPRING_CLOUD"},"instanceHeartBeatInterval":5000,"instanceHeartBeatTimeOut":15000,"ipDeleteTimeout":30000}]
+2025-11-23 14:29:15,836 INFO (ServiceInfoHolder.java:169)- current ips:(0) service: DEFAULT_GROUP@@novel-user-service -> []
+2025-11-23 14:29:15,837 INFO (LoggerUtils.java:60)- [6578ec2a-7ff6-4033-aff9-1abc87f46ace] Ack server push request, request = NotifySubscriberRequest, requestId = 1420
+2025-11-23 14:29:22,300 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:29:22,300 INFO (LoggingFilter.java:21)- Path: /api/front/user
+2025-11-23 14:29:22,300 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:29:22,300 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:29:22,300 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:29:22,301 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-user-service
+2025-11-23 14:29:23,472 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:29:23,472 INFO (LoggingFilter.java:21)- Path: /api/front/user
+2025-11-23 14:29:23,472 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:29:23,472 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:29:23,472 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:29:23,473 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-user-service
+2025-11-23 14:29:24,141 INFO (LoggerUtils.java:60)- [6578ec2a-7ff6-4033-aff9-1abc87f46ace] Receive server push request, request = NotifySubscriberRequest, requestId = 1421
+2025-11-23 14:29:24,142 INFO (ServiceInfoHolder.java:235)- new ips(1) service: DEFAULT_GROUP@@novel-user-service -> [{"ip":"10.44.86.207","port":9060,"weight":1.0,"healthy":true,"enabled":true,"ephemeral":true,"clusterName":"DEFAULT","serviceName":"DEFAULT_GROUP@@novel-user-service","metadata":{"preserved.register.source":"SPRING_CLOUD"},"instanceHeartBeatInterval":5000,"instanceHeartBeatTimeOut":15000,"ipDeleteTimeout":30000}]
+2025-11-23 14:29:24,142 INFO (ServiceInfoHolder.java:169)- current ips:(1) service: DEFAULT_GROUP@@novel-user-service -> [{"ip":"10.44.86.207","port":9060,"weight":1.0,"healthy":true,"enabled":true,"ephemeral":true,"clusterName":"DEFAULT","serviceName":"DEFAULT_GROUP@@novel-user-service","metadata":{"preserved.register.source":"SPRING_CLOUD"},"instanceHeartBeatInterval":5000,"instanceHeartBeatTimeOut":15000,"ipDeleteTimeout":30000}]
+2025-11-23 14:29:24,142 INFO (LoggerUtils.java:60)- [6578ec2a-7ff6-4033-aff9-1abc87f46ace] Ack server push request, request = NotifySubscriberRequest, requestId = 1421
+2025-11-23 14:29:25,900 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:29:25,901 INFO (LoggingFilter.java:21)- Path: /api/front/news/latest_list
+2025-11-23 14:29:25,901 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:29:25,901 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:29:25,901 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:29:25,901 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-news-service
+2025-11-23 14:29:25,901 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:29:25,901 INFO (LoggingFilter.java:21)- Path: /api/front/book/visit_rank
+2025-11-23 14:29:25,901 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:29:25,902 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:29:25,902 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:29:25,902 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:29:25,902 INFO (LoggingFilter.java:21)- Path: /api/front/book/newest_rank
+2025-11-23 14:29:25,902 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:29:25,902 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:29:25,902 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:29:25,902 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-book-service
+2025-11-23 14:29:25,902 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-book-service
+2025-11-23 14:29:25,902 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:29:25,902 INFO (LoggingFilter.java:21)- Path: /api/front/home/books
+2025-11-23 14:29:25,902 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:29:25,902 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:29:25,902 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:29:25,903 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:29:25,903 INFO (LoggingFilter.java:21)- Path: /api/front/home/friend_Link/list
+2025-11-23 14:29:25,903 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:29:25,903 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:29:25,903 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-home-service
+2025-11-23 14:29:25,903 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:29:25,903 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:29:25,903 INFO (LoggingFilter.java:21)- Path: /api/front/book/update_rank
+2025-11-23 14:29:25,903 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:29:25,903 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:29:25,903 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:29:25,903 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-home-service
+2025-11-23 14:29:25,904 WARN (RoundRobinLoadBalancer.java:98)- No servers available for service: novel-book-service
+2025-11-23 14:29:27,396 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:29:27,397 INFO (LoggingFilter.java:21)- Path: /api/front/user
+2025-11-23 14:29:27,397 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:29:27,397 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:29:27,397 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:29:27,780 INFO (LoggingFilter.java:29)- === GATEWAY RESPONSE ===
+2025-11-23 14:29:27,780 INFO (LoggingFilter.java:30)- Status: 200 OK
+2025-11-23 14:29:27,781 INFO (LoggingFilter.java:31)- From Gateway: true
+2025-11-23 14:29:32,472 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:29:32,475 INFO (LoggingFilter.java:21)- Path: /api/front/resource/image
+2025-11-23 14:29:32,475 INFO (LoggingFilter.java:22)- Method: POST
+2025-11-23 14:29:32,475 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"*/*", Content-Type:"multipart/form-data; boundary=----WebKitFormBoundaryUcFlhja2dWZdsy2U", Sec-Fetch-Site:"cross-site", Origin:"http://localhost:1024", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Referer:"http://localhost:1024/", Sec-Fetch-Dest:"empty", Content-Length:"3361205", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:29:32,475 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:29:33,735 INFO (LoggingFilter.java:29)- === GATEWAY RESPONSE ===
+2025-11-23 14:29:33,735 INFO (LoggingFilter.java:30)- Status: 200 OK
+2025-11-23 14:29:33,735 INFO (LoggingFilter.java:31)- From Gateway: true
+2025-11-23 14:29:33,758 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:29:33,758 INFO (LoggingFilter.java:21)- Path: /api/front/user
+2025-11-23 14:29:33,758 INFO (LoggingFilter.java:22)- Method: PUT
+2025-11-23 14:29:33,758 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Content-Type:"application/json", Sec-Fetch-Site:"cross-site", Origin:"http://localhost:1024", X-Requested-With:"XMLHttpRequest", Content-Length:"134", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Referer:"http://localhost:1024/", Sec-Fetch-Dest:"empty", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:29:33,758 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:29:34,210 INFO (LoggingFilter.java:29)- === GATEWAY RESPONSE ===
+2025-11-23 14:29:34,210 INFO (LoggingFilter.java:30)- Status: 200 OK
+2025-11-23 14:29:34,210 INFO (LoggingFilter.java:31)- From Gateway: true
+2025-11-23 14:29:34,893 INFO (LoggingFilter.java:20)- === GATEWAY REQUEST ===
+2025-11-23 14:29:34,893 INFO (LoggingFilter.java:21)- Path: /api/front/user
+2025-11-23 14:29:34,893 INFO (LoggingFilter.java:22)- Method: GET
+2025-11-23 14:29:34,893 INFO (LoggingFilter.java:23)- Headers: [Host:"127.0.0.1:8888", Accept:"application/json, text/plain, */*", Origin:"http://localhost:1024", Sec-Fetch-Site:"cross-site", X-Requested-With:"XMLHttpRequest", Sec-Fetch-Mode:"cors", User-Agent:"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", Authorization:"eyJzeXN0ZW1LZXlIZWFkZXIiOiJmcm9udCIsImFsZyI6IkhTMjU2In0.eyJzdWIiOiI1In0.jiy3AL-EIkyyqIrKllJAYYk69tJlcoJ6z-_wxRTKMN0", Sec-Fetch-Dest:"empty", Referer:"http://localhost:1024/", Accept-Language:"zh-CN,zh-Hans;q=0.9", Priority:"u=3, i", Accept-Encoding:"gzip, deflate", Connection:"keep-alive"]
+2025-11-23 14:29:34,894 INFO (LoggingFilter.java:24)- QueryParams: {}
+2025-11-23 14:29:35,075 INFO (LoggingFilter.java:29)- === GATEWAY RESPONSE ===
+2025-11-23 14:29:35,076 INFO (LoggingFilter.java:30)- Status: 200 OK
+2025-11-23 14:29:35,076 INFO (LoggingFilter.java:31)- From Gateway: true
+2025-11-23 14:32:35,107 WARN (NotifyCenter.java:136)- [NotifyCenter] Start destroying Publisher
+2025-11-23 14:32:35,107 WARN (HttpClientBeanHolder.java:102)- [HttpClientBeanHolder] Start destroying common HttpClient
+2025-11-23 14:32:35,107 WARN (NotifyCenter.java:153)- [NotifyCenter] Destruction of the end
+2025-11-23 14:32:35,110 WARN (HttpClientBeanHolder.java:111)- [HttpClientBeanHolder] Destruction of the end
+2025-11-23 14:32:35,114 INFO (NacosServiceRegistry.java:95)- De-registering from Nacos Server now...
+2025-11-23 14:32:35,114 INFO (NamingGrpcClientProxy.java:216)- [DEREGISTER-SERVICE] public deregistering service novel-gateway with instance: Instance{instanceId='null', ip='10.44.86.207', port=8888, weight=1.0, healthy=true, enabled=true, ephemeral=true, clusterName='DEFAULT', serviceName='null', metadata={}}
+2025-11-23 14:32:35,147 INFO (NacosServiceRegistry.java:115)- De-registration finished.
+2025-11-23 14:32:35,147 INFO (ServiceInfoHolder.java:256)- com.alibaba.nacos.client.naming.cache.ServiceInfoHolder do shutdown begin
+2025-11-23 14:32:35,147 INFO (FailoverReactor.java:133)- com.alibaba.nacos.client.naming.backups.FailoverReactor do shutdown begin
+2025-11-23 14:32:35,148 INFO (FailoverReactor.java:135)- com.alibaba.nacos.client.naming.backups.FailoverReactor do shutdown stop
+2025-11-23 14:32:35,148 INFO (ServiceInfoHolder.java:258)- com.alibaba.nacos.client.naming.cache.ServiceInfoHolder do shutdown stop
+2025-11-23 14:32:35,148 INFO (NamingClientProxyDelegate.java:204)- com.alibaba.nacos.client.naming.remote.NamingClientProxyDelegate do shutdown begin
+2025-11-23 14:32:35,148 INFO (ServiceInfoUpdateService.java:143)- com.alibaba.nacos.client.naming.core.ServiceInfoUpdateService do shutdown begin
+2025-11-23 14:32:35,148 INFO (ServiceInfoUpdateService.java:145)- com.alibaba.nacos.client.naming.core.ServiceInfoUpdateService do shutdown stop
+2025-11-23 14:32:35,148 INFO (ServerListManager.java:194)- com.alibaba.nacos.client.naming.core.ServerListManager do shutdown begin
+2025-11-23 14:32:35,148 WARN (NamingHttpClientManager.java:74)- [NamingHttpClientManager] Start destroying NacosRestTemplate
+2025-11-23 14:32:35,148 WARN (NamingHttpClientManager.java:81)- [NamingHttpClientManager] Destruction of the end
+2025-11-23 14:32:35,148 INFO (ServerListManager.java:199)- com.alibaba.nacos.client.naming.core.ServerListManager do shutdown stop
+2025-11-23 14:32:35,148 INFO (NamingHttpClientProxy.java:484)- com.alibaba.nacos.client.naming.remote.http.NamingHttpClientProxy do shutdown begin
+2025-11-23 14:32:35,148 WARN (NamingHttpClientManager.java:74)- [NamingHttpClientManager] Start destroying NacosRestTemplate
+2025-11-23 14:32:35,148 WARN (NamingHttpClientManager.java:81)- [NamingHttpClientManager] Destruction of the end
+2025-11-23 14:32:35,148 INFO (NamingHttpClientProxy.java:486)- com.alibaba.nacos.client.naming.remote.http.NamingHttpClientProxy do shutdown stop
+2025-11-23 14:32:35,148 INFO (RpcClient.java:425)- Shutdown rpc client, set status to shutdown
+2025-11-23 14:32:35,148 INFO (RpcClient.java:427)- Shutdown client event executor java.util.concurrent.ScheduledThreadPoolExecutor@59ad6663[Running, pool size = 2, active threads = 2, queued tasks = 0, completed tasks = 0]
+2025-11-23 14:32:35,148 INFO (RpcClient.java:580)- Close current connection 1763879208236_222.171.7.80_52453
+2025-11-23 14:32:35,150 INFO (GrpcClient.java:140)- Shutdown grpc executor java.util.concurrent.ThreadPoolExecutor@52e0b5f[Running, pool size = 6, active threads = 0, queued tasks = 0, completed tasks = 153]
+2025-11-23 14:32:35,150 INFO (NamingGrpcRedoService.java:292)- Shutdown grpc redo service executor java.util.concurrent.ScheduledThreadPoolExecutor@1461bd53[Running, pool size = 1, active threads = 0, queued tasks = 1, completed tasks = 115]
+2025-11-23 14:32:35,150 INFO (CredentialWatcher.java:106)- [null] CredentialWatcher is stopped
+2025-11-23 14:32:35,150 INFO (CredentialService.java:100)- [null] CredentialService is freed
+2025-11-23 14:32:35,150 INFO (NamingClientProxyDelegate.java:211)- com.alibaba.nacos.client.naming.remote.NamingClientProxyDelegate do shutdown stop
+2025-11-23 14:32:36,348 INFO (CredentialWatcher.java:165)- null No credential found
