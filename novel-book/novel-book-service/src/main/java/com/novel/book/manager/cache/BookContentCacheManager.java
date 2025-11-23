@@ -23,7 +23,7 @@ public class BookContentCacheManager {
     /**
      * 查询小说内容，并放入缓存中
      */
-    @Cacheable(cacheManager = CacheConsts.REDIS_CACHE_MANAGER,
+    @Cacheable(cacheManager = CacheConsts.REDIS_CACHE_MANAGER_PLAIN,
             value = CacheConsts.BOOK_CONTENT_CACHE_NAME)
     public String getBookContent(Long chapterId) {
         QueryWrapper<BookContent> contentQueryWrapper = new QueryWrapper<>();

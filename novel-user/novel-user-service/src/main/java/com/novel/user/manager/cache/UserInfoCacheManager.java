@@ -27,7 +27,7 @@ public class UserInfoCacheManager {
      * 查询用户信息，并放入缓存中
      */
     @CachePut(
-            cacheManager = CacheConsts.REDIS_CACHE_MANAGER,  // 指定使用Redis缓存管理器
+            cacheManager = CacheConsts.REDIS_CACHE_MANAGER_TYPED,  // 指定使用Redis缓存管理器
             value = CacheConsts.USER_INFO_CACHE_NAME,       // 指定缓存名称
             key = "#userId"
     )
@@ -46,7 +46,7 @@ public class UserInfoCacheManager {
     }
 
     @Cacheable(
-            cacheManager = CacheConsts.REDIS_CACHE_MANAGER,  // 指定使用Redis缓存管理器
+            cacheManager = CacheConsts.REDIS_CACHE_MANAGER_TYPED,  // 指定使用Redis缓存管理器
             value = CacheConsts.USER_INFO_CACHE_NAME,       // 指定缓存名称
             key = "#userId"
     )
@@ -65,7 +65,7 @@ public class UserInfoCacheManager {
     }
 
 
-    @CacheEvict(cacheManager = CacheConsts.REDIS_CACHE_MANAGER,
+    @CacheEvict(cacheManager = CacheConsts.REDIS_CACHE_MANAGER_TYPED,
             value = CacheConsts.USER_INFO_CACHE_NAME,
             key = "#userId")
     public void evictUserInfo(Long userId) {}

@@ -22,7 +22,7 @@ public class FriendLinkCacheManager {
     /**
      * 友情链接列表查询，并放入缓存中
      */
-    @Cacheable(cacheManager = CacheConsts.REDIS_CACHE_MANAGER, value = CacheConsts.HOME_FRIEND_LINK_CACHE_NAME)
+    @Cacheable(cacheManager = CacheConsts.REDIS_CACHE_MANAGER_PLAIN, value = CacheConsts.HOME_FRIEND_LINK_CACHE_NAME)
     public List<HomeFriendLinkRespDto>  listFriendLinks() {
         // 从友情链接表中查询出友情链接列表
         QueryWrapper<HomeFriendLink> queryWrapper = new QueryWrapper<>();
@@ -40,14 +40,14 @@ public class FriendLinkCacheManager {
     /**
      * 更新缓存
      */
-    @CachePut(cacheManager = CacheConsts.REDIS_CACHE_MANAGER,
+    @CachePut(cacheManager = CacheConsts.REDIS_CACHE_MANAGER_PLAIN,
             value = CacheConsts.HOME_FRIEND_LINK_CACHE_NAME)
     public List<HomeFriendLinkRespDto> updateFriendLinkCache() {
         // 直接查询最新数据并更新缓存
         return listFriendLinks();
     }
 
-    @CacheEvict(cacheManager = CacheConsts.REDIS_CACHE_MANAGER,
+    @CacheEvict(cacheManager = CacheConsts.REDIS_CACHE_MANAGER_PLAIN,
             value = CacheConsts.HOME_FRIEND_LINK_CACHE_NAME)
     public void evictCache() {}
 

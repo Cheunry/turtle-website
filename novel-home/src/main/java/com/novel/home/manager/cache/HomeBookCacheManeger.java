@@ -32,7 +32,7 @@ public class HomeBookCacheManeger {
     /**
      *  查询首页展示小说，并且放入缓存
      */
-    @Cacheable(cacheManager = CacheConsts.REDIS_CACHE_MANAGER, value = CacheConsts.HOME_BOOK_CACHE_NAME)
+    @Cacheable(cacheManager = CacheConsts.REDIS_CACHE_MANAGER_PLAIN, value = CacheConsts.HOME_BOOK_CACHE_NAME)
     public List<HomeBookRespDto> listHomeBooks() {
         // 从首页小说展示表中查询出需要展示的小说
         QueryWrapper<HomeBook> queryWrapper = new QueryWrapper<>();
@@ -68,7 +68,7 @@ public class HomeBookCacheManeger {
         return Collections.emptyList();
     }
 
-    @CacheEvict(cacheManager = CacheConsts.REDIS_CACHE_MANAGER,
+    @CacheEvict(cacheManager = CacheConsts.REDIS_CACHE_MANAGER_PLAIN,
             value = CacheConsts.HOME_BOOK_CACHE_NAME)
     public void evictCache() {}
     /*
