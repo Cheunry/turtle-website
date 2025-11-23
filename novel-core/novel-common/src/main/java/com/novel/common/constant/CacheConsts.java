@@ -20,9 +20,16 @@ public class CacheConsts {
     public static final String CAFFEINE_CACHE_MANAGER = "caffeineCacheManager";
 
     /**
-     * Redis 缓存管理器
+     * Redis 缓存管理器1
      */
-    public static final String REDIS_CACHE_MANAGER = "redisCacheManager";
+    public static final String REDIS_CACHE_MANAGER_PLAIN = "plainJsonCacheManager";
+
+    /**
+     * Redis 缓存管理器2
+     */
+    public static final String REDIS_CACHE_MANAGER_TYPED = "typedJsonCacheManager";
+
+
 
     /**
      * 首页小说推荐缓存
