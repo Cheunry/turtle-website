@@ -7,6 +7,7 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 
 @SpringBootApplication(scanBasePackages = {"com.novel"})
 @EnableDiscoveryClient
+@EnableFeignClients
 public class NovelResourceApplication {
 
     public static void main(String[] args) {

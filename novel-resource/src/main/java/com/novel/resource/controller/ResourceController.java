@@ -5,6 +5,7 @@ import com.novel.common.resp.RestResp;
 import com.novel.resource.dto.resp.ImgVerifyCodeRespDto;
 import com.novel.resource.service.ResourceService;
 
+import com.novel.resource.service.TencentCosService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -24,6 +25,7 @@ import java.io.IOException;
 public class ResourceController {
 
     private final ResourceService resourceService;
+    private final TencentCosService tencentCosService;
 
     /**
      * 获取图片验证码接口
@@ -41,7 +43,7 @@ public class ResourceController {
     @PostMapping("/image")
     RestResp<String> uploadImage(
             @Parameter(description = "上传文件") @RequestParam("file") MultipartFile file) {
-        return resourceService.uploadImage(file);
+        return tencentCosService.uploadImageTencent(file);
     }
 
 }

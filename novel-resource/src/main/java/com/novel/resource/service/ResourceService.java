@@ -19,10 +19,5 @@ public interface ResourceService {
      */
     RestResp<ImgVerifyCodeRespDto> getImgVerifyCode() throws IOException;
 
-    /**
-     * 图片上传
-     * @param file 需要上传的图片
-     * @return 图片访问路径
-     * */
-    RestResp<String> uploadImage(MultipartFile file);
+
 }

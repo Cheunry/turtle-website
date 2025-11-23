@@ -3,7 +3,27 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Data;
 
-/**
+@Data
+@Builder
+public class UserLoginRespDto {
+
+    @Schema(description = "用户ID")
+    private Long uid;
+
+    @Schema(description = "用户昵称")
+    private String nickName;
+
+    @Schema(description = "用户token")
+    private String token;
+}
+
+/*
+ * 用户token是什么？
+ * 相当于登录之后服务器发了一张临时通行证，
+ * 后续请求只要拿这张证就可以证明我是谁，而不用反复输入密码
+ */
+
+/*
  * 用到的几个注解的作用
  * @Data：Lombok注解，自动生成：
  * getter/setter方法
@@ -25,23 +45,3 @@ import lombok.Data;
  * 类型和约束说明：明确字段的类型、格式、约束条件
  *
  */
-
-
-@Data
-@Builder
-public class UserLoginRespDto {
-
-    @Schema(description = "用户ID")
-    private Long userId;
-
-    @Schema(description = "用户昵称")
-    private String nickName;
-
-    @Schema(description = "用户token")
-    private String token;
-    /**
-     * 用户token是什么？
-     * 相当于登录之后服务器发了一张临时通行证，
-     * 后续请求只要拿这张证就可以证明我是谁，而不用反复输入密码
-     */
-}

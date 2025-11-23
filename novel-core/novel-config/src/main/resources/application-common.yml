@@ -80,13 +80,15 @@ spring:
               # 分片算法的行表达式
               algorithm-expression: book_content$->{chapter_id % 10}
 
+
+
 --- #---------------------中间件配置---------------------------
 spring:
   data:
     # Redis 配置
     redis:
       host: 120.53.89.103
-      port: 6379
+      port: 52580
       password: 123456
 
 #  # RabbitMQ 配置
