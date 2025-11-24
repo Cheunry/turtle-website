@@ -39,18 +39,6 @@ public class BookListSearchImpl implements BookListSearchService {
         return RestResp.ok(bookRankCacheManager.listUpdateRankBooks());
     }
 
-    @Override
-    public RestResp<List<BookChapterRespDto>> listChapters(Long bookId) {
-        QueryWrapper<BookChapter> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq(DatabaseConsts.BookChapterTable.COLUMN_BOOK_ID, bookId)
-                .orderByAsc(DatabaseConsts.BookChapterTable.COLUMN_CHAPTER_NUM);
-        return RestResp.ok(bookChapterMapper.selectList(queryWrapper).stream()
-                .map(v -> BookChapterRespDto.builder()
-                        .id(v.getId())
-                        .chapterName(v.getChapterName())
-                        .isVip(v.getIsVip())
-                        .build()).toList());
-    }
 
     @Override
     public RestResp<List<BookCategoryRespDto>> listCategory(Integer workDirection) {

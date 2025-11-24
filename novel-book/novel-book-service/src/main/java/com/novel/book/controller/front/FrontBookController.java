@@ -1,11 +1,7 @@
 package com.novel.book.controller.front;
 
 
-import com.novel.book.dto.resp.BookCategoryRespDto;
-import com.novel.book.dto.resp.BookContentAboutRespDto;
-import com.novel.book.dto.resp.BookInfoRespDto;
-import com.novel.book.dto.resp.BookRankRespDto;
-import com.novel.book.manager.cache.BookRankCacheManager;
+import com.novel.book.dto.resp.*;
 import com.novel.book.service.BookListSearchService;
 import com.novel.book.service.BookReadService;
 import com.novel.book.service.BookSearchService;
@@ -88,6 +84,37 @@ public class FrontBookController {
     public RestResp<BookContentAboutRespDto> getBookContentAbout(
             @Parameter(description = "章节ID") @PathVariable("chapterId") Long chapterId) {
         return bookReadService.getBookContentAbout(chapterId);
+    }
+
+
+    /**
+     * 小说章节目录查询接口
+     */
+    @Operation(summary = "小说章节目录查询接口")
+    @GetMapping("chapter/list")
+    public RestResp<List<BookChapterRespDto>> getChapterList(
+            @Parameter(description = "小说ID")  Long bookId) {
+        return bookReadService.getBookChapter(bookId);
+    }
+
+    /**
+     * 获取上一章节ID接口
+     */
+    @Operation(summary = "获取上一章节ID接口")
+    @GetMapping("pre_chapter_id/{chapterId}")
+    public RestResp<Long> getPreChapterId(
+            @Parameter(description = "章节ID") @PathVariable("chapterId") Long chapterId) {
+        return bookReadService.getPreChapterId(chapterId);
+    }
+
+    /**
+     * 获取下一章节ID接口
+     */
+    @Operation(summary = "获取下一章节ID接口")
+    @GetMapping("next_chapter_id/{chapterId}")
+    public RestResp<Long> getNextChapterId(
+            @Parameter(description = "章节ID") @PathVariable("chapterId") Long chapterId) {
+        return bookReadService.getNextChapterId(chapterId);
     }
 
 }

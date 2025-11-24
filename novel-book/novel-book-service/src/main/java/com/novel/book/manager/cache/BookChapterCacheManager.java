@@ -6,9 +6,13 @@ import com.novel.book.dao.mapper.BookChapterMapper;
 import com.novel.book.dto.resp.BookChapterRespDto;
 import com.novel.common.constant.CacheConsts;
 import com.novel.common.constant.DatabaseConsts;
+import com.novel.config.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.BeanUtils;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
+
+import java.util.Optional;
 
 /**
  * 小说章节：缓存管理类
@@ -35,6 +39,5 @@ public class BookChapterCacheManager {
                 .chapterUpdateTime(bookChapter.getUpdateTime())
                 .build();
     }
-
 
 }

@@ -11,7 +11,6 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
 import java.util.List;
-import org.springframework.cache.annotation.CachePut;
 
 @Component
 @RequiredArgsConstructor
@@ -37,15 +36,6 @@ public class FriendLinkCacheManager {
 
     }
 
-    /**
-     * 更新缓存
-     */
-    @CachePut(cacheManager = CacheConsts.REDIS_CACHE_MANAGER_PLAIN,
-            value = CacheConsts.HOME_FRIEND_LINK_CACHE_NAME)
-    public List<HomeFriendLinkRespDto> updateFriendLinkCache() {
-        // 直接查询最新数据并更新缓存
-        return listFriendLinks();
-    }
 
     @CacheEvict(cacheManager = CacheConsts.REDIS_CACHE_MANAGER_PLAIN,
             value = CacheConsts.HOME_FRIEND_LINK_CACHE_NAME)
