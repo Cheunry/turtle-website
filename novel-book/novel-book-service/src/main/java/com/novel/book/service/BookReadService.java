@@ -14,9 +14,9 @@ public interface BookReadService {
 
     RestResp<List<BookChapterRespDto>> getBookChapter(Long bookId);
 
-    RestResp<Long> getPreChapterId(Long chapterId);
+    RestResp<Long> getPreChapterId(Long bookId, Integer chapterNum);
 
-    RestResp<Long> getNextChapterId(Long chapterId);
+    RestResp<Long> getNextChapterId(Long bookId, Integer chapterNum);
 
 
 }

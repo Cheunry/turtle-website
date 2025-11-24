@@ -54,13 +54,13 @@ public class BookReadServiceImpl implements BookReadService {
      * 接口：next_chapter_id/{chapterId} ，返回下一章的id即可
      */
     @Override
-    public RestResp<Long> getNextChapterId(Long chapterId) {
+    public RestResp<Long> getNextChapterId(Long bookId, Integer chapterNum) {
 
-        // 根据当前的章节号获取当前章节的信息
-        BookChapterRespDto bookChapter = bookChapterCacheManager.getChapter(chapterId);
-        // 再根据当前章节信息获取书籍id和章节号
-        Long bookId = bookChapter.getBookId();
-        Integer chapterNum = bookChapter.getChapterNum();
+//        // 根据当前的章节号获取当前章节的信息
+//        BookChapterRespDto bookChapter = bookChapterCacheManager.getChapter(chapterId);
+//        // 再根据当前章节信息获取书籍id和章节号
+//        Long bookId = bookChapter.getBookId();
+//        Integer chapterNum = bookChapter.getChapterNum();
 
         // 获取下一章的id
         QueryWrapper<BookChapter> queryWrapper = new QueryWrapper<>();
@@ -80,13 +80,13 @@ public class BookReadServiceImpl implements BookReadService {
      * pre_chapter_id/{chapterId}
      */
     @Override
-    public RestResp<Long> getPreChapterId(Long chapterId) {
+    public RestResp<Long> getPreChapterId(Long bookId, Integer chapterNum) {
 
         // 根据当前的章节号获取当前章节的信息
-        BookChapterRespDto bookChapter = bookChapterCacheManager.getChapter(chapterId);
+//        BookChapterRespDto bookChapter = bookChapterCacheManager.getChapter(chapterId);
         // 再根据当前章节信息获取书籍id和章节号
-        Long bookId = bookChapter.getBookId();
-        Integer chapterNum = bookChapter.getChapterNum();
+//        Long bookId = bookChapter.getBookId();
+//        Integer chapterNum = bookChapter.getChapterNum();
 
         // 获取上一章的id
         QueryWrapper<BookChapter> queryWrapper = new QueryWrapper<>();
