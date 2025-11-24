@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
  */
 @Component
 @RequiredArgsConstructor
-public class HomeBookCacheManeger {
+public class HomeBookCacheManager {
     private final HomeBookMapper homeBookMapper;
     private final HomeBookFeignManager homeBookFeignManager;
 

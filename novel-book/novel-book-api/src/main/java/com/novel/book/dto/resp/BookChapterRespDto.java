@@ -67,4 +67,6 @@ public class BookChapterRespDto {
     @Schema(description = "是否收费;1-收费 0-免费")
     private Integer isVip;
 
+
+
 }

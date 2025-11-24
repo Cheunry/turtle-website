@@ -32,13 +32,7 @@ public interface BookListSearchService {
      */
     RestResp<List<BookRankRespDto>> listUpdateRankBooks();
 
-    /**
-     * 小说章节列表查询
-     *
-     * @param bookId 小说ID
-     * @return 小说章节列表
-     */
-    RestResp<List<BookChapterRespDto>> listChapters(Long bookId);
+
 
     /**
      * 小说分类列表查询
