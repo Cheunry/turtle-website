@@ -9,6 +9,8 @@
         <module>novel-resource</module>
         <module>novel-home</module>
         <module>novel-book</module>
+        <module>novel-author</module>
+        <module>novel-author</module>
     </modules>
     <parent>
         <groupId>org.springframework.boot</groupId>

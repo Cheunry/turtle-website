@@ -101,20 +101,22 @@ public class FrontBookController {
      * 获取上一章节ID接口
      */
     @Operation(summary = "获取上一章节ID接口")
-    @GetMapping("pre_chapter_id/{chapterId}")
+    @GetMapping("pre_chapter_id/{bookId}/{chapterNum}")
     public RestResp<Long> getPreChapterId(
-            @Parameter(description = "章节ID") @PathVariable("chapterId") Long chapterId) {
-        return bookReadService.getPreChapterId(chapterId);
+            @Parameter(description = "书籍ID") @PathVariable("bookId") Long bookId,
+            @Parameter(description = "章节号") @PathVariable("chapterNum") Integer chapterNum) {
+        return bookReadService.getPreChapterId(bookId, chapterNum);
     }
 
     /**
      * 获取下一章节ID接口
      */
     @Operation(summary = "获取下一章节ID接口")
-    @GetMapping("next_chapter_id/{chapterId}")
+    @GetMapping("next_chapter_id/{bookId}/{chapterNum}")
     public RestResp<Long> getNextChapterId(
-            @Parameter(description = "章节ID") @PathVariable("chapterId") Long chapterId) {
-        return bookReadService.getNextChapterId(chapterId);
+            @Parameter(description = "书籍ID") @PathVariable("bookId") Long bookId,
+            @Parameter(description = "章节号") @PathVariable("chapterNum") Integer chapterNum) {
+        return bookReadService.getNextChapterId(bookId, chapterNum);
     }
 
 }

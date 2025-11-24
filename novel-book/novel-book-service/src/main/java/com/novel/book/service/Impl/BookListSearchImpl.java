@@ -21,7 +21,6 @@ import java.util.List;
 public class BookListSearchImpl implements BookListSearchService {
 
     private final BookRankCacheManager bookRankCacheManager;
-    private final BookChapterMapper bookChapterMapper;
     private final BookCategoryCacheManager bookCategoryCacheManager;
 
     @Override
