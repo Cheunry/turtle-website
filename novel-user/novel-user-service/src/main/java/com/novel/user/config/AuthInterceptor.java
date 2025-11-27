@@ -28,7 +28,6 @@ import java.util.Objects;
 public class AuthInterceptor implements HandlerInterceptor {
 
     private final UserCacheManager userCacheManager;
-    private final CacheManager redisCacheManager;
 
     /**
      * handle 执行前调用
@@ -50,12 +49,14 @@ public class AuthInterceptor implements HandlerInterceptor {
             // token 解析失败
             throw new BusinessException(ErrorCodeEnum.USER_LOGIN_EXPIRED);
         }
+
         UserInfoDto userInfoDto = userCacheManager.getUserAndPutToCache(userId);
 
         if (Objects.isNull(userInfoDto)) {
             // 用户不存在
             throw new BusinessException(ErrorCodeEnum.USER_ACCOUNT_NOT_EXIST);
         }
+
         // 设置 userId 到当前线程
         UserHolder.setUserId(userId);
         return HandlerInterceptor.super.preHandle(request, response, handler);

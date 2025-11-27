@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import com.novel.common.req.PageReqDto;
 import io.swagger.v3.oas.annotations.Parameter;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import java.util.Date;
@@ -12,6 +13,7 @@ import java.util.Date;
  * 小说搜索 请求DTO
  */
 @Data
+@EqualsAndHashCode(callSuper = true)                // 将超类的字段也纳入比较范围
 public class BookSearchReqDto extends PageReqDto {
 
     /**

@@ -42,6 +42,7 @@ public class JwtUtils {
      * @return JWT
      */
     public String generateToken(Long uid, String systemKey) {
+
         return Jwts.builder()
             .setHeaderParam(HEADER_SYSTEM_KEY, systemKey)
             .setSubject(uid.toString())
@@ -57,17 +58,22 @@ public class JwtUtils {
      * @return 用户ID
      */
     public Long parseToken(String token, String systemKey) {
+
         Jws<Claims> claimsJws;
+
         try {
+
             claimsJws = Jwts.parserBuilder()
                 .setSigningKey(Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8)))
                 .build()
                 .parseClaimsJws(token);
+
             // OK, we can trust this JWT
             // 判断该 JWT 是否属于指定系统
             if (Objects.equals(claimsJws.getHeader().get(HEADER_SYSTEM_KEY), systemKey)) {
                 return Long.parseLong(claimsJws.getBody().getSubject());
             }
+
         } catch (JwtException e) {
             log.warn("JWT解析失败:{}", token);
             // don't trust the JWT!

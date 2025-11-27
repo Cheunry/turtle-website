@@ -33,6 +33,7 @@ public class UserRegisterServiceImpl implements UserRegisterService {
 
     @Override
     public RestResp<UserRegisterRespDto> register(UserRegisterReqDto dto) {
+
         // 校验图形验证码是否正确
         if (!verifyCodeManager.imgVerifyCodeOk(dto.getSessionId(), dto.getVelCode())) {
             // 图形验证码校验失败
