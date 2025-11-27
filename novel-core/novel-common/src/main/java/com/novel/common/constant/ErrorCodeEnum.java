@@ -70,8 +70,6 @@ public enum ErrorCodeEnum {
     USER_PASSWORD_ERROR("A0210", "用户密码错误"),
 
 
-
-
     /**
      * 二级宏观错误码，用户请求参数错误
      */
@@ -83,9 +81,21 @@ public enum ErrorCodeEnum {
     USER_LOGIN_EXPIRED("A0230", "用户登录已过期"),
 
     /**
+     * 认证 Token 缺失
+     */
+    AUTH_TOKEN_MISSING("A0231","Token 缺失"),
+
+    /**
+     * Token 解析失败/无效
+     */
+    AUTH_TOKEN_INVALID("A0232", "认证 Token 无效 (解析失败或签名错误)"),
+
+
+    /**
      * 访问未授权
      */
     USER_UN_AUTH("A0301", "访问未授权"),
+
 
     /**
      * 用户请求服务异常
@@ -116,6 +126,11 @@ public enum ErrorCodeEnum {
      * 小说名已存在
      */
     AUTHOR_BOOK_NAME_EXIST("A3001", "小说名已存在"),
+
+    /**
+     * 作家重复注册
+     */
+    AUTHOR_DUPLICATE_REGISTRATION("A3002", "您已经是作家了，无需重复注册"),
 
     /**
      * 用户上传文件异常

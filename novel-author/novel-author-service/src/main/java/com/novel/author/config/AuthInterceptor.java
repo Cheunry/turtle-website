@@ -1,22 +1,22 @@
-package com.novel.user.config;
+package com.novel.author.config;
 
+import com.novel.author.dto.AuthorInfoDto;
+import com.novel.author.manager.cache.AuthorCacheManager;
 import com.novel.common.auth.JwtUtils;
 import com.novel.common.auth.UserHolder;
 import com.novel.common.constant.ErrorCodeEnum;
 import com.novel.common.constant.SystemConfigConsts;
 import com.novel.config.exception.BusinessException;
-import com.novel.user.dto.UserInfoDto;
-import com.novel.user.manager.cache.UserCacheManager;
-
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.ModelAndView;
+
 import java.util.Objects;
+
 
 /**
  * 认证授权拦截器：
@@ -27,7 +27,7 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class AuthInterceptor implements HandlerInterceptor {
 
-    private final UserCacheManager userCacheManager;
+    private final AuthorCacheManager AuthorCacheManager;
 
     /**
      * handle 执行前调用
@@ -36,6 +36,7 @@ public class AuthInterceptor implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response,
                              Object handler) throws Exception {
+
         // 获取登录 JWT
         String token = request.getHeader(SystemConfigConsts.HTTP_AUTH_HEADER_NAME);
 
@@ -44,22 +45,29 @@ public class AuthInterceptor implements HandlerInterceptor {
             // token 为空
             throw new BusinessException(ErrorCodeEnum.USER_LOGIN_EXPIRED);
         }
+
         Long userId = JwtUtils.parseToken(token, SystemConfigConsts.NOVEL_FRONT_KEY);
         if (Objects.isNull(userId)) {
             // token 解析失败
             throw new BusinessException(ErrorCodeEnum.USER_LOGIN_EXPIRED);
         }
 
-        UserInfoDto userInfoDto = userCacheManager.getUserAndPutToCache(userId);
+        // 作家权限认证
+        AuthorInfoDto authorInfo = AuthorCacheManager.getAuthorInfoByUserId(userId);
+        if (Objects.isNull(authorInfo)) {
 
-        if (Objects.isNull(userInfoDto)) {
-            // 用户不存在
-            throw new BusinessException(ErrorCodeEnum.USER_ACCOUNT_NOT_EXIST);
+            // 作家账号不存在，无权访问作家专区
+            throw new BusinessException(ErrorCodeEnum.USER_UN_AUTH);
         }
+
+        // 设置作家ID到当前线程
+        UserHolder.setAuthorId(authorInfo.getId());
 
         // 设置 userId 到当前线程
         UserHolder.setUserId(userId);
+
         return HandlerInterceptor.super.preHandle(request, response, handler);
+
     }
 
     /**
@@ -69,6 +77,7 @@ public class AuthInterceptor implements HandlerInterceptor {
     @Override
     public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler,
                            ModelAndView modelAndView) throws Exception {
+
         HandlerInterceptor.super.postHandle(request, response, handler, modelAndView);
     }
 
@@ -77,11 +86,35 @@ public class AuthInterceptor implements HandlerInterceptor {
      */
     @SuppressWarnings("NullableProblems")
     @Override
-    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex)
-            throws Exception {
+    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler,
+                                Exception ex) throws Exception {
+
         // 清理当前线程保存的用户数据
         UserHolder.clear();
+
         HandlerInterceptor.super.afterCompletion(request, response, handler, ex);
     }
 
 }
+
+
+/*
+
+为什么使用它？
+
+当你在代码中使用一些没有明确标记是否允许为空（Nullable）或是否不能为空（NonNull）的参数、返回值或字段时，
+IDE（尤其是使用了 JetBrains IntelliJ IDEA 或其他空值分析工具）或某些编译器的 静态代码分析 可能会发出警告。
+
+例如，在 HandlerInterceptor 的方法签名中：
+
+Java
+@Override
+public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex)
+// ...
+在某些环境下，request, response, handler, ex 这些参数并没有明确的 @Nullable 或 @NonNull 注解。
+如果你在重写方法时没有使用这些参数，或者你认为它们在特定情况下不会为空，
+但编译器或 IDE 仍然发出警告，提醒你可能存在空指针风险，
+此时你就可以使用 @SuppressWarnings("NullableProblems") 来 消除这些干扰性的警告。
+
+
+ */
