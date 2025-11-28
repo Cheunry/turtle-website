@@ -2,6 +2,9 @@ package com.novel.book.controller.inner;
 
 import com.novel.book.dto.req.BookAddReqDto;
 import com.novel.book.dto.req.BookPageReqDto;
+import com.novel.book.dto.req.ChapterAddReqDto;
+import com.novel.book.dto.req.ChapterPageReqDto;
+import com.novel.book.dto.resp.BookChapterRespDto;
 import com.novel.book.dto.resp.BookInfoRespDto;
 import com.novel.book.service.BookSearchService;
 import com.novel.book.service.BookAuthorService;
@@ -47,6 +50,16 @@ public class InnerBookController {
     }
 
     /**
+     * 小说章节发布接口
+     */
+    @Operation(summary = "小说章节发布接口")
+    @PostMapping("publishBookChapter")
+    public RestResp<Void> publishBookChapter(@Valid @RequestBody ChapterAddReqDto dto) {
+        return bookAuthorService.saveBookChapter(dto);
+    }
+
+
+    /**
      * 小说发布列表查询接口
      */
     @Operation(summary = "小说发布列表查询接口")
@@ -54,4 +67,16 @@ public class InnerBookController {
     public RestResp<PageRespDto<BookInfoRespDto>> listPublishBooks(@RequestBody BookPageReqDto dto) {
         return bookAuthorService.listAuthorBooks(dto);
     }
+
+
+    /**
+     * 小说章节发布列表查询接口
+     */
+    @Operation(summary = "小说章节发布列表查询接口")
+    @PostMapping("listPublishBookChapters")
+    public RestResp<PageRespDto<BookChapterRespDto>> listPublishBookChapters(@RequestBody ChapterPageReqDto dto) {
+        return bookAuthorService.listBookChapters(dto);
+    }
+
+
 }

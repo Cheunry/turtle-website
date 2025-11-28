@@ -17,7 +17,7 @@ import java.util.Objects;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class AuthorRegisterInfoImpl implements AuthorInfoService {
+public class AuthorInfoServiceImpl implements AuthorInfoService {
 
     private final AuthorInfoMapper authorInfoMapper;
     private final AuthorCacheManager authorCacheManager;
@@ -44,6 +44,7 @@ public class AuthorRegisterInfoImpl implements AuthorInfoService {
         authorInfo.setCreateTime(LocalDateTime.now());
         authorInfo.setUpdateTime(LocalDateTime.now());
         authorInfoMapper.insert(authorInfo);
+
         return RestResp.ok();
     }
 

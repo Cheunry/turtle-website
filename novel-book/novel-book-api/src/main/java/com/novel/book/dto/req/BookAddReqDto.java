@@ -21,7 +21,7 @@ public class BookAddReqDto {
     /**
      * 作品方向;0-男频 1-女频
      */
-    @Schema(description = "作品方向;0-男频 1-女频", required = true)
+    @Schema(description = "作品方向;0-男频 1-女频")
     @NotNull
     private Integer workDirection;
 
