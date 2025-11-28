@@ -1,7 +1,5 @@
 package com.novel.author.service;
 
-import com.novel.author.dao.entity.AuthorInfo;
-import com.novel.author.dto.AuthorInfoDto;
 import com.novel.author.dto.req.AuthorRegisterReqDto;
 import com.novel.common.auth.UserHolder;
 import com.novel.common.resp.RestResp;

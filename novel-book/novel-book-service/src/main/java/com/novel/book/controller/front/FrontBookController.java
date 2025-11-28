@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -67,13 +68,13 @@ public class FrontBookController {
     }
 
     /**
-     * 小说信息查询接口
+     * 小说章节目录查询接口
      */
-    @Operation(summary = "小说信息查询接口")
-    @GetMapping("{id}")
-    public RestResp<BookInfoRespDto> getBookById(
-            @Parameter(description = "小说 ID") @PathVariable("id") Long bookId) {
-        return bookSearchService.getBookById(bookId);
+    @Operation(summary = "小说章节目录查询接口")
+    @GetMapping("chapter/list")
+    public RestResp<List<BookChapterRespDto>> getChapterList(
+            @Parameter(description = "小说ID") @RequestParam("bookId") Long bookId) {
+        return bookReadService.getBookChapter(bookId);
     }
 
     /**
@@ -84,17 +85,6 @@ public class FrontBookController {
     public RestResp<BookContentAboutRespDto> getBookContentAbout(
             @Parameter(description = "章节ID") @PathVariable("chapterId") Long chapterId) {
         return bookReadService.getBookContentAbout(chapterId);
-    }
-
-
-    /**
-     * 小说章节目录查询接口
-     */
-    @Operation(summary = "小说章节目录查询接口")
-    @GetMapping("chapter/list")
-    public RestResp<List<BookChapterRespDto>> getChapterList(
-            @Parameter(description = "小说ID")  Long bookId) {
-        return bookReadService.getBookChapter(bookId);
     }
 
     /**
@@ -117,6 +107,16 @@ public class FrontBookController {
             @Parameter(description = "书籍ID") @PathVariable("bookId") Long bookId,
             @Parameter(description = "章节号") @PathVariable("chapterNum") Integer chapterNum) {
         return bookReadService.getNextChapterId(bookId, chapterNum);
+    }
+
+    /**
+     * 小说信息查询接口（放在最后，因为路径最宽泛）
+     */
+    @Operation(summary = "小说信息查询接口")
+    @GetMapping("{id}")
+    public RestResp<BookInfoRespDto> getBookById(
+            @Parameter(description = "小说 ID") @PathVariable("id") Long bookId) {
+        return bookSearchService.getBookById(bookId);
     }
 
 }

@@ -118,6 +118,26 @@ CREATE TABLE `book_chapter`
     KEY            `idx_bookId` (`book_id`) USING BTREE
 ) ENGINE=InnoDB AUTO_INCREMENT=1445988184596992001 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='小说章节';
 
+
+
+-- ----------------------------
+-- Table structure for book_content
+-- ----------------------------
+DROP TABLE IF EXISTS `book_content`;
+CREATE TABLE `book_content`
+(
+    `id`          bigint(20) unsigned NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `chapter_id`  bigint(20) unsigned NOT NULL COMMENT '章节ID',
+    `content`     mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '小说章节内容',
+    `create_time` datetime DEFAULT NULL,
+    `update_time` datetime DEFAULT NULL,
+    PRIMARY KEY (`id`) USING BTREE,
+    UNIQUE KEY `uk_chapterId` (`chapter_id`) USING BTREE,
+    UNIQUE KEY `pk_id` (`id`) USING BTREE
+) ENGINE=InnoDB AUTO_INCREMENT=4256332 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='小说内容';
+
+
+
 -- ----------------------------
 -- Table structure for book_comment
 -- ----------------------------
@@ -173,21 +193,6 @@ CREATE TABLE `book_comment_reply`
     UNIQUE KEY `pk_id` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='小说评论回复';
 
--- ----------------------------
--- Table structure for book_content
--- ----------------------------
-DROP TABLE IF EXISTS `book_content`;
-CREATE TABLE `book_content`
-(
-    `id`          bigint(20) unsigned NOT NULL AUTO_INCREMENT COMMENT '主键',
-    `chapter_id`  bigint(20) unsigned NOT NULL COMMENT '章节ID',
-    `content`     mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '小说章节内容',
-    `create_time` datetime DEFAULT NULL,
-    `update_time` datetime DEFAULT NULL,
-    PRIMARY KEY (`id`) USING BTREE,
-    UNIQUE KEY `uk_chapterId` (`chapter_id`) USING BTREE,
-    UNIQUE KEY `pk_id` (`id`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=4256332 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='小说内容';
 
 -- ----------------------------
 -- Table structure for book_info

@@ -3,11 +3,13 @@ package com.novel.book.dao.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import lombok.Builder;
 import lombok.Data;
 
 import java.time.LocalDateTime;
 
 @Data
+@Builder
 @TableName("book_chapter")
 public class BookChapter {
 
@@ -33,6 +35,11 @@ public class BookChapter {
      * 章节字数
      */
     private Integer wordCount;
+
+    /**
+     * 章节内容
+     */
+    private String content;
 
     /**
      * 是否收费;1-收费 0-免费

@@ -2,6 +2,9 @@ package com.novel.book.manager.feign;
 
 import com.novel.book.dto.req.BookAddReqDto;
 import com.novel.book.dto.req.BookPageReqDto;
+import com.novel.book.dto.req.ChapterAddReqDto;
+import com.novel.book.dto.req.ChapterPageReqDto;
+import com.novel.book.dto.resp.BookChapterRespDto;
 import com.novel.book.dto.resp.BookInfoRespDto;
 import com.novel.common.constant.ApiRouterConsts;
 import com.novel.common.constant.ErrorCodeEnum;
@@ -32,11 +35,22 @@ public interface BookFeign {
     RestResp<Void> publishBook(BookAddReqDto dto);
 
     /**
+     * 小说章节发布接口
+     */
+    @PostMapping(ApiRouterConsts.API_INNER_BOOK_URL_PREFIX + "/publishBookChapter")
+    RestResp<Void> publishBookChapter(ChapterAddReqDto dto);
+
+    /**
      * 小说发布列表查询接口
      */
     @PostMapping(ApiRouterConsts.API_INNER_BOOK_URL_PREFIX + "/listPublishBooks")
     RestResp<PageRespDto<BookInfoRespDto>> listPublishBooks(BookPageReqDto dto);
 
+    /**
+     * 小说章节列表查询
+     */
+    @PostMapping(ApiRouterConsts.API_INNER_BOOK_URL_PREFIX + "/listPublishBookChapters")
+    RestResp<PageRespDto<BookChapterRespDto>> listPublishBookChapters(ChapterPageReqDto dto);
 
 
     @Component
@@ -55,10 +69,22 @@ public interface BookFeign {
         }
 
         @Override
+        public RestResp<Void> publishBookChapter(ChapterAddReqDto dto) {
+
+            return RestResp.fail(ErrorCodeEnum.THIRD_SERVICE_ERROR);
+        }
+
+
+
+        @Override
         public RestResp<PageRespDto<BookInfoRespDto>> listPublishBooks(BookPageReqDto dto) {
 
-            return RestResp.ok(PageRespDto.of(dto.getPageNum(), dto.getPageSize(),
-                    0, new ArrayList<>(0)));
+            return RestResp.ok(PageRespDto.of(dto.getPageNum(), dto.getPageSize(), 0, new ArrayList<>(0)));
+        }
+
+        @Override
+        public RestResp<PageRespDto<BookChapterRespDto>> listPublishBookChapters(ChapterPageReqDto dto) {
+            return RestResp.ok(PageRespDto.of(dto.getPageNum(), dto.getPageSize(), 0, new ArrayList<>(0)));
         }
 
     }
