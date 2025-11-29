@@ -2,10 +2,7 @@ package com.novel.author.manager.feign;
 
 import com.novel.author.dto.AuthorInfoDto;
 import com.novel.author.manager.cache.AuthorCacheManager;
-import com.novel.book.dto.req.BookAddReqDto;
-import com.novel.book.dto.req.BookPageReqDto;
-import com.novel.book.dto.req.ChapterAddReqDto;
-import com.novel.book.dto.req.ChapterPageReqDto;
+import com.novel.book.dto.req.*;
 import com.novel.book.dto.resp.BookChapterRespDto;
 import com.novel.book.dto.resp.BookInfoRespDto;
 import com.novel.book.manager.feign.BookFeign;
@@ -64,6 +61,30 @@ public class BookFeignManager {
     public RestResp<PageRespDto<BookChapterRespDto>> listPublishBookChapters(ChapterPageReqDto dto) {
 
         return bookFeign.listPublishBookChapters(dto);
+    }
+
+    /**
+     * 获取单个章节信息
+     */
+    public RestResp<BookChapterRespDto> getBookChapter(Long id) {
+        return bookFeign.getBookChapter(id);
+    }
+
+    /**
+     * 更新某章节信息
+     */
+    public RestResp<Void> updateBookChapter(ChapterUptReqDto dto) {
+        dto.setAuthorId(UserHolder.getAuthorId());
+        return bookFeign.updateBookChapter(dto);
+    }
+
+    /**
+     * 删除某章节
+     */
+    public RestResp<Void> deleteBookChapter(ChapterDelReqDto dto) {
+        // 确保 AuthorId 被正确设置，防止越权删除
+        dto.setAuthorId(UserHolder.getAuthorId()); 
+        return bookFeign.deleteBookChapter(dto);
     }
 
 

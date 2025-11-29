@@ -61,6 +61,8 @@ public class BookChapterRespDto {
     @JsonFormat(pattern = "yyyy/MM/dd HH:mm")
     private LocalDateTime chapterUpdateTime;
 
+    private String content;
+
     /**
      * 是否收费;1-收费 0-免费
      */
