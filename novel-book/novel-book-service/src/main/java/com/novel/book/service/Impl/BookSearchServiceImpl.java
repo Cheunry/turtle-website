@@ -18,7 +18,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class BookSearchServiceImpl implements BookSearchService {
 
-
     private final BookInfoCacheManager bookInfoCacheManager;
     private final BookInfoMapper bookInfoMapper;
 

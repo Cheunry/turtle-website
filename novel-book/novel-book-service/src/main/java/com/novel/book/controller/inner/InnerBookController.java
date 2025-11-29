@@ -1,9 +1,6 @@
 package com.novel.book.controller.inner;
 
-import com.novel.book.dto.req.BookAddReqDto;
-import com.novel.book.dto.req.BookPageReqDto;
-import com.novel.book.dto.req.ChapterAddReqDto;
-import com.novel.book.dto.req.ChapterPageReqDto;
+import com.novel.book.dto.req.*;
 import com.novel.book.dto.resp.BookChapterRespDto;
 import com.novel.book.dto.resp.BookInfoRespDto;
 import com.novel.book.service.BookSearchService;
@@ -12,13 +9,11 @@ import com.novel.common.constant.ApiRouterConsts;
 import com.novel.common.resp.PageRespDto;
 import com.novel.common.resp.RestResp;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -68,7 +63,6 @@ public class InnerBookController {
         return bookAuthorService.listAuthorBooks(dto);
     }
 
-
     /**
      * 小说章节发布列表查询接口
      */
@@ -78,5 +72,23 @@ public class InnerBookController {
         return bookAuthorService.listBookChapters(dto);
     }
 
+
+    @Operation(summary = "删除章节")
+    @PostMapping("deleteBookChapter")
+    public RestResp<Void> deleteBookChapter(@Valid @RequestBody ChapterDelReqDto dto) {
+        return bookAuthorService.deleteBookChapter(dto);
+    }
+
+    @Operation(summary = "获取单个章节详情")
+    @GetMapping("getBookChapter")
+    public RestResp<BookChapterRespDto> getBookChapter(Long id) {
+        return bookAuthorService.getBookChapter(id);
+    }
+
+    @Operation(summary = "保存对章节的修改")
+    @PutMapping("updateBookChapter")
+    public RestResp<Void> updateBookChapter(@RequestBody ChapterUptReqDto dto) {
+        return bookAuthorService.updateBookChapter(dto);
+    }
 
 }

@@ -98,6 +98,8 @@ public class DatabaseConsts {
 
         public static final String COLUMN_LAST_CHAPTER_UPDATE_TIME = "last_chapter_update_time";
 
+        public static final String COLUMN_LAST_CHAPTER_UPDATE_ID = "last_chapter_update_id";
+
     }
 
     /**
@@ -115,20 +117,7 @@ public class DatabaseConsts {
 
         public static final String COLUMN_CHAPTER_NUM = "chapter_num";
 
-        public static final String COLUMN_LAST_CHAPTER_UPDATE_TIME = "last_chapter_update_time";
-
-    }
-
-    /**
-     * 小说内容表
-     */
-    public static class BookContentTable {
-
-        private BookContentTable() {
-            throw new IllegalStateException(SystemConfigConsts.CONST_INSTANCE_EXCEPTION_MSG);
-        }
-
-        public static final String COLUMN_CHAPTER_ID = "chapter_id";
+        public static final String COLUMN_CHAPTER_UPDATE_TIME = "update_time";
 
     }
 

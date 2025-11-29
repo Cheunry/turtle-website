@@ -1,9 +1,7 @@
 package com.novel.book.service;
 
-import com.novel.book.dto.req.BookAddReqDto;
-import com.novel.book.dto.req.BookPageReqDto;
-import com.novel.book.dto.req.ChapterAddReqDto;
-import com.novel.book.dto.req.ChapterPageReqDto;
+import com.novel.book.dao.entity.BookChapter;
+import com.novel.book.dto.req.*;
 import com.novel.book.dto.resp.BookChapterRespDto;
 import com.novel.book.dto.resp.BookInfoRespDto;
 import com.novel.common.resp.PageRespDto;
@@ -17,6 +15,12 @@ public interface BookAuthorService {
 
     RestResp<PageRespDto<BookInfoRespDto>> listAuthorBooks(BookPageReqDto dto);
 
-    RestResp<PageRespDto<BookChapterRespDto>>  listBookChapters(ChapterPageReqDto dto);
+    RestResp<PageRespDto<BookChapterRespDto>> listBookChapters(ChapterPageReqDto dto);
+
+    RestResp<BookChapterRespDto> getBookChapter(Long id);
+
+    RestResp<Void> deleteBookChapter(ChapterDelReqDto dto);
+
+    RestResp<Void> updateBookChapter(ChapterUptReqDto dto);
 
 }
