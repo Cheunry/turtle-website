@@ -52,3 +52,6 @@ logs/
 # 日志文件
 *.log
 *.log.*
+
+doc/docker/
+**/doc/docker/
