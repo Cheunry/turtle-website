@@ -2,6 +2,7 @@ package com.novel.book.manager.feign;
 
 import com.novel.book.dto.req.*;
 import com.novel.book.dto.resp.BookChapterRespDto;
+import com.novel.book.dto.resp.BookEsRespDto;
 import com.novel.book.dto.resp.BookInfoRespDto;
 import com.novel.common.constant.ApiRouterConsts;
 import com.novel.common.constant.ErrorCodeEnum;
@@ -67,6 +68,12 @@ public interface BookFeign {
     @PostMapping(ApiRouterConsts.API_INNER_BOOK_URL_PREFIX + "/deleteBookChapter")
     RestResp<Void> deleteBookChapter(@RequestBody ChapterDelReqDto dto);
 
+    /**
+     * 查询下一批保存到 ES 中的小说列表
+     */
+    @PostMapping(ApiRouterConsts.API_INNER_BOOK_URL_PREFIX + "/listNextEsBooks")
+    RestResp<List<BookEsRespDto>> listNextEsBooks(Long maxBookId);
+
     @Component
     class BookFeignFallback implements BookFeign {
 
@@ -106,12 +113,17 @@ public interface BookFeign {
 
         @Override
         public RestResp<Void> updateBookChapter(ChapterUptReqDto dto) {
-            return null;
+            return RestResp.fail(ErrorCodeEnum.THIRD_SERVICE_ERROR);
         }
 
         @Override
         public RestResp<Void> deleteBookChapter(ChapterDelReqDto dto) {
             return RestResp.fail(ErrorCodeEnum.THIRD_SERVICE_ERROR);
+        }
+
+        @Override
+        public RestResp<List<BookEsRespDto>> listNextEsBooks(Long maxBookId) {
+            return RestResp.ok(new ArrayList<>(0));
         }
 
 

@@ -17,3 +17,11 @@ ALTER TABLE `book_chapter`
 
 ALTER TABLE `book_chapter`
     MODIFY COLUMN `word_count` int(10) unsigned NOT NULL DEFAULT '0' COMMENT '章节字数';
+
+
+SELECT id, book_name, word_count
+FROM book_info
+WHERE id > 0
+  AND word_count > 0
+ORDER BY id ASC
+LIMIT 30;

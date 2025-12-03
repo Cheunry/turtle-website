@@ -18,6 +18,7 @@ import java.util.List;
 @RequestMapping(ApiRouterConsts.API_FRONT_HOME_URL_PREFIX)
 @RequiredArgsConstructor
 public class HomeController {
+
     private final HomeService homeService;
 
     /**

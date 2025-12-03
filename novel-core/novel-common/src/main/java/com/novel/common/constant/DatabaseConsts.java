@@ -100,6 +100,8 @@ public class DatabaseConsts {
 
         public static final String COLUMN_LAST_CHAPTER_UPDATE_ID = "last_chapter_update_id";
 
+        public static final String COLUMN_BOOK_STATUS = "book_status";      // 书籍状态;0-连载中 1-已完结
+
     }
 
     /**
