@@ -2,13 +2,13 @@ package com.novel.book.service;
 
 import com.novel.book.dto.resp.BookCategoryRespDto;
 import com.novel.book.dto.resp.BookChapterRespDto;
+import com.novel.book.dto.resp.BookEsRespDto;
 import com.novel.book.dto.resp.BookRankRespDto;
 import com.novel.common.resp.RestResp;
 
 import java.util.List;
 
 public interface BookListSearchService {
-
 
 
     /**
@@ -41,6 +41,8 @@ public interface BookListSearchService {
      * @return 分类列表
      */
     RestResp<List<BookCategoryRespDto>> listCategory(Integer workDirection);
+
+
 
 
 }

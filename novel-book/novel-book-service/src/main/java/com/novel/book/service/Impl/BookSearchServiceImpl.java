@@ -3,6 +3,7 @@ package com.novel.book.service.Impl;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.novel.book.dao.entity.BookInfo;
 import com.novel.book.dao.mapper.BookInfoMapper;
+import com.novel.book.dto.resp.BookEsRespDto;
 import com.novel.book.dto.resp.BookInfoRespDto;
 import com.novel.book.manager.cache.BookInfoCacheManager;
 import com.novel.common.constant.DatabaseConsts;
@@ -11,6 +12,7 @@ import com.novel.book.service.BookSearchService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -40,4 +42,5 @@ public class BookSearchServiceImpl implements BookSearchService {
                         .bookDesc(v.getBookDesc())
                         .build()).collect(Collectors.toList()));
     }
+
 }

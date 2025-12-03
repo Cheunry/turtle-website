@@ -2,7 +2,9 @@ package com.novel.book.controller.inner;
 
 import com.novel.book.dto.req.*;
 import com.novel.book.dto.resp.BookChapterRespDto;
+import com.novel.book.dto.resp.BookEsRespDto;
 import com.novel.book.dto.resp.BookInfoRespDto;
+import com.novel.book.service.BookEsService;
 import com.novel.book.service.BookSearchService;
 import com.novel.book.service.BookAuthorService;
 import com.novel.common.constant.ApiRouterConsts;
@@ -25,6 +27,19 @@ public class InnerBookController {
 
     private final BookSearchService bookSearchService;
     private final BookAuthorService bookAuthorService;
+    private final BookEsService bookEsService;
+
+    /**
+     * 查询下一批保存到 ES 中的小说列表
+     */
+    @Operation(summary = "查询下一批保存到 ES 中的小说列表")
+    @PostMapping("listNextEsBooks")
+    RestResp<List<BookEsRespDto>> listNextEsBooks(@Parameter(description = "已查询的最大小说ID") @RequestBody Long maxBookId) {
+
+        return bookEsService.listNextEsBooks(maxBookId);
+    }
+
+
 
     /**
      * 批量查询小说信息
@@ -32,6 +47,7 @@ public class InnerBookController {
     @Operation(summary = "批量查询小说信息")
     @PostMapping("listBookInfoByIds")
     RestResp<List<BookInfoRespDto>> listBookInfoByIds(@RequestBody List<Long> bookIds) {
+
         return bookSearchService.listBookInfoByIds(bookIds);
     }
 
@@ -41,6 +57,7 @@ public class InnerBookController {
     @Operation(summary = "小说发布接口")
     @PostMapping("publishBook")
     public RestResp<Void> publishBook(@Valid @RequestBody BookAddReqDto dto) {
+
         return bookAuthorService.saveBook(dto);
     }
 
@@ -50,6 +67,7 @@ public class InnerBookController {
     @Operation(summary = "小说章节发布接口")
     @PostMapping("publishBookChapter")
     public RestResp<Void> publishBookChapter(@Valid @RequestBody ChapterAddReqDto dto) {
+
         return bookAuthorService.saveBookChapter(dto);
     }
 
@@ -60,6 +78,7 @@ public class InnerBookController {
     @Operation(summary = "小说发布列表查询接口")
     @PostMapping("listPublishBooks")
     public RestResp<PageRespDto<BookInfoRespDto>> listPublishBooks(@RequestBody BookPageReqDto dto) {
+
         return bookAuthorService.listAuthorBooks(dto);
     }
 
@@ -69,25 +88,28 @@ public class InnerBookController {
     @Operation(summary = "小说章节发布列表查询接口")
     @PostMapping("listPublishBookChapters")
     public RestResp<PageRespDto<BookChapterRespDto>> listPublishBookChapters(@RequestBody ChapterPageReqDto dto) {
+
         return bookAuthorService.listBookChapters(dto);
     }
-
 
     @Operation(summary = "删除章节")
     @PostMapping("deleteBookChapter")
     public RestResp<Void> deleteBookChapter(@Valid @RequestBody ChapterDelReqDto dto) {
+
         return bookAuthorService.deleteBookChapter(dto);
     }
 
     @Operation(summary = "获取单个章节详情")
     @GetMapping("getBookChapter")
     public RestResp<BookChapterRespDto> getBookChapter(Long id) {
+
         return bookAuthorService.getBookChapter(id);
     }
 
     @Operation(summary = "保存对章节的修改")
     @PutMapping("updateBookChapter")
     public RestResp<Void> updateBookChapter(@RequestBody ChapterUptReqDto dto) {
+
         return bookAuthorService.updateBookChapter(dto);
     }
 
