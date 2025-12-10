@@ -90,17 +90,18 @@ public class BookInfoRespDto {
     @Schema(description = "评论数")
     private Integer commentCount;
 
-    /**
-     * 首章节ID
-     */
-    @Schema(description = "首章节ID")
-    private Long firstChapterId;
 
     /**
-     * 最新章节ID
+     * 首章节号
      */
-    @Schema(description = "最新章节ID")
-    private Long lastChapterId;
+    @Schema(description = "首章节号")
+    private Integer firstChapterNum;
+
+    /**
+     * 最新章节号
+     */
+    @Schema(description = "最新章节号")
+    private Integer lastChapterNum;
 
     /**
      * 最新章节名

@@ -2,6 +2,8 @@ package com.novel.book.controller.front;
 
 
 import com.novel.book.dto.resp.*;
+import com.novel.book.dto.req.BookVisitReqDto;
+import com.novel.book.service.BookCommentService;
 import com.novel.book.service.BookListSearchService;
 import com.novel.book.service.BookReadService;
 import com.novel.book.service.BookSearchService;
@@ -11,11 +13,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -29,6 +27,7 @@ public class FrontBookController {
     private final BookSearchService bookSearchService;
     private final BookListSearchService bookListSearchService;
     private final BookReadService bookReadService;
+    private final BookCommentService bookCommentService;
 
     /**
      * 小说分类列表查询接口
@@ -68,6 +67,25 @@ public class FrontBookController {
     }
 
     /**
+     * 小说推荐列表查询接口
+     */
+    @Operation(summary = "小说推荐列表查询接口")
+    @GetMapping("rec_list")
+    public RestResp<List<BookInfoRespDto>> listRecBooks(
+            @Parameter(description = "小说ID") @RequestParam("bookId") Long bookId) {
+        return bookListSearchService.listRecBooks(bookId);
+    }
+
+    /**
+     * 增加小说点击量接口
+     */
+    @Operation(summary = "增加小说点击量接口")
+    @PostMapping("visit")
+    public RestResp<Void> addVisitCount(@Parameter(description = "小说ID") @RequestBody BookVisitReqDto dto) {
+        return bookSearchService.addVisitCount(dto.getBookId());
+    }
+
+    /**
      * 小说章节目录查询接口
      */
     @Operation(summary = "小说章节目录查询接口")
@@ -81,10 +99,21 @@ public class FrontBookController {
      * 小说内容相关信息查询接口
      */
     @Operation(summary = "小说内容相关信息查询接口")
-    @GetMapping("content/{chapterId}")
+    @GetMapping("content/{bookId}/{chapterNum}")
     public RestResp<BookContentAboutRespDto> getBookContentAbout(
-            @Parameter(description = "章节ID") @PathVariable("chapterId") Long chapterId) {
-        return bookReadService.getBookContentAbout(chapterId);
+            @Parameter(description = "书籍ID") @PathVariable("bookId") Long bookId,
+            @Parameter(description = "章节号") @PathVariable("chapterNum") Integer chapterNum) {
+        return bookReadService.getBookContentAbout(bookId, chapterNum);
+    }
+
+    /**
+     * 小说最新章节相关信息查询接口
+     */
+    @Operation(summary = "小说最新章节相关信息查询接口")
+    @GetMapping("last_chapter/about")
+    public RestResp<BookChapterAboutRespDto> getLastChapterAbout(
+            @Parameter(description = "小说ID") Long bookId) {
+        return bookSearchService.getLastChapterAbout(bookId);
     }
 
     /**
@@ -92,7 +121,7 @@ public class FrontBookController {
      */
     @Operation(summary = "获取上一章节ID接口")
     @GetMapping("pre_chapter_id/{bookId}/{chapterNum}")
-    public RestResp<Long> getPreChapterId(
+    public RestResp<Integer> getPreChapterId(
             @Parameter(description = "书籍ID") @PathVariable("bookId") Long bookId,
             @Parameter(description = "章节号") @PathVariable("chapterNum") Integer chapterNum) {
         return bookReadService.getPreChapterId(bookId, chapterNum);
@@ -103,7 +132,7 @@ public class FrontBookController {
      */
     @Operation(summary = "获取下一章节ID接口")
     @GetMapping("next_chapter_id/{bookId}/{chapterNum}")
-    public RestResp<Long> getNextChapterId(
+    public RestResp<Integer> getNextChapterId(
             @Parameter(description = "书籍ID") @PathVariable("bookId") Long bookId,
             @Parameter(description = "章节号") @PathVariable("chapterNum") Integer chapterNum) {
         return bookReadService.getNextChapterId(bookId, chapterNum);
@@ -117,6 +146,17 @@ public class FrontBookController {
     public RestResp<BookInfoRespDto> getBookById(
             @Parameter(description = "小说 ID") @PathVariable("id") Long bookId) {
         return bookSearchService.getBookById(bookId);
+    }
+
+
+    /**
+     * 小说最新评论查询接口
+     */
+    @Operation(summary = "小说最新评论查询接口")
+    @GetMapping("comment/newest_list")
+    public RestResp<BookCommentRespDto> listNewestComments(
+            @Parameter(description = "小说ID") Long bookId) {
+        return bookCommentService.listNewestComments(bookId);
     }
 
 }

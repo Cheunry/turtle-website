@@ -18,11 +18,6 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 public class BookChapterRespDto {
 
-    /**
-     * 章节ID
-     */
-    @Schema(description = "章节ID")
-    private Long id;
 
     /**
      * 小说ID
@@ -35,6 +30,12 @@ public class BookChapterRespDto {
      */
     @Schema(description = "章节号")
     private Integer chapterNum;
+
+    /**
+     * 作者ID
+     */
+    @Schema(description = "作者ID")
+    private Long authorId;
 
     /**
      * 章节名

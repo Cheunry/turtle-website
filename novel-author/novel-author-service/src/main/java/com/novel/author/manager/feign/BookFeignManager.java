@@ -66,8 +66,8 @@ public class BookFeignManager {
     /**
      * 获取单个章节信息
      */
-    public RestResp<BookChapterRespDto> getBookChapter(Long id) {
-        return bookFeign.getBookChapter(id);
+    public RestResp<BookChapterRespDto> getBookChapter(Long bookId, Integer chapterNum) {
+        return bookFeign.getBookChapter(bookId, chapterNum);
     }
 
     /**

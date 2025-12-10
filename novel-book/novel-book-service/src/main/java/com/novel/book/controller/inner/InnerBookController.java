@@ -4,6 +4,7 @@ import com.novel.book.dto.req.*;
 import com.novel.book.dto.resp.BookChapterRespDto;
 import com.novel.book.dto.resp.BookEsRespDto;
 import com.novel.book.dto.resp.BookInfoRespDto;
+import com.novel.book.service.BookCommentService;
 import com.novel.book.service.BookEsService;
 import com.novel.book.service.BookSearchService;
 import com.novel.book.service.BookAuthorService;
@@ -28,6 +29,7 @@ public class InnerBookController {
     private final BookSearchService bookSearchService;
     private final BookAuthorService bookAuthorService;
     private final BookEsService bookEsService;
+    private final BookCommentService bookCommentService;
 
     /**
      * 查询下一批保存到 ES 中的小说列表
@@ -37,6 +39,14 @@ public class InnerBookController {
     RestResp<List<BookEsRespDto>> listNextEsBooks(@Parameter(description = "已查询的最大小说ID") @RequestBody Long maxBookId) {
 
         return bookEsService.listNextEsBooks(maxBookId);
+    }
+
+    /**
+     * 根据 ID 获取 ES 书籍数据（新增）
+     */
+    @GetMapping("/getEsBookById")
+    public RestResp<BookEsRespDto> getEsBookById(@RequestParam("bookId") Long bookId) {
+        return bookEsService.getEsBookById(bookId);
     }
 
 
@@ -101,9 +111,9 @@ public class InnerBookController {
 
     @Operation(summary = "获取单个章节详情")
     @GetMapping("getBookChapter")
-    public RestResp<BookChapterRespDto> getBookChapter(Long id) {
+    public RestResp<BookChapterRespDto> getBookChapter(Long bookId, Integer chapterNum) {
 
-        return bookAuthorService.getBookChapter(id);
+        return bookAuthorService.getBookChapter(bookId, chapterNum);
     }
 
     @Operation(summary = "保存对章节的修改")
@@ -112,5 +122,34 @@ public class InnerBookController {
 
         return bookAuthorService.updateBookChapter(dto);
     }
+
+
+    /**
+     * 发表评论接口
+     */
+    @Operation(summary = "发表评论接口")
+    @PostMapping("publishComment")
+    public RestResp<Void> publishComment(@Valid @RequestBody BookCommentReqDto dto) {
+        return bookCommentService.saveComment(dto);
+    }
+
+    /**
+     * 修改评论接口
+     */
+    @Operation(summary = "修改评论接口")
+    @PostMapping("updateComment")
+    public RestResp<Void> updateComment(@Valid @RequestBody BookCommentReqDto dto) {
+        return bookCommentService.updateComment(dto);
+    }
+
+    /**
+     * 删除评论接口
+     */
+    @Operation(summary = "删除评论接口")
+    @PostMapping("deleteComment")
+    public RestResp<Void> deleteComment(@RequestBody BookCommentReqDto dto) {
+        return bookCommentService.deleteComment(dto);
+    }
+
 
 }

@@ -91,7 +91,12 @@ public class BookInfo {
     /**
      * 最新章节ID
      */
-    private Long lastChapterId;
+//    private Long lastChapterId;
+
+    /**
+     * 最新章节NUM
+     */
+    private Integer lastChapterNum;
 
     /**
      * 最新章节名

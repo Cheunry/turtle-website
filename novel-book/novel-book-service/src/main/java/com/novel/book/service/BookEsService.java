@@ -14,4 +14,10 @@ public interface BookEsService {
      * @return 小说列表
      */
     RestResp<List<BookEsRespDto>> listNextEsBooks(Long maxBookId);
+
+    /**
+     * 根据 ID 获取 ES 书籍数据
+     */
+    RestResp<BookEsRespDto> getEsBookById(Long bookId);
+
 }

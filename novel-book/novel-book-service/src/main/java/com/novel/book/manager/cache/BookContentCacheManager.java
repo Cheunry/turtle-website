@@ -25,8 +25,11 @@ public class BookContentCacheManager {
      */
 //    @Cacheable(cacheManager = CacheConsts.REDIS_CACHE_MANAGER_PLAIN,
 //            value = CacheConsts.BOOK_CONTENT_CACHE_NAME)
-    public String getBookContent(Long chapterId) {
-        BookChapter bookChapter = bookChapterMapper.selectById(chapterId);
+    public String getBookContent(Long bookId, Integer chapterNum) {
+        QueryWrapper<BookChapter> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq(DatabaseConsts.BookChapterTable.COLUMN_BOOK_ID, bookId)
+                .eq(DatabaseConsts.BookChapterTable.COLUMN_CHAPTER_NUM, chapterNum);
+        BookChapter bookChapter = bookChapterMapper.selectOne(queryWrapper);
         return bookChapter != null ? bookChapter.getContent() : null;
     }
 

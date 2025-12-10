@@ -12,4 +12,12 @@ import java.util.List;
 
 @Mapper
 public interface BookInfoMapper extends BaseMapper<BookInfo> {
+
+    /**
+     * 最初的原始方法，已经换用redis！
+     * 增加小说点击量
+     *
+     * @param bookId 小说ID
+     */
+    void addVisitCount(@Param("bookId") Long bookId);
 }

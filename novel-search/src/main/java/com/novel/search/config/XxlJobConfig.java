@@ -8,7 +8,8 @@ import org.springframework.context.annotation.Configuration;
 
 /**
  * XXL-JOB 执行器配置类
- * ！！！！！注意：目前基于本地开发环境，网络配置使用默认值或空。后期需要修改！！！！！！！1
+ * ！！！！！注意：目前基于本地开发环境，网络配置使用默认值或空。后期需要修改！！！！！！！
+ * 在本地xxl-job暂时不可用
  */
 @Configuration
 @Slf4j

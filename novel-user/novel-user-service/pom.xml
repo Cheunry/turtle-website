@@ -12,11 +12,11 @@
     <artifactId>novel-user-service</artifactId>
 
     <dependencies>
-    <!--    <dependency>-->
-    <!--        <groupId>com.novel</groupId>-->
-    <!--        <artifactId>novel-book-api</artifactId>-->
-    <!--        <version>${project.version}</version>-->
-    <!--    </dependency>-->
+        <dependency>
+            <groupId>com.novel</groupId>
+            <artifactId>novel-book-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <dependency>
             <groupId>com.novel</groupId>
             <artifactId>novel-config</artifactId>

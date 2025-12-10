@@ -34,4 +34,15 @@ public class BookFeignManager {
         return new ArrayList<>(0);
     }
 
+    /**
+     * 根据 ID 获取 ES 书籍数据
+     */
+    public BookEsRespDto getEsBookById(Long bookId) {
+        RestResp<BookEsRespDto> resp = bookFeign.getEsBookById(bookId);
+        if (Objects.equals(ErrorCodeEnum.OK.getCode(), resp.getCode())) {
+            return resp.getData();
+        }
+        return null;
+    }
+
 }

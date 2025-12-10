@@ -64,12 +64,48 @@ public class BookEsServiceImpl implements BookEsService {
                         .commentCount(bookInfo.getCommentCount())
                         .lastChapterName(bookInfo.getLastChapterName())
                         // 将数据库中的时间转换为一个标准的 Unix 时间戳（毫秒数），这是一个 Long 类型。
-                        .lastChapterUpdateTime(bookInfo.getLastChapterUpdateTime()
-                                .toInstant(ZoneOffset.ofHours(8)).toEpochMilli())
+                        // 增加判空处理，防止 NPE
+                        .lastChapterUpdateTime(bookInfo.getLastChapterUpdateTime() != null
+                                ? bookInfo.getLastChapterUpdateTime().toInstant(ZoneOffset.ofHours(8)).toEpochMilli()
+                                : 0L)
                         .isVip(bookInfo.getIsVip())
                         .build()
                 ).toList()
         );
 
+    }
+
+    @Override
+    public RestResp<BookEsRespDto> getEsBookById(Long bookId) {
+        
+        BookInfo bookInfo = bookInfoMapper.selectById(bookId);
+        if (bookInfo == null) {
+            return RestResp.ok(null);
+        }
+
+        BookEsRespDto bookEsDto = BookEsRespDto.builder()
+                .id(bookInfo.getId())
+                .workDirection(bookInfo.getWorkDirection())
+                .categoryId(bookInfo.getCategoryId())
+                .categoryName(bookInfo.getCategoryName())
+                .bookName(bookInfo.getBookName())
+                .picUrl(bookInfo.getPicUrl())
+                .authorName(bookInfo.getAuthorName())
+                .bookDesc(bookInfo.getBookDesc())
+                .score(bookInfo.getScore())
+                .bookStatus(bookInfo.getBookStatus())
+                .visitCount(bookInfo.getVisitCount())
+                .wordCount(bookInfo.getWordCount())
+                .commentCount(bookInfo.getCommentCount())
+                .lastChapterName(bookInfo.getLastChapterName())
+                // 将数据库中的时间转换为一个标准的 Unix 时间戳（毫秒数），这是一个 Long 类型。
+                // 这里也要判空
+                .lastChapterUpdateTime(bookInfo.getLastChapterUpdateTime() != null
+                        ? bookInfo.getLastChapterUpdateTime().toInstant(ZoneOffset.ofHours(8)).toEpochMilli()
+                        : 0L)
+                .isVip(bookInfo.getIsVip())
+                .build();
+
+        return RestResp.ok(bookEsDto);
     }
 }

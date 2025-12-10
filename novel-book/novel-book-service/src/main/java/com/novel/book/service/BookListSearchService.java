@@ -4,6 +4,7 @@ import com.novel.book.dto.resp.BookCategoryRespDto;
 import com.novel.book.dto.resp.BookChapterRespDto;
 import com.novel.book.dto.resp.BookEsRespDto;
 import com.novel.book.dto.resp.BookRankRespDto;
+import com.novel.book.dto.resp.BookInfoRespDto;
 import com.novel.common.resp.RestResp;
 
 import java.util.List;
@@ -42,7 +43,13 @@ public interface BookListSearchService {
      */
     RestResp<List<BookCategoryRespDto>> listCategory(Integer workDirection);
 
-
+    /**
+     * 小说推荐列表查询
+     *
+     * @param bookId 小说ID
+     * @return 推荐列表
+     */
+    RestResp<List<BookInfoRespDto>> listRecBooks(Long bookId);
 
 
 }

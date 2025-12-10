@@ -25,3 +25,23 @@ WHERE id > 0
   AND word_count > 0
 ORDER BY id ASC
 LIMIT 30;
+
+
+-- 1. 如果 id 已经是自增主键，先去掉自增属性（为了修改主键），由于 MySQL 限制，可能需要先删主键
+--    通常最简单的办法是重建表，或者按以下顺序操作：
+
+-- A. 先把 id 改成普通列（去掉自增），同时删掉原来的主键
+ALTER TABLE book_chapter MODIFY id bigint(20) unsigned NOT NULL;
+ALTER TABLE book_chapter DROP PRIMARY KEY;
+
+-- B. 此时表没有主键了。添加复合主键 (book_id, chapter_num)
+--    这将触发 MySQL 重组数据，按 book_id 物理排序（耗时操作）
+ALTER TABLE book_chapter ADD PRIMARY KEY (book_id, chapter_num);
+
+-- C. 把 id 加回自增属性，并设为唯一索引
+--    注意：MySQL 要求 AUTO_INCREMENT 列必须是索引的第一列（可以是主键，也可以是唯一索引）
+ALTER TABLE book_chapter MODIFY id bigint(20) unsigned NOT NULL AUTO_INCREMENT, ADD UNIQUE KEY uk_id (id);
+
+UPDATE book_chapter
+SET chapter_num = chapter_num + 1
+ORDER BY chapter_num DESC;

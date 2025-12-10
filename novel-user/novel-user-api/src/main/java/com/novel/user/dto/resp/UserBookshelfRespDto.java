@@ -26,16 +26,10 @@ public class UserBookshelfRespDto {
     @Schema(description = "作者名")
     private String authorName;
 
-    @Schema(description = "最新章节号")
-    private Integer lastChapterNum;
-
-    @Schema(description = "最新章节名")
-    private String lastChapterName;
-
-    @Schema(description = "最新章节更新时间")
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm")
-    private LocalDateTime lastChapterUpdateTime;
+    @Schema(description = "首章节号")
+    private Integer firstChapterNum;
 
     @Schema(description = "上次阅读的章节号")
     private Integer preChapterNum;
+
 }

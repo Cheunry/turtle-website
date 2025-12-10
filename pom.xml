@@ -10,15 +10,16 @@
         <module>novel-home</module>
         <module>novel-book</module>
         <module>novel-author</module>
-        <module>novel-author</module>
         <module>novel-search</module>
     </modules>
+
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
         <version>3.0.5</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
+
     <groupId>com.novel</groupId>
     <artifactId>turtle-website</artifactId>
     <packaging>pom</packaging>
@@ -41,6 +42,7 @@
         <spring-cloud-starter-bootstrap.version>3.1.1</spring-cloud-starter-bootstrap.version>
         <cos_api-qcloud.version>5.6.227</cos_api-qcloud.version>
         <commons-io.version>2.16.1</commons-io.version>
+        <rocketmq.version>2.3.0</rocketmq.version>
     </properties>
     <dependencyManagement>
 
@@ -133,6 +135,13 @@
                 <groupId>commons-io</groupId>
                 <artifactId>commons-io</artifactId>
                 <version>${commons-io.version}</version>
+            </dependency>
+
+            <!-- RocketMQ 依赖管理 -->
+            <dependency>
+                <groupId>org.apache.rocketmq</groupId>
+                <artifactId>rocketmq-spring-boot-starter</artifactId>
+                <version>${rocketmq.version}</version>
             </dependency>
 
         </dependencies>

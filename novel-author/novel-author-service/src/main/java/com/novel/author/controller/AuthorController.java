@@ -138,44 +138,50 @@ public class AuthorController {
         chapterPageReqReqDto.setBookId(bookId);
         chapterPageReqReqDto.setPageNum(dto.getPageNum());
         chapterPageReqReqDto.setPageSize(dto.getPageSize());
+        // 【新增】设置 AuthorId，用于后续权限校验
+        chapterPageReqReqDto.setAuthorId(UserHolder.getAuthorId());
         return bookFeignManager.listPublishBookChapters(chapterPageReqReqDto);
     }
 
     /*获取单个章节详情 (用于编辑)
-        接口路径: GET /author/book/chapter/{id}
-        前端方法: getChapter(id)
+        接口路径: GET /author/book/chapter/{bookId}/{chapterNum}
+        前端方法: getChapter(bookId, chapterNum)
         功能: 获取特定章节的详细内容，用于在编辑器中回显数据。*/
     @Operation(summary = "获取单个章节详情")
-    @GetMapping("book/chapter/{id}")
+    @GetMapping("book/chapter/{bookId}/{chapterNum}")
     public RestResp<BookChapterRespDto> getBookChapter(
-            @Parameter(description = "章节ID") @PathVariable("id") Long id) {
-        return bookFeignManager.getBookChapter(id);
+            @Parameter(description = "小说ID") @PathVariable("bookId") Long bookId,
+            @Parameter(description = "章节号") @PathVariable("chapterNum") Integer chapterNum) {
+        return bookFeignManager.getBookChapter(bookId, chapterNum);
     }
 
     /*更新章节
-        接口路径: PUT /author/book/chapter/{id}
-        前端方法: updateChapter(id, params)
+        接口路径: PUT /author/book/chapter_update/{bookId}/{chapterNum}
+        前端方法: updateChapter(bookId, chapterNum, params)
         功能: 保存对已有章节的修改。*/
     @Operation(summary = "保存对更新章节的修改")
-    @PutMapping("book/chapter_update/{id}")
+    @PutMapping("book/chapter_update/{bookId}/{chapterNum}")
     public RestResp<Void> updateBookChapter(
-            @Parameter(description = "章节ID") @PathVariable("id") Long id,
+            @Parameter(description = "小说ID") @PathVariable("bookId") Long bookId,
+            @Parameter(description = "章节号") @PathVariable("chapterNum") Integer chapterNum,
             @Valid @RequestBody ChapterUptReqDto dto) {
-        dto.setChapterId(id);
+        dto.setBookId(bookId);
+        dto.setOldChapterNum(chapterNum);
         return bookFeignManager.updateBookChapter(dto);
     }
 
     /*删除章节
-        接口路径: POST /author/book/chapter/delete/{id}  (建议修改路径以区分发布)
-        前端方法: deleteChapter(id)
+        接口路径: POST /author/book/chapter/delete/{bookId}/{chapterNum}
+        前端方法: deleteChapter(bookId, chapterNum)
         功能: 删除指定章节。*/
     @Operation(summary = "删除章节")
-    @PostMapping("book/chapter/delete/{id}")
+    @PostMapping("book/chapter/delete/{bookId}/{chapterNum}")
     public RestResp<Void> deleteBookChapter(
-            @Parameter(description = "章节ID") @PathVariable("id") Long id,
-            @Valid @RequestBody ChapterDelReqDto dto) {
-        dto.setChapterId(id);
-        // authorId 会在 Manager 层统一设置，这里设置也可以，但要注意 Manager 的覆盖逻辑
+            @Parameter(description = "小说ID") @PathVariable("bookId") Long bookId,
+            @Parameter(description = "章节号") @PathVariable("chapterNum") Integer chapterNum) {
+        ChapterDelReqDto dto = new ChapterDelReqDto();
+        dto.setBookId(bookId);
+        dto.setChapterNum(chapterNum);
         return bookFeignManager.deleteBookChapter(dto);
     }
 

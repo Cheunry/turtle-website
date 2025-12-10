@@ -16,6 +16,14 @@ public class ChapterAddReqDto {
     private Long bookId;
 
     /**
+     * 章节号（用户手动输入）
+     */
+    @Schema(description = "章节号")
+    @NotNull(message = "章节号不能为空")
+    private Integer chapterNum;
+
+
+    /**
      * 作者ID
      */
     private Long authorId;

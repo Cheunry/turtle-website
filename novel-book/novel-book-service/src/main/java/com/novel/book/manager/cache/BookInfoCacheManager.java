@@ -50,7 +50,7 @@ public class BookInfoCacheManager {
         QueryWrapper<BookChapter> queryWrapper = new QueryWrapper<>();
         queryWrapper
                 .eq(DatabaseConsts.BookChapterTable.COLUMN_BOOK_ID, id)
-                .orderByAsc(DatabaseConsts.BookChapterTable.COLUMN_CHAPTER_NUM)
+                .orderByAsc(DatabaseConsts.BookChapterTable.COLUMN_CHAPTER_NUM) // 修改为 Asc 正序
                 .last(DatabaseConsts.SqlEnum.LIMIT_1.getSql());
         BookChapter firstBookChapter = bookChapterMapper.selectOne(queryWrapper);
         // 组装响应对象
@@ -64,11 +64,13 @@ public class BookInfoCacheManager {
                 .categoryId(bookInfo.getCategoryId())
                 .categoryName(bookInfo.getCategoryName())
                 .commentCount(bookInfo.getCommentCount())
-                .firstChapterId(firstBookChapter.getId())
-                .lastChapterId(bookInfo.getLastChapterId())
+                .firstChapterNum(firstBookChapter != null ? firstBookChapter.getChapterNum() : 1) // 增加判空处理
+                .lastChapterNum(bookInfo.getLastChapterNum())     // 使用 bookInfo 中的数据
+                .lastChapterName(bookInfo.getLastChapterName())   // 使用 bookInfo 中的数据
                 .picUrl(bookInfo.getPicUrl())
                 .visitCount(bookInfo.getVisitCount())
                 .wordCount(bookInfo.getWordCount())
+                .updateTime(bookInfo.getUpdateTime())
                 .build();
     }
 

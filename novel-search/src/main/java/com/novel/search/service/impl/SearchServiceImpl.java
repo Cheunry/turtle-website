@@ -88,6 +88,8 @@ public class SearchServiceImpl implements SearchService {
                     .authorName(book.getAuthorName())
                     .wordCount(book.getWordCount())
                     .lastChapterName(book.getLastChapterName())
+                    .bookStatus(book.getBookStatus())
+                    .picUrl(book.getPicUrl())
                     .build());
         }
         assert total != null;

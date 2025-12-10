@@ -10,13 +10,13 @@ import java.util.List;
 
 public interface BookReadService {
 
-    RestResp<BookContentAboutRespDto> getBookContentAbout(Long chapterId);
+    RestResp<BookContentAboutRespDto> getBookContentAbout(Long bookId, Integer chapterNum);
 
     RestResp<List<BookChapterRespDto>> getBookChapter(Long bookId);
 
-    RestResp<Long> getPreChapterId(Long bookId, Integer chapterNum);
+    RestResp<Integer> getPreChapterId(Long bookId, Integer chapterNum);
 
-    RestResp<Long> getNextChapterId(Long bookId, Integer chapterNum);
+    RestResp<Integer> getNextChapterId(Long bookId, Integer chapterNum);
 
 
 }

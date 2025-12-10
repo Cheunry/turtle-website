@@ -12,7 +12,7 @@ public class ChapterUptReqDto {
     /**
      * 章节ID
      */
-    private Long chapterId;
+//    private Long chapterId;
 
     /**
      * 小说ID
@@ -20,9 +20,19 @@ public class ChapterUptReqDto {
     private Long bookId;
 
     /**
+     * 章节号
+     */
+    private Integer chapterNum;
+
+    /**
      * 作者ID
      */
     private Long authorId;
+
+    /**
+     * 旧章节号（用于定位原章节）
+     */
+    private Integer oldChapterNum;
 
     /**
      * 章节名

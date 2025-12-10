@@ -8,7 +8,12 @@ public class ChapterDelReqDto {
     /**
      * 章节ID
      */
-    private Long chapterId;
+//    private Long chapterId;
+
+    /**
+     * 章节号
+     */
+    private Integer chapterNum;
 
     /**
      * 小说ID

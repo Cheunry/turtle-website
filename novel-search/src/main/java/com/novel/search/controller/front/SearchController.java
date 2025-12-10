@@ -38,7 +38,9 @@ public class SearchController {
         return searchService.searchBooks(bookSearchReqDto);
     }
 
-    // 临时手动触发全量同步的接口
+    /** 临时手动触发全量同步的接口
+     *  执行只需打开网址：<a href="http://localhost:8080/api/front/search/sync/all">...</a>
+     */
     @GetMapping("sync/all")
     public RestResp<String> syncAll() {
         allBookToEsTask.saveToEs();

@@ -54,7 +54,7 @@ public interface BookFeign {
      * 获取单个章节信息
      */
     @GetMapping(ApiRouterConsts.API_INNER_BOOK_URL_PREFIX + "/getBookChapter")
-    RestResp<BookChapterRespDto> getBookChapter(@RequestParam("id") Long id);
+    RestResp<BookChapterRespDto> getBookChapter(@RequestParam("bookId") Long bookId, @RequestParam("chapterNum") Integer chapterNum);
 
     /**
      * 更新某章节信息
@@ -73,6 +73,32 @@ public interface BookFeign {
      */
     @PostMapping(ApiRouterConsts.API_INNER_BOOK_URL_PREFIX + "/listNextEsBooks")
     RestResp<List<BookEsRespDto>> listNextEsBooks(Long maxBookId);
+
+    /**
+     * 根据 ID 获取 ES 书籍数据
+     */
+    @GetMapping(ApiRouterConsts.API_INNER_BOOK_URL_PREFIX + "/getEsBookById")
+    RestResp<BookEsRespDto> getEsBookById(@RequestParam("bookId") Long bookId);
+
+
+    /**
+     * 发表评论
+     */
+    @PostMapping(ApiRouterConsts.API_INNER_BOOK_URL_PREFIX + "/publishComment")
+    RestResp<Void> publishComment(BookCommentReqDto dto);
+
+    /**
+     * 修改评论
+     */
+    @PostMapping(ApiRouterConsts.API_INNER_BOOK_URL_PREFIX + "/updateComment")
+    RestResp<Void> updateComment(BookCommentReqDto dto);
+
+    /**
+     * 删除评论接口
+     */
+    @PostMapping(ApiRouterConsts.API_INNER_BOOK_URL_PREFIX + "/deleteComment")
+    RestResp<Void> deleteComment(@RequestBody BookCommentReqDto dto);
+
 
     @Component
     class BookFeignFallback implements BookFeign {
@@ -107,7 +133,7 @@ public interface BookFeign {
         }
 
         @Override
-        public RestResp<BookChapterRespDto> getBookChapter(Long id) {
+        public RestResp<BookChapterRespDto> getBookChapter(Long bookId, Integer chapterNum) {
             return null;
         }
 
@@ -126,7 +152,26 @@ public interface BookFeign {
             return RestResp.ok(new ArrayList<>(0));
         }
 
+        @Override
+        public RestResp<BookEsRespDto> getEsBookById(Long bookId) {
+            // 现在的 fail 方法会自动推断 T 为 BookEsRespDto
+            return RestResp.fail(ErrorCodeEnum.THIRD_SERVICE_ERROR);
+        }
 
+        @Override
+        public RestResp<Void> publishComment(BookCommentReqDto dto) {
+            return RestResp.fail(ErrorCodeEnum.THIRD_SERVICE_ERROR);
+        }
+
+        @Override
+        public RestResp<Void> updateComment(BookCommentReqDto dto) {
+            return RestResp.fail(ErrorCodeEnum.THIRD_SERVICE_ERROR);
+        }
+
+        @Override
+        public RestResp<Void> deleteComment(BookCommentReqDto dto) {
+            return RestResp.fail(ErrorCodeEnum.THIRD_SERVICE_ERROR);
+        }
     }
 
 

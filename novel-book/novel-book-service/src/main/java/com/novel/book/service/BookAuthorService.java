@@ -17,7 +17,7 @@ public interface BookAuthorService {
 
     RestResp<PageRespDto<BookChapterRespDto>> listBookChapters(ChapterPageReqDto dto);
 
-    RestResp<BookChapterRespDto> getBookChapter(Long id);
+    RestResp<BookChapterRespDto> getBookChapter(Long bookId, Integer chapterNum);
 
     RestResp<Void> deleteBookChapter(ChapterDelReqDto dto);
 

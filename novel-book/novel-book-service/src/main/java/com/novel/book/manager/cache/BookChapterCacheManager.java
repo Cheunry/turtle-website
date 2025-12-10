@@ -4,12 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.novel.book.dao.entity.BookChapter;
 import com.novel.book.dao.mapper.BookChapterMapper;
 import com.novel.book.dto.resp.BookChapterRespDto;
-import com.novel.common.constant.CacheConsts;
 import com.novel.common.constant.DatabaseConsts;
-import com.novel.config.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.BeanUtils;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
@@ -28,10 +24,18 @@ public class BookChapterCacheManager {
      */
 //    @Cacheable(cacheManager = CacheConsts.REDIS_CACHE_MANAGER_PLAIN,
 //            value = CacheConsts.BOOK_CHAPTER_CACHE_NAME)
-    public BookChapterRespDto getChapter(Long chapterId) {
-        BookChapter bookChapter = bookChapterMapper.selectById(chapterId);
+    public BookChapterRespDto getChapter(Long bookId, Integer chapterNum) {
+        QueryWrapper<BookChapter> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq(DatabaseConsts.BookChapterTable.COLUMN_BOOK_ID, bookId)
+                .eq(DatabaseConsts.BookChapterTable.COLUMN_CHAPTER_NUM, chapterNum);
+        BookChapter bookChapter = bookChapterMapper.selectOne(queryWrapper);
+        
+        // 增加判空逻辑
+        if (bookChapter == null) {
+            return null;
+        }
+
         return BookChapterRespDto.builder()
-                .id(chapterId)
                 .bookId(bookChapter.getBookId())
                 .chapterNum(bookChapter.getChapterNum())
                 .chapterName(bookChapter.getChapterName())
