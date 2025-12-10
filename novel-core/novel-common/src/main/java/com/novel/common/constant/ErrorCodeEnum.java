@@ -128,6 +128,11 @@ public enum ErrorCodeEnum {
     AUTHOR_BOOK_NAME_EXIST("A3001", "小说名已存在"),
 
     /**
+     * 章节号已存在
+     */
+    CHAPTER_NUM_EXIST("A3003","章节号已存在"),
+
+    /**
      * 作家重复注册
      */
     AUTHOR_DUPLICATE_REGISTRATION("A3002", "您已经是作家了，无需重复注册"),

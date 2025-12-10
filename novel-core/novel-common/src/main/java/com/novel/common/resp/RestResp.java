@@ -30,6 +30,8 @@ public class RestResp<T> {
     @Schema(description = "响应数据")
     private T data;
 
+    
+
     private RestResp() {
         this.code = ErrorCodeEnum.OK.getCode();
         this.message = ErrorCodeEnum.OK.getMessage();
@@ -60,9 +62,9 @@ public class RestResp<T> {
     }
 
     /**
-     * 业务处理失败
+     * 业务处理失败 (修改版：支持泛型推断)
      */
-    public static RestResp<Void> fail(ErrorCodeEnum errorCode) {
+    public static <T> RestResp<T> fail(ErrorCodeEnum errorCode) {
         return new RestResp<>(errorCode);
     }
 

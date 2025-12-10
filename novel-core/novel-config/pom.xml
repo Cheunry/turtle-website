@@ -81,11 +81,6 @@
             <artifactId>hibernate-validator</artifactId>
         </dependency>
 
-        <!-- MQ 相关 -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-amqp</artifactId>
-        </dependency>
 
         <!-- ShardingSphere-JDBC -->
         <dependency>

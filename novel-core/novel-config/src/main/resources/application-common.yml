@@ -91,23 +91,34 @@ spring:
       port: 52580
       password: 123456
 
+  # RocketMQ 配置
+  rocketmq:
+    # 默认端口 9876
+    name-server: 120.53.89.103:9876 
+    producer:
+      # 生产者组
+      group: group-common-producer
+      # 发送超时时间
+      send-message-timeout: 3000
+      # 消息体最大大小 4MB
+      max-message-size: 4194304
 
-  # RabbitMQ 配置
-  rabbitmq:
-    # 这里必须使用 AMQP 客户端连接端口 (5672 映射出来的 52582)
-    addresses: "120.53.89.103:52582"
-    virtual-host: novel
-    template:
-      retry:
-        # 开启重试
-        enabled: true
-        # 最大重试次数
-        max-attempts: 3
-        # 第一次和第二次重试之间的持续时间
-        initial-interval: "3s"
-    # 配置登录凭证
-    username: "rabbit"
-    password: "rabbitmq_123456"
+#  # RabbitMQ 配置
+#  rabbitmq:
+#    # 这里必须使用 AMQP 客户端连接端口 (5672 映射出来的 52582)
+#    addresses: "120.53.89.103:52582"
+#    virtual-host: novel
+#    template:
+#      retry:
+#        # 开启重试
+#        enabled: true
+#        # 最大重试次数
+#        max-attempts: 3
+#        # 第一次和第二次重试之间的持续时间
+#        initial-interval: "3s"
+#    # 配置登录凭证
+#    username: "rabbit"
+#    password: "rabbitmq_123456"
 
 --- #----------------------安全配置---------------------------
 # Actuator 端点管理
