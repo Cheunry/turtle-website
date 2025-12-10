@@ -5,8 +5,6 @@ import lombok.Getter;
 /**
  * 数据库 常量
  *
- * @author xiongxiaoyang
- * @date 2022/5/12
  */
 public class DatabaseConsts {
 
@@ -98,7 +96,7 @@ public class DatabaseConsts {
 
         public static final String COLUMN_LAST_CHAPTER_UPDATE_TIME = "last_chapter_update_time";
 
-        public static final String COLUMN_LAST_CHAPTER_UPDATE_ID = "last_chapter_update_id";
+        public static final String COLUMN_LAST_CHAPTER_UPDATE_NUM = "last_chapter_update_num";
 
         public static final String COLUMN_BOOK_STATUS = "book_status";      // 书籍状态;0-连载中 1-已完结
 
@@ -113,7 +111,7 @@ public class DatabaseConsts {
             throw new IllegalStateException(SystemConfigConsts.CONST_INSTANCE_EXCEPTION_MSG);
         }
 
-        public static final String COLUMN_CHAPTER_ID = "id";
+//        public static final String COLUMN_CHAPTER_ID = "id";
 
         public static final String COLUMN_BOOK_ID = "book_id";
 
