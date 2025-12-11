@@ -1,14 +1,16 @@
 package com.novel.book.service.Impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.novel.book.dao.entity.BookCategory;
 import com.novel.book.dao.entity.BookInfo;
+import com.novel.book.dao.mapper.BookCategoryMapper;
 import com.novel.book.dao.mapper.BookInfoMapper;
 import com.novel.book.dto.resp.BookCategoryRespDto;
 import com.novel.book.dto.resp.BookInfoRespDto;
 import com.novel.book.dto.resp.BookRankRespDto;
-import com.novel.book.manager.cache.BookCategoryCacheManager;
 import com.novel.book.manager.cache.BookRankCacheManager;
 import com.novel.book.service.BookListSearchService;
+import com.novel.common.constant.DatabaseConsts;
 import com.novel.common.resp.RestResp;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,8 +24,8 @@ import java.util.stream.Collectors;
 public class BookListSearchImpl implements BookListSearchService {
 
     private final BookRankCacheManager bookRankCacheManager;
-    private final BookCategoryCacheManager bookCategoryCacheManager;
     private final BookInfoMapper bookInfoMapper;
+    private final BookCategoryMapper bookCategoryMapper;
 
     @Override
     public RestResp<List<BookRankRespDto>> listVisitRankBooks() {
@@ -43,11 +45,20 @@ public class BookListSearchImpl implements BookListSearchService {
 
     @Override
     public RestResp<List<BookCategoryRespDto>> listCategory(Integer workDirection) {
-        return RestResp.ok(bookCategoryCacheManager.listCategory(workDirection));
+        QueryWrapper<BookCategory> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq(DatabaseConsts.BookCategoryTable.COLUMN_WORK_DIRECTION, workDirection);
+        List<BookCategoryRespDto> categoryList = bookCategoryMapper.selectList(queryWrapper).stream().map(v->
+                BookCategoryRespDto.builder()
+                        .id(v.getId())
+                        .name(v.getName())
+                        .build()
+        ).toList();
+        return RestResp.ok(categoryList);
     }
 
     @Override
     public RestResp<List<BookInfoRespDto>> listRecBooks(Long bookId) {
+
         BookInfo bookInfo = bookInfoMapper.selectById(bookId);
         if (bookInfo == null) {
             return RestResp.ok(Collections.emptyList());

@@ -23,14 +23,6 @@ public class BookRankCacheManager {
 
     private final BookInfoMapper bookInfoMapper;
 
-//    private final RedisTemplate<String, String> stringRedisTemplate;
-//
-//
-//    public BookRankCacheManager(BookInfoMapper bookInfoMapper,
-//                                @Qualifier("stringRedisTemplate") RedisTemplate<String, String> stringRedisTemplate) {
-//        this.bookInfoMapper = bookInfoMapper;
-//        this.stringRedisTemplate = stringRedisTemplate;
-//    }
 
 
     /**

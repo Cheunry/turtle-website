@@ -1,14 +1,21 @@
 package com.novel.book.service.Impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.novel.book.dao.entity.BookComment;
+import com.novel.book.dao.entity.BookInfo;
 import com.novel.book.dao.mapper.BookCommentMapper;
+import com.novel.book.dao.mapper.BookInfoMapper;
 import com.novel.book.dto.req.BookCommentReqDto;
+import com.novel.book.dto.req.CommentPageReqDto;
 import com.novel.book.dto.resp.BookCommentRespDto;
 import com.novel.book.manager.feign.UserFeignManager;
 import com.novel.book.service.BookCommentService;
 import com.novel.common.constant.DatabaseConsts;
 import com.novel.common.constant.ErrorCodeEnum;
+import com.novel.common.req.PageReqDto;
+import com.novel.common.resp.PageRespDto;
 import com.novel.common.resp.RestResp;
 import com.novel.config.annotation.Key;
 import com.novel.config.annotation.Lock;
@@ -17,6 +24,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +37,8 @@ public class BookCommentServiceImpl implements BookCommentService {
 
     private final BookCommentMapper bookCommentMapper;
     private final UserFeignManager userFeignManager;
+    // 新增注入 BookInfoMapper
+    private final BookInfoMapper bookInfoMapper;
 
 
     @Lock(prefix = "userComment")
@@ -109,4 +119,6 @@ public class BookCommentServiceImpl implements BookCommentService {
         bookCommentMapper.update(bookComment, queryWrapper);
         return RestResp.ok();
     }
+
+
 }

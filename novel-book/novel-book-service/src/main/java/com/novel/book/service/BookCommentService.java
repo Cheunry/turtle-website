@@ -1,8 +1,11 @@
 package com.novel.book.service;
 
 import com.novel.book.dto.req.BookCommentReqDto;
+import com.novel.book.dto.req.CommentPageReqDto;
 import com.novel.book.dto.resp.BookCommentRespDto;
 import com.novel.common.resp.RestResp;
+import com.novel.common.req.PageReqDto;
+import com.novel.common.resp.PageRespDto;
 
 public interface BookCommentService {
 
@@ -37,4 +40,5 @@ public interface BookCommentService {
      * @return void
      */
     RestResp<Void> updateComment(BookCommentReqDto dto);
+
 }

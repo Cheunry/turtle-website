@@ -1,8 +1,11 @@
 package com.novel.book.dto.resp;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Data;
+
+import java.time.LocalDateTime;
 
 /**
  * 小说内容相关 响应DTO
@@ -11,22 +14,42 @@ import lombok.Data;
 @Builder
 public class BookContentAboutRespDto {
 
-    /**
-     * 小说信息
-     */
     @Schema(description = "小说信息")
-    private BookInfoRespDto bookInfo;
+    private BookInfo bookInfo;
 
-    /**
-     * 章节信息
-     */
     @Schema(description = "章节信息")
-    private BookChapterRespDto chapterInfo;
+    private ChapterInfo chapterInfo;
 
-    /**
-     * 章节内容
-     */
     @Schema(description = "章节内容")
     private String bookContent;
 
+    @Data
+    @Builder
+    public static class BookInfo {
+        @Schema(description = "小说类别名")
+        private String categoryName;
+
+        @Schema(description = "作者名")
+        private String authorName;
+    }
+
+    @Data
+    @Builder
+    public static class ChapterInfo {
+        @Schema(description = "书籍ID")
+        private Long bookId;
+
+        @Schema(description = "章节号")
+        private Integer chapterNum;
+
+        @Schema(description = "章节名")
+        private String chapterName;
+
+        @Schema(description = "章节字数")
+        private Integer chapterWordCount;
+
+        @Schema(description = "章节更新时间")
+        @JsonFormat(pattern = "yyyy-MM-dd HH:mm")
+        private LocalDateTime chapterUpdateTime;
+    }
 }

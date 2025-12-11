@@ -6,6 +6,7 @@ import com.novel.book.dto.resp.BookEsRespDto;
 import com.novel.book.dto.resp.BookInfoRespDto;
 import com.novel.common.constant.ApiRouterConsts;
 import com.novel.common.constant.ErrorCodeEnum;
+import com.novel.common.req.PageReqDto;
 import com.novel.common.resp.PageRespDto;
 import com.novel.common.resp.RestResp;
 import org.springframework.cloud.openfeign.FeignClient;
@@ -172,6 +173,7 @@ public interface BookFeign {
         public RestResp<Void> deleteComment(BookCommentReqDto dto) {
             return RestResp.fail(ErrorCodeEnum.THIRD_SERVICE_ERROR);
         }
+
     }
 
 

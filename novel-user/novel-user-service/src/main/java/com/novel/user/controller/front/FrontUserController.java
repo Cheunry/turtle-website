@@ -24,6 +24,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import com.novel.common.resp.PageRespDto;
+import com.novel.common.req.PageReqDto;
 
 @Tag(name = "UserController", description = "前台门户-会员模块")
 @SecurityRequirement(name = SystemConfigConsts.HTTP_AUTH_HEADER_NAME)
@@ -67,6 +69,9 @@ public class FrontUserController {
         return userUpdateService.updateUserInfo(dto);
     }
 
+
+    /* ***********************反馈相关************************* */
+
     /**
      * 用户反馈提交接口
      */
@@ -84,6 +89,9 @@ public class FrontUserController {
     public RestResp<Void> deleteFeedback(@Parameter(description = "反馈ID") @PathVariable Long id) {
         return userFeedbackService.deleteFeedback(UserHolder.getUserId(), id);
     }
+
+
+    /* ************************评论相关************************* */
 
 
     /**
@@ -120,6 +128,10 @@ public class FrontUserController {
         dto.setCommentId(id);
         return bookFeignManager.deleteComment(dto);
     }
+
+
+
+    /* ************************书架相关************************* */
 
     /**
      * 查询书架状态接口 0-不在书架 1-已在书架

@@ -2,14 +2,11 @@ package com.novel.book.service.Impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.novel.book.dao.entity.BookChapter;
+import com.novel.book.dao.entity.BookInfo;
 import com.novel.book.dao.mapper.BookChapterMapper;
 import com.novel.book.dao.mapper.BookInfoMapper;
 import com.novel.book.dto.resp.BookChapterRespDto;
 import com.novel.book.dto.resp.BookContentAboutRespDto;
-import com.novel.book.dto.resp.BookInfoRespDto;
-import com.novel.book.manager.cache.BookChapterCacheManager;
-import com.novel.book.manager.cache.BookContentCacheManager;
-import com.novel.book.manager.cache.BookInfoCacheManager;
 import com.novel.book.service.BookReadService;
 import com.novel.common.constant.DatabaseConsts;
 import com.novel.common.resp.RestResp;
@@ -23,11 +20,8 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class BookReadServiceImpl implements BookReadService {
 
-    private final BookChapterCacheManager bookChapterCacheManager;
-    private final BookContentCacheManager bookContentCacheManager;
-    private final BookInfoCacheManager bookInfoCacheManager;
     private final BookChapterMapper bookChapterMapper;
-
+    private final BookInfoMapper bookInfoMapper;
 
     /**
      * 看小说某章节内容
@@ -37,19 +31,33 @@ public class BookReadServiceImpl implements BookReadService {
     @Override
     public RestResp<BookContentAboutRespDto> getBookContentAbout(Long bookId, Integer chapterNum) {
 
-        BookChapterRespDto bookChapter = bookChapterCacheManager.getChapter(bookId, chapterNum);
-        String bookContent = bookContentCacheManager.getBookContent(bookId, chapterNum);
-        BookInfoRespDto bookInfo = bookInfoCacheManager.getBookInfo(bookChapter.getBookId());
+        // 1. 查询章节信息（包含 content）
+        QueryWrapper<BookChapter> chapterQueryWrapper = new QueryWrapper<>();
+        chapterQueryWrapper.eq(DatabaseConsts.BookChapterTable.COLUMN_BOOK_ID, bookId)
+                .eq(DatabaseConsts.BookChapterTable.COLUMN_CHAPTER_NUM, chapterNum);
+        BookChapter bookChapter = bookChapterMapper.selectOne(chapterQueryWrapper);
 
-        return RestResp.ok(
-                BookContentAboutRespDto.builder()
-                        .bookInfo(bookInfo)
-                        .chapterInfo(bookChapter)
-                        .bookContent(bookContent)
-                        .build()                    // 小说信息 章节信息 章节内容
-        );
+        // 2. 查询小说基本信息
+        BookInfo bookInfo = bookInfoMapper.selectById(bookId);
 
+        // 3. 组装并返回
+        // 注意：实际生产环境需判空处理，这里暂略或假设存在
+        return RestResp.ok(BookContentAboutRespDto.builder()
+            .bookInfo(BookContentAboutRespDto.BookInfo.builder()
+                .categoryName(bookInfo != null ? bookInfo.getCategoryName() : null)
+                .authorName(bookInfo != null ? bookInfo.getAuthorName() : null)
+                .build())
+            .chapterInfo(BookContentAboutRespDto.ChapterInfo.builder()
+                .bookId(bookChapter != null ? bookChapter.getBookId() : null)
+                .chapterNum(bookChapter != null ? bookChapter.getChapterNum() : null)
+                .chapterName(bookChapter != null ? bookChapter.getChapterName() : null)
+                .chapterWordCount(bookChapter != null ? bookChapter.getWordCount() : null)
+                .chapterUpdateTime(bookChapter != null ? bookChapter.getUpdateTime() : null)
+                .build())
+            .bookContent(bookChapter != null ? bookChapter.getContent() : null)
+            .build());
     }
+
     /**
      * 看下一章
      * 接口：next_chapter_id/{chapterId} ，返回下一章的id即可

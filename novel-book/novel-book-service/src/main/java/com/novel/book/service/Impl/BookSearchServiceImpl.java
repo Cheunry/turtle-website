@@ -7,9 +7,7 @@ import com.novel.book.dao.mapper.BookChapterMapper;
 import com.novel.book.dao.mapper.BookInfoMapper;
 import com.novel.book.dto.resp.BookChapterAboutRespDto;
 import com.novel.book.dto.resp.BookChapterRespDto;
-import com.novel.book.dto.resp.BookEsRespDto;
 import com.novel.book.dto.resp.BookInfoRespDto;
-import com.novel.book.manager.cache.BookChapterCacheManager;
 import com.novel.book.manager.cache.BookContentCacheManager;
 import com.novel.book.manager.cache.BookInfoCacheManager;
 import com.novel.common.constant.DatabaseConsts;
@@ -18,10 +16,8 @@ import com.novel.book.service.BookSearchService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.stream.Collectors;
-import com.novel.book.dto.req.BookVisitReqDto;
 import com.novel.common.constant.AmqpConsts;
 import org.apache.rocketmq.spring.core.RocketMQTemplate;
 
@@ -31,7 +27,6 @@ public class BookSearchServiceImpl implements BookSearchService {
 
     private final BookInfoCacheManager bookInfoCacheManager;
     private final BookInfoMapper bookInfoMapper;
-    private final BookChapterCacheManager bookChapterCacheManager;
     private final BookContentCacheManager bookContentCacheManager;
     private final BookChapterMapper bookChapterMapper;
     private final RocketMQTemplate rocketMQTemplate;

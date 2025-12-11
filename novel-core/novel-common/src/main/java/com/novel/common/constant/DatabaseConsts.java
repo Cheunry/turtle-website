@@ -111,8 +111,6 @@ public class DatabaseConsts {
             throw new IllegalStateException(SystemConfigConsts.CONST_INSTANCE_EXCEPTION_MSG);
         }
 
-//        public static final String COLUMN_CHAPTER_ID = "id";
-
         public static final String COLUMN_BOOK_ID = "book_id";
 
         public static final String COLUMN_CHAPTER_NUM = "chapter_num";
@@ -129,6 +127,8 @@ public class DatabaseConsts {
         private BookCommentTable() {
             throw new IllegalStateException(SystemConfigConsts.CONST_INSTANCE_EXCEPTION_MSG);
         }
+
+        public static final String COLUMN_COMMENT_ID = "id";
 
         public static final String COLUMN_BOOK_ID = "book_id";
 

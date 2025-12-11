@@ -9,6 +9,8 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import com.novel.book.dto.resp.BookInfoRespDto;
+import com.novel.common.req.PageReqDto;
+import com.novel.common.resp.PageRespDto;
 
 /**
  * 小说微服务调用 Feign 客户端管理
@@ -40,5 +42,4 @@ public class BookFeignManager {
     public RestResp<List<BookInfoRespDto>> listBookInfoByIds(List<Long> bookIds) {
         return bookFeign.listBookInfoByIds(bookIds);
     }
-
 }
