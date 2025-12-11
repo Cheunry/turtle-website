@@ -1,9 +1,12 @@
 package com.novel.author.config;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.novel.author.dao.entity.AuthorInfo;
+import com.novel.author.dao.mapper.AuthorInfoMapper;
 import com.novel.author.dto.AuthorInfoDto;
-import com.novel.author.manager.cache.AuthorCacheManager;
 import com.novel.common.auth.JwtUtils;
 import com.novel.common.auth.UserHolder;
+import com.novel.common.constant.DatabaseConsts;
 import com.novel.common.constant.ErrorCodeEnum;
 import com.novel.common.constant.SystemConfigConsts;
 import com.novel.config.exception.BusinessException;
@@ -27,7 +30,7 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class AuthInterceptor implements HandlerInterceptor {
 
-    private final AuthorCacheManager AuthorCacheManager;
+    private final AuthorInfoMapper authorInfoMapper;
 
     /**
      * handle 执行前调用
@@ -53,7 +56,8 @@ public class AuthInterceptor implements HandlerInterceptor {
         }
 
         // 作家权限认证
-        AuthorInfoDto authorInfo = AuthorCacheManager.getAuthorInfoByUserId(userId);
+        AuthorInfoDto authorInfo = getAuthorInfoByUserId(userId);
+
         if (Objects.isNull(authorInfo)) {
 
             // 作家账号不存在，无权访问作家专区
@@ -68,6 +72,24 @@ public class AuthInterceptor implements HandlerInterceptor {
 
         return HandlerInterceptor.super.preHandle(request, response, handler);
 
+    }
+
+    /**
+     * 查询作家信息
+     */
+    public AuthorInfoDto getAuthorInfoByUserId(Long userId) {
+        QueryWrapper<AuthorInfo> queryWrapper = new QueryWrapper<>();
+        queryWrapper
+                .eq(DatabaseConsts.AuthorInfoTable.COLUMN_USER_ID, userId)
+                .last(DatabaseConsts.SqlEnum.LIMIT_1.getSql());
+        AuthorInfo authorInfo = authorInfoMapper.selectOne(queryWrapper);
+        if (Objects.isNull(authorInfo)) {
+            return null;
+        }
+        return AuthorInfoDto.builder()
+                .id(authorInfo.getId())
+                .penName(authorInfo.getPenName())
+                .status(authorInfo.getStatus()).build();
     }
 
     /**

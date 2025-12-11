@@ -148,7 +148,6 @@ public class FrontBookController {
         return bookSearchService.getBookById(bookId);
     }
 
-
     /**
      * 小说最新评论查询接口
      */

@@ -31,11 +31,6 @@ public class BookInfoCacheManager {
  *          存在则直接从缓存中取，
      *      否则执行方法体中的逻辑后缓存结果）
      */
-//    @Cacheable(cacheManager = CacheConsts.REDIS_CACHE_MANAGER_PLAIN,
-//            value = CacheConsts.BOOK_INFO_CACHE_NAME)
-    public BookInfoRespDto getBookInfo(Long id) {
-        return cachePutBookInfo(id);
-    }
 
     /**
      * 缓存小说信息
@@ -74,11 +69,6 @@ public class BookInfoCacheManager {
                 .build();
     }
 
-//    @CacheEvict(cacheManager = CacheConsts.REDIS_CACHE_MANAGER_PLAIN,
-//            value = CacheConsts.BOOK_INFO_CACHE_NAME)
-    public void evictBookInfoCache(Long ignoredId) {
-        // 调用此方法自动清除小说信息的缓存
-    }
 
 
 }

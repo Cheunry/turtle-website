@@ -7,17 +7,18 @@ import com.novel.book.dao.mapper.BookChapterMapper;
 import com.novel.book.dao.mapper.BookInfoMapper;
 import com.novel.book.dto.resp.BookChapterAboutRespDto;
 import com.novel.book.dto.resp.BookChapterRespDto;
+import com.novel.book.dto.resp.BookEsRespDto;
 import com.novel.book.dto.resp.BookInfoRespDto;
-import com.novel.book.manager.cache.BookContentCacheManager;
-import com.novel.book.manager.cache.BookInfoCacheManager;
 import com.novel.common.constant.DatabaseConsts;
 import com.novel.common.resp.RestResp;
 import com.novel.book.service.BookSearchService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.stream.Collectors;
+import com.novel.book.dto.req.BookVisitReqDto;
 import com.novel.common.constant.AmqpConsts;
 import org.apache.rocketmq.spring.core.RocketMQTemplate;
 
@@ -25,15 +26,44 @@ import org.apache.rocketmq.spring.core.RocketMQTemplate;
 @RequiredArgsConstructor
 public class BookSearchServiceImpl implements BookSearchService {
 
-    private final BookInfoCacheManager bookInfoCacheManager;
     private final BookInfoMapper bookInfoMapper;
-    private final BookContentCacheManager bookContentCacheManager;
     private final BookChapterMapper bookChapterMapper;
     private final RocketMQTemplate rocketMQTemplate;
 
     @Override
     public RestResp<BookInfoRespDto> getBookById(Long bookId) {
-        return RestResp.ok(bookInfoCacheManager.getBookInfo(bookId));
+
+        // 查询基础信息
+        BookInfo bookInfo = bookInfoMapper.selectById(bookId);
+        // 查询首章ID
+        QueryWrapper<BookChapter> queryWrapper = new QueryWrapper<>();
+        queryWrapper
+                .eq(DatabaseConsts.BookChapterTable.COLUMN_BOOK_ID, bookId)
+                .orderByAsc(DatabaseConsts.BookChapterTable.COLUMN_CHAPTER_NUM) // Asc 正序
+                .last(DatabaseConsts.SqlEnum.LIMIT_1.getSql());
+        BookChapter firstBookChapter = bookChapterMapper.selectOne(queryWrapper);
+
+        // 组装响应对象
+        BookInfoRespDto bookInfoRespDto = BookInfoRespDto.builder()
+                .id(bookInfo.getId())
+                .bookName(bookInfo.getBookName())
+                .bookDesc(bookInfo.getBookDesc())
+                .bookStatus(bookInfo.getBookStatus())
+                .authorId(bookInfo.getAuthorId())
+                .authorName(bookInfo.getAuthorName())
+                .categoryId(bookInfo.getCategoryId())
+                .categoryName(bookInfo.getCategoryName())
+                .commentCount(bookInfo.getCommentCount())
+                .firstChapterNum(firstBookChapter != null ? firstBookChapter.getChapterNum() : 1) // 增加判空处理
+                .lastChapterNum(bookInfo.getLastChapterNum())     // 使用 bookInfo 中的数据
+                .lastChapterName(bookInfo.getLastChapterName())   // 使用 bookInfo 中的数据
+                .picUrl(bookInfo.getPicUrl())
+                .visitCount(bookInfo.getVisitCount())
+                .wordCount(bookInfo.getWordCount())
+                .updateTime(bookInfo.getUpdateTime())
+                .build();
+
+        return RestResp.ok(bookInfoRespDto);
     }
 
 
@@ -61,17 +91,18 @@ public class BookSearchServiceImpl implements BookSearchService {
 
     @Override
     public RestResp<BookChapterAboutRespDto> getLastChapterAbout(Long bookId) {
-        // 1. 查询小说信息
-        BookInfoRespDto bookInfo = bookInfoCacheManager.getBookInfo(bookId);
+        // 查询小说信息
+//        BookInfoRespDto bookInfo = bookInfoCacheManager.getBookInfo(bookId);
 
-        // 2. 查询最新章节信息（不依赖 bookInfo.getLastChapterNum()，直接查表获取真实最大章节号）
+
+        // 查询最新章节信息（不依赖 bookInfo.getLastChapterNum()，直接查表获取真实最大章节号,因为旧数据没有lastChapterNum字段）
         QueryWrapper<BookChapter> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq(DatabaseConsts.BookChapterTable.COLUMN_BOOK_ID, bookId)
                 .orderByDesc(DatabaseConsts.BookChapterTable.COLUMN_CHAPTER_NUM)
                 .last(DatabaseConsts.SqlEnum.LIMIT_1.getSql());
         BookChapter latestChapter = bookChapterMapper.selectOne(queryWrapper);
 
-        // 3. 如果章节为空，直接返回空对象
+        // 如果章节为空，直接返回空对象
         if (latestChapter == null) {
             return RestResp.ok(BookChapterAboutRespDto.builder()
                     .chapterTotal(0L)
@@ -79,7 +110,7 @@ public class BookSearchServiceImpl implements BookSearchService {
                     .build());
         }
 
-        // 4. 将 entity 转换为 dto
+        // 将 entity 转换为 dto
         BookChapterRespDto bookChapter = BookChapterRespDto.builder()
                 .bookId(latestChapter.getBookId())
                 .chapterNum(latestChapter.getChapterNum())
@@ -87,17 +118,18 @@ public class BookSearchServiceImpl implements BookSearchService {
                 .chapterWordCount(latestChapter.getWordCount())
                 .chapterUpdateTime(latestChapter.getUpdateTime())
                 .isVip(latestChapter.getIsVip())
+                .content(latestChapter.getContent())
                 .build();
 
-        // 5. 查询章节内容
-        String content = bookContentCacheManager.getBookContent(bookId, latestChapter.getChapterNum());
+        // 章节内容
+        String content = bookChapter.getContent();
         
-        // 6. 查询章节总数
+        // 查询章节总数
         QueryWrapper<BookChapter> chapterQueryWrapper = new QueryWrapper<>();
         chapterQueryWrapper.eq(DatabaseConsts.BookChapterTable.COLUMN_BOOK_ID, bookId);
         Long chapterTotal = bookChapterMapper.selectCount(chapterQueryWrapper);
 
-        // 7. 组装数据并返回
+        // 组装数据并返回
         return RestResp.ok(BookChapterAboutRespDto.builder()
                 .chapterInfo(bookChapter)
                 .chapterTotal(chapterTotal)

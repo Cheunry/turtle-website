@@ -1,11 +1,12 @@
 package com.novel.author.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.novel.author.dao.entity.AuthorInfo;
 import com.novel.author.dao.mapper.AuthorInfoMapper;
 import com.novel.author.dto.AuthorInfoDto;
 import com.novel.author.dto.req.AuthorRegisterReqDto;
-import com.novel.author.manager.cache.AuthorCacheManager;
 import com.novel.author.service.AuthorInfoService;
+import com.novel.common.constant.DatabaseConsts;
 import com.novel.common.resp.RestResp;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,13 +21,12 @@ import java.util.Objects;
 public class AuthorInfoServiceImpl implements AuthorInfoService {
 
     private final AuthorInfoMapper authorInfoMapper;
-    private final AuthorCacheManager authorCacheManager;
 
 
     @Override
     public RestResp<Void> authorRegister(AuthorRegisterReqDto dto) {
         // 校验该用户是否已注册为作家
-        AuthorInfoDto author = authorCacheManager.getAuthorInfoByUserId(dto.getUserId());
+        AuthorInfoDto author = getAuthorInfoByUserId(dto.getUserId());
 
         if (Objects.nonNull(author)) {
             // 该用户已经是作家，直接返回
@@ -57,13 +57,31 @@ public class AuthorInfoServiceImpl implements AuthorInfoService {
     @Override
     public RestResp<Integer> getStatus(Long userId) {
 
-        AuthorInfoDto authorInfoDto= authorCacheManager.getAuthorInfoByUserId(userId);
+        AuthorInfoDto authorInfoDto= getAuthorInfoByUserId(userId);
 
         if (Objects.isNull(authorInfoDto)) {
             return RestResp.ok(null);
         }
         return RestResp.ok(authorInfoDto.getStatus());
 
+    }
+
+    /**
+     * 查询作家信息
+     */
+    public AuthorInfoDto getAuthorInfoByUserId(Long userId) {
+        QueryWrapper<AuthorInfo> queryWrapper = new QueryWrapper<>();
+        queryWrapper
+                .eq(DatabaseConsts.AuthorInfoTable.COLUMN_USER_ID, userId)
+                .last(DatabaseConsts.SqlEnum.LIMIT_1.getSql());
+        AuthorInfo authorInfo = authorInfoMapper.selectOne(queryWrapper);
+        if (Objects.isNull(authorInfo)) {
+            return null;
+        }
+        return AuthorInfoDto.builder()
+                .id(authorInfo.getId())
+                .penName(authorInfo.getPenName())
+                .status(authorInfo.getStatus()).build();
     }
 
 }

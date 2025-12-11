@@ -8,7 +8,6 @@ import com.novel.book.dao.mapper.BookInfoMapper;
 import com.novel.book.dto.resp.BookCategoryRespDto;
 import com.novel.book.dto.resp.BookInfoRespDto;
 import com.novel.book.dto.resp.BookRankRespDto;
-import com.novel.book.manager.cache.BookRankCacheManager;
 import com.novel.book.service.BookListSearchService;
 import com.novel.common.constant.DatabaseConsts;
 import com.novel.common.resp.RestResp;
@@ -23,23 +22,33 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class BookListSearchImpl implements BookListSearchService {
 
-    private final BookRankCacheManager bookRankCacheManager;
     private final BookInfoMapper bookInfoMapper;
     private final BookCategoryMapper bookCategoryMapper;
 
     @Override
     public RestResp<List<BookRankRespDto>> listVisitRankBooks() {
-        return RestResp.ok(bookRankCacheManager.listVisitRankBooks());
+        QueryWrapper<BookInfo> bookInfoQueryWrapper = new QueryWrapper<>();
+        bookInfoQueryWrapper.orderByDesc(DatabaseConsts.BookTable.COLUMN_VISIT_COUNT);
+        return RestResp.ok(listRankBooks(bookInfoQueryWrapper));
     }
 
     @Override
     public RestResp<List<BookRankRespDto>> listNewestRankBooks() {
-        return RestResp.ok(bookRankCacheManager.listNewestRankBooks());
+
+        QueryWrapper<BookInfo> bookInfoQueryWrapper = new QueryWrapper<>();
+        bookInfoQueryWrapper
+                .gt(DatabaseConsts.BookTable.COLUMN_WORD_COUNT, 0)
+                .orderByDesc(DatabaseConsts.CommonColumnEnum.CREATE_TIME.getName());
+        return RestResp.ok(listRankBooks(bookInfoQueryWrapper));
     }
 
     @Override
     public RestResp<List<BookRankRespDto>> listUpdateRankBooks() {
-        return RestResp.ok(bookRankCacheManager.listUpdateRankBooks());
+        QueryWrapper<BookInfo> bookInfoQueryWrapper = new QueryWrapper<>();
+        bookInfoQueryWrapper
+                .gt(DatabaseConsts.BookTable.COLUMN_WORD_COUNT, 0)
+                .orderByDesc(DatabaseConsts.CommonColumnEnum.UPDATE_TIME.getName());
+        return RestResp.ok(listRankBooks(bookInfoQueryWrapper));
     }
 
 
@@ -78,5 +87,30 @@ public class BookListSearchImpl implements BookListSearchService {
                 .authorName(b.getAuthorName())
                 .build()).collect(Collectors.toList());
         return RestResp.ok(result);
+    }
+
+    /**
+     *
+     * @param bookInfoQueryWrapper
+     * @return 排行榜列表
+     */
+    private List<BookRankRespDto> listRankBooks(QueryWrapper<BookInfo> bookInfoQueryWrapper) {
+        bookInfoQueryWrapper
+                .gt(DatabaseConsts.BookTable.COLUMN_WORD_COUNT, 0)
+                .last(DatabaseConsts.SqlEnum.LIMIT_30.getSql());
+        return bookInfoMapper.selectList(bookInfoQueryWrapper).stream().map(v -> {
+            BookRankRespDto respDto = new BookRankRespDto();
+            respDto.setId(v.getId());
+            respDto.setCategoryId(v.getCategoryId());
+            respDto.setCategoryName(v.getCategoryName());
+            respDto.setBookName(v.getBookName());
+            respDto.setAuthorName(v.getAuthorName());
+            respDto.setPicUrl(v.getPicUrl());
+            respDto.setBookDesc(v.getBookDesc());
+            respDto.setLastChapterName(v.getLastChapterName());
+            respDto.setLastChapterUpdateTime(v.getLastChapterUpdateTime());
+            respDto.setWordCount(v.getWordCount());
+            return respDto;
+        }).toList();
     }
 }
