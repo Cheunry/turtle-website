@@ -45,3 +45,17 @@ ALTER TABLE book_chapter MODIFY id bigint(20) unsigned NOT NULL AUTO_INCREMENT, 
 UPDATE book_chapter
 SET chapter_num = chapter_num + 1
 ORDER BY chapter_num DESC;
+
+
+
+ALTER TABLE `news_info`
+    ADD COLUMN `content` MEDIUMTEXT NOT NULL COMMENT '新闻内容' AFTER `title`;
+
+UPDATE `news_info` AS ni
+    JOIN `news_content` AS nc ON ni.id = nc.news_id
+SET
+    ni.content = nc.content,
+    -- 可选：更新 news_info 表的更新时间
+    ni.update_time = NOW();
+
+DROP TABLE IF EXISTS `news_content`;

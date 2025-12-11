@@ -11,6 +11,7 @@
         <module>novel-book</module>
         <module>novel-author</module>
         <module>novel-search</module>
+        <module>novel-news</module>
     </modules>
 
     <parent>
