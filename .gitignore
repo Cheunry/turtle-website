@@ -37,6 +37,8 @@ build/
 **/.env
 **/application.yml
 **/bootstrap.yml
+**/application-common.yml
+**/bootstrap-common.yml
 
 
 # 忽略 logs 目录

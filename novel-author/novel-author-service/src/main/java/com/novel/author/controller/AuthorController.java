@@ -21,6 +21,7 @@ import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.web.bind.annotation.*;
 import com.novel.book.dto.req.BookUptReqDto;
+import com.novel.book.dto.req.BookDelReqDto;
 
 @Tag(name = "AuthorController", description = "作者模块")
 @SecurityRequirement(name = SystemConfigConsts.HTTP_AUTH_HEADER_NAME)
@@ -77,6 +78,18 @@ public class AuthorController {
         dto.setBookId(bookId);
         dto.setAuthorId(UserHolder.getAuthorId());
         return bookFeignManager.updateBook(dto);
+    }
+
+    /**
+     * 删除书籍接口
+     */
+    @Operation(summary = "删除书籍接口")
+    @DeleteMapping("book/{bookId}")
+    public RestResp<Void> deleteBook(
+            @Parameter(description = "小说ID") @PathVariable("bookId") Long bookId) {
+        BookDelReqDto dto = new BookDelReqDto();
+        dto.setBookId(bookId);
+        return bookFeignManager.deleteBook(dto);
     }
 
     /**

@@ -37,6 +37,12 @@ public class BookInfoRespDto {
     private String categoryName;
 
     /**
+     * 作品方向;0-男频 1-女频
+     */
+    @Schema(description = "作品方向;0-男频 1-女频")
+    private Integer workDirection;
+
+    /**
      * 小说封面地址
      */
     @Schema(description = "小说封面地址")

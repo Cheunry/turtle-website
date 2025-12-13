@@ -65,4 +65,11 @@ public interface BookAuthorService {
      */
     RestResp<Void> updateBookChapter(ChapterUptReqDto dto);
 
+    /**
+     * 作家删除书籍
+     * @param dto 删除请求
+     * @return void
+     */
+    RestResp<Void> deleteBook(BookDelReqDto dto);
+
 }

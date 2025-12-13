@@ -58,6 +58,7 @@ public class BookSearchServiceImpl implements BookSearchService {
                 .authorName(bookInfo.getAuthorName())
                 .categoryId(bookInfo.getCategoryId())
                 .categoryName(bookInfo.getCategoryName())
+                .workDirection(bookInfo.getWorkDirection()) // Add this line
                 .commentCount(bookInfo.getCommentCount())
                 .firstChapterNum(firstBookChapter != null ? firstBookChapter.getChapterNum() : 1) // 增加判空处理
                 .lastChapterNum(bookInfo.getLastChapterNum())     // 使用 bookInfo 中的数据

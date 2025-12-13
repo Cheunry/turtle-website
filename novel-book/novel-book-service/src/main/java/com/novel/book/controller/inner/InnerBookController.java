@@ -80,6 +80,12 @@ public class InnerBookController {
         return bookAuthorService.updateBook(dto);
     }
 
+    @Operation(summary = "删除小说接口")
+    @PostMapping("deleteBook")
+    public RestResp<Void> deleteBook(@Valid @RequestBody BookDelReqDto dto) {
+        return bookAuthorService.deleteBook(dto);
+    }
+
     /**
      * 小说章节发布接口
      */

@@ -73,6 +73,11 @@ public class BookAuthorServiceImpl implements BookAuthorService {
         return RestResp.ok();
     }
 
+    /**
+     * 作家修改书籍信息
+     * @param dto 更新书籍请求dto
+     * @return Void
+     */
     @Override
     public RestResp<Void> updateBook(BookUptReqDto dto) {
         // 1. 校验小说是否存在且属于该作者
@@ -117,12 +122,16 @@ public class BookAuthorServiceImpl implements BookAuthorService {
             updateBook.setIsVip(dto.getIsVip());
             hasUpdate = true;
         }
+        if (dto.getBookStatus() != null) {
+            updateBook.setBookStatus(dto.getBookStatus());
+            hasUpdate = true;
+        }
 
         if (hasUpdate) {
             updateBook.setUpdateTime(LocalDateTime.now());
             bookInfoMapper.updateById(updateBook);
             
-            // 【新增】发送 ES 更新消息
+            // 发送 ES 更新消息
             sendBookChangeMsg(dto.getBookId());
         }
 
@@ -387,6 +396,32 @@ public class BookAuthorServiceImpl implements BookAuthorService {
         updateBookInfo(chapter.getBookId(), chapter, false, oldWordCount);
 
         // 发送 MQ 消息
+        sendBookChangeMsg(dto.getBookId());
+
+        return RestResp.ok();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public RestResp<Void> deleteBook(BookDelReqDto dto) {
+        // 1. 校验小说是否存在且属于该作者
+        BookInfo bookInfo = bookInfoMapper.selectById(dto.getBookId());
+        if (Objects.isNull(bookInfo)) {
+            return RestResp.ok();
+        }
+        if (!Objects.equals(bookInfo.getAuthorId(), dto.getAuthorId())) {
+            return RestResp.fail(ErrorCodeEnum.USER_UN_AUTH);
+        }
+
+        // 2. 删除章节
+        QueryWrapper<BookChapter> chapterWrapper = new QueryWrapper<>();
+        chapterWrapper.eq(DatabaseConsts.BookChapterTable.COLUMN_BOOK_ID, dto.getBookId());
+        bookChapterMapper.delete(chapterWrapper);
+
+        // 3. 删除书籍
+        bookInfoMapper.deleteById(dto.getBookId());
+
+        // 4. 发送 MQ 消息 (通知搜索引擎等更新)
         sendBookChangeMsg(dto.getBookId());
 
         return RestResp.ok();

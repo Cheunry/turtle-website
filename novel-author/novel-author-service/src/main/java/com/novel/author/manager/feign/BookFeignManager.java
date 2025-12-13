@@ -102,6 +102,14 @@ public class BookFeignManager {
     }
 
     /**
+     * 删除书籍
+     */
+    public RestResp<Void> deleteBook(BookDelReqDto dto) {
+        dto.setAuthorId(UserHolder.getAuthorId());
+        return bookFeign.deleteBook(dto);
+    }
+
+    /**
      * 查询作家信息
      */
     public AuthorInfoDto getAuthorInfoByUserId(Long userId) {

@@ -67,4 +67,10 @@ public class BookUptReqDto {
      */
     private Long authorId;
 
+    /**
+     * 小说状态;0-连载中 1-已完结
+     */
+    @Schema(description = "小说状态;0-连载中 1-已完结")
+    private Integer bookStatus;
+
 }
