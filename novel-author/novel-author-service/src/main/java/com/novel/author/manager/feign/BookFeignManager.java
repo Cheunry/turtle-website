@@ -95,6 +95,13 @@ public class BookFeignManager {
     }
 
     /**
+     * 更新书籍信息
+     */
+    public RestResp<Void> updateBook(BookUptReqDto dto) {
+        return bookFeign.updateBook(dto);
+    }
+
+    /**
      * 查询作家信息
      */
     public AuthorInfoDto getAuthorInfoByUserId(Long userId) {

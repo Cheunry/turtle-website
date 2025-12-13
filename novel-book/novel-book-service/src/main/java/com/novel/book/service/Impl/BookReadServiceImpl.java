@@ -59,11 +59,13 @@ public class BookReadServiceImpl implements BookReadService {
     }
 
     /**
-     * 看下一章
-     * 接口：next_chapter_id/{chapterId} ，返回下一章的id即可
+     * 看书籍下一章
+     * @param bookId 书籍ID
+     * @param chapterNum 章节号
+     * @return 下一章章节号
      */
     @Override
-    public RestResp<Integer> getNextChapterId(Long bookId, Integer chapterNum) {
+    public RestResp<Integer> getNextChapterNum(Long bookId, Integer chapterNum) {
 
         // 获取下一章
         QueryWrapper<BookChapter> queryWrapper = new QueryWrapper<>();
@@ -79,11 +81,13 @@ public class BookReadServiceImpl implements BookReadService {
     }
 
     /**
-     * 看上一章
-     * pre_chapter_id/{chapterId}
+     * 看书籍上一章
+     * @param bookId 书籍ID
+     * @param chapterNum 章节号
+     * @return 上一章章节号
      */
     @Override
-    public RestResp<Integer> getPreChapterId(Long bookId, Integer chapterNum) {
+    public RestResp<Integer> getPreChapterNum(Long bookId, Integer chapterNum) {
 
         // 获取上一章
         QueryWrapper<BookChapter> queryWrapper = new QueryWrapper<>();
@@ -98,9 +102,9 @@ public class BookReadServiceImpl implements BookReadService {
     }
 
     /**
-     * 看目录
-     * http://localhost:1024/#/chapter_list/1357668191920263169
-     * chapter/list
+     * 获取书籍目录
+     * @param bookId 书籍ID
+     * @return 书籍章节目录列表
      */
     @Override
     public RestResp<List<BookChapterRespDto>> getBookChapter(Long bookId) {

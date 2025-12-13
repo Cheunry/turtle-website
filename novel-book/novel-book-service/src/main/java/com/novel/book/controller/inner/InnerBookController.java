@@ -72,6 +72,15 @@ public class InnerBookController {
     }
 
     /**
+     * 更新小说接口
+     */
+    @Operation(summary = "更新小说接口")
+    @PostMapping("updateBook")
+    public RestResp<Void> updateBook(@Valid @RequestBody BookUptReqDto dto) {
+        return bookAuthorService.updateBook(dto);
+    }
+
+    /**
      * 小说章节发布接口
      */
     @Operation(summary = "小说章节发布接口")

@@ -22,7 +22,11 @@ public class AuthorInfoServiceImpl implements AuthorInfoService {
 
     private final AuthorInfoMapper authorInfoMapper;
 
-
+    /**
+     * 作家注册
+     * @param dto 作家注册请求DTO
+     * @return Void
+     */
     @Override
     public RestResp<Void> authorRegister(AuthorRegisterReqDto dto) {
         // 校验该用户是否已注册为作家
@@ -32,6 +36,7 @@ public class AuthorInfoServiceImpl implements AuthorInfoService {
             // 该用户已经是作家，直接返回
             return RestResp.ok();
         }
+
         // 保存作家注册信息
         AuthorInfo authorInfo = new AuthorInfo();
         authorInfo.setUserId(dto.getUserId());
@@ -68,6 +73,8 @@ public class AuthorInfoServiceImpl implements AuthorInfoService {
 
     /**
      * 查询作家信息
+     * @param userId 用户ID
+     * @return 作家基础信息DTO
      */
     public AuthorInfoDto getAuthorInfoByUserId(Long userId) {
         QueryWrapper<AuthorInfo> queryWrapper = new QueryWrapper<>();

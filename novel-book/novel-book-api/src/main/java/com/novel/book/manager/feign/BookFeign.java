@@ -6,7 +6,6 @@ import com.novel.book.dto.resp.BookEsRespDto;
 import com.novel.book.dto.resp.BookInfoRespDto;
 import com.novel.common.constant.ApiRouterConsts;
 import com.novel.common.constant.ErrorCodeEnum;
-import com.novel.common.req.PageReqDto;
 import com.novel.common.resp.PageRespDto;
 import com.novel.common.resp.RestResp;
 import org.springframework.cloud.openfeign.FeignClient;
@@ -32,6 +31,12 @@ public interface BookFeign {
      */
     @PostMapping(ApiRouterConsts.API_INNER_BOOK_URL_PREFIX + "/publishBook")
     RestResp<Void> publishBook(BookAddReqDto dto);
+
+    /**
+     * 更新小说接口
+     */
+    @PostMapping(ApiRouterConsts.API_INNER_BOOK_URL_PREFIX + "/updateBook")
+    RestResp<Void> updateBook(BookUptReqDto dto);
 
     /**
      * 小说章节发布接口
@@ -113,6 +118,11 @@ public interface BookFeign {
         @Override
         public RestResp<Void> publishBook(BookAddReqDto dto) {
 
+            return RestResp.fail(ErrorCodeEnum.THIRD_SERVICE_ERROR);
+        }
+
+        @Override
+        public RestResp<Void> updateBook(BookUptReqDto dto) {
             return RestResp.fail(ErrorCodeEnum.THIRD_SERVICE_ERROR);
         }
 

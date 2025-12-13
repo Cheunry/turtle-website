@@ -11,7 +11,6 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 /**
  * 分布式锁 注解
- *
  */
 @Documented
 @Retention(RUNTIME)

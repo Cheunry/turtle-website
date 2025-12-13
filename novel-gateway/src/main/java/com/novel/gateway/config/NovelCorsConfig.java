@@ -12,6 +12,9 @@ import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 @Configuration
 public class NovelCorsConfig {
 
+    /**
+     * 创建并配置用于处理 CORS 逻辑的核心组件 CorsWebFilter
+     */
     @Bean
     public CorsWebFilter corsWebFilter() {
         CorsConfiguration config = new CorsConfiguration();

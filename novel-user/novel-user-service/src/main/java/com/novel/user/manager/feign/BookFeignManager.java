@@ -14,9 +14,6 @@ import com.novel.common.resp.PageRespDto;
 
 /**
  * 小说微服务调用 Feign 客户端管理
- *
- * @author xiongxiaoyang
- * @date 2023/3/29
  */
 @Component
 @AllArgsConstructor

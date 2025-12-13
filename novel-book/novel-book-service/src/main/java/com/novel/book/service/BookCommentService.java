@@ -11,7 +11,6 @@ public interface BookCommentService {
 
     /**
      * 发表评论
-     *
      * @param dto 评论相关 DTO
      * @return void
      */
@@ -19,7 +18,6 @@ public interface BookCommentService {
 
     /**
      * 小说最新评论查询
-     *
      * @param bookId 小说ID
      * @return 小说最新评论数据
      */
@@ -27,7 +25,6 @@ public interface BookCommentService {
 
     /**
      * 删除评论
-     *
      * @param dto 评论相关 DTO
      * @return void
      */
@@ -35,7 +32,6 @@ public interface BookCommentService {
 
     /**
      * 修改评论
-     *
      * @param dto 评论相关 DTO
      * @return void
      */

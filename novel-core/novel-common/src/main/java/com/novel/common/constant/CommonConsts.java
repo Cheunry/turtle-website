@@ -3,9 +3,6 @@ package com.novel.common.constant;
 
 /**
  * 通用常量
- *
- * @author xiongxiaoyang
- * @date 2022/5/12
  */
 public class CommonConsts {
 

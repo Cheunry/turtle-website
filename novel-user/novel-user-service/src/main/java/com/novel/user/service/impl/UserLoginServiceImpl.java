@@ -2,6 +2,7 @@ package com.novel.user.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.novel.common.auth.JwtUtils;
+import com.novel.common.constant.CacheConsts;
 import com.novel.common.constant.DatabaseConsts;
 import com.novel.common.constant.ErrorCodeEnum;
 import com.novel.common.constant.SystemConfigConsts;
@@ -11,8 +12,6 @@ import com.novel.user.dao.entity.UserInfo;
 import com.novel.user.dao.mapper.UserInfoMapper;
 import com.novel.user.dto.req.UserLoginReqDto;
 import com.novel.user.dto.resp.UserLoginRespDto;
-import com.novel.user.manager.cache.UserCacheManager;
-import com.novel.user.manager.redis.RedisKeyConstants;
 import com.novel.user.service.UserLoginService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -34,7 +33,7 @@ public class UserLoginServiceImpl implements UserLoginService {
 
 
     public UserLoginServiceImpl(UserInfoMapper userInfoMapper,
-                                @Qualifier("turtleRedisTemplate") RedisTemplate<String, Object> redisTemplate, UserCacheManager userCacheManager){
+                                @Qualifier("turtleRedisTemplate") RedisTemplate<String, Object> redisTemplate){
         this.userInfoMapper = userInfoMapper;
         this.redisTemplate = redisTemplate;
     }
@@ -92,7 +91,7 @@ public class UserLoginServiceImpl implements UserLoginService {
      * 检查用户是否被锁定
      */
     private boolean isUserLocked(String username) {
-        String lockKey = String.format(RedisKeyConstants.USER_LOCK_STATUS, username);
+        String lockKey = String.format(CacheConsts.USER_LOCK_STATUS, username);
         return redisTemplate.hasKey(lockKey);
     }
 
@@ -100,7 +99,7 @@ public class UserLoginServiceImpl implements UserLoginService {
      * 获取锁定剩余时间，单位是分钟
      */
     private long getLockRemainTime(String username) {
-        String lockKey = String.format(RedisKeyConstants.USER_LOCK_STATUS, username);
+        String lockKey = String.format(CacheConsts.USER_LOCK_STATUS, username);
         return redisTemplate.getExpire(lockKey, TimeUnit.MINUTES);
     }
 
@@ -109,13 +108,13 @@ public class UserLoginServiceImpl implements UserLoginService {
      * @param username
      */
     private void processLoginFailure(String username) {
-        String failCountKey = String.format(RedisKeyConstants.LOGIN_FAIL_COUNT, username);
+        String failCountKey = String.format(CacheConsts.LOGIN_FAIL_COUNT, username);
 
         // 增加失败次数
         Long failCount = redisTemplate.opsForValue().increment(failCountKey);
         if (failCount == 1) {
             // 第一次失败，设置过期时间
-            redisTemplate.expire(failCountKey, RedisKeyConstants.LOCK_EXPIRE_TIME, TimeUnit.SECONDS);
+            redisTemplate.expire(failCountKey, CacheConsts.LOCK_EXPIRE_TIME, TimeUnit.SECONDS);
         }
 
         // 检查是否达到锁定阈值
@@ -128,12 +127,12 @@ public class UserLoginServiceImpl implements UserLoginService {
      * 锁定用户
      */
     private void lockUser(String username) {
-        String lockKey = String.format(RedisKeyConstants.USER_LOCK_STATUS, username);
+        String lockKey = String.format(CacheConsts.USER_LOCK_STATUS, username);
         redisTemplate.opsForValue().set(lockKey, "LOCKED",
-                RedisKeyConstants.LOCK_EXPIRE_TIME, TimeUnit.SECONDS);
+                CacheConsts.LOCK_EXPIRE_TIME, TimeUnit.SECONDS);
 
         // 清除失败计数
-        String failCountKey = String.format(RedisKeyConstants.LOGIN_FAIL_COUNT, username);
+        String failCountKey = String.format(CacheConsts.LOGIN_FAIL_COUNT, username);
         redisTemplate.delete(failCountKey);
 
         log.warn("用户 {} 因连续登录失败被锁定", username);
@@ -146,7 +145,7 @@ public class UserLoginServiceImpl implements UserLoginService {
      */
     private int getRemainAttempts(String username) {
 
-        String failCountKey = String.format(RedisKeyConstants.LOGIN_FAIL_COUNT, username);
+        String failCountKey = String.format(CacheConsts.LOGIN_FAIL_COUNT, username);
         Long failCount = (Long) redisTemplate.opsForValue().get(failCountKey);
         int currentCount = failCount != null ? failCount.intValue() : 0;
         return Math.max(0, 5 - currentCount - 1);
@@ -158,8 +157,8 @@ public class UserLoginServiceImpl implements UserLoginService {
      */
     private void clearLoginFailureRecord(String username) {
 
-        String failCountKey = String.format(RedisKeyConstants.LOGIN_FAIL_COUNT, username);
-        String lockKey = String.format(RedisKeyConstants.USER_LOCK_STATUS, username);
+        String failCountKey = String.format(CacheConsts.LOGIN_FAIL_COUNT, username);
+        String lockKey = String.format(CacheConsts.USER_LOCK_STATUS, username);
 
         redisTemplate.delete(failCountKey);
         redisTemplate.delete(lockKey);

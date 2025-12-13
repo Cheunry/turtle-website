@@ -11,9 +11,6 @@ import lombok.Getter;
  * 步长间距预留 100。
  * <p>
  * 错误码分为一级宏观错误码、二级宏观错误码、三级宏观错误码。 在无法更加具体确定的错误场景中，可以直接使用一级宏观错误码。
- *
- * @author xiongxiaoyang
- * @date 2022/5/11
  */
 @Getter
 @AllArgsConstructor

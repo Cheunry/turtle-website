@@ -37,10 +37,13 @@ public class BookCommentServiceImpl implements BookCommentService {
 
     private final BookCommentMapper bookCommentMapper;
     private final UserFeignManager userFeignManager;
-    // 新增注入 BookInfoMapper
-    private final BookInfoMapper bookInfoMapper;
 
 
+    /**
+     * 保存用户评论
+     * @param dto 评论相关 DTO
+     * @return void
+     */
     @Lock(prefix = "userComment")
     @Override
     public RestResp<Void> saveComment(
@@ -63,6 +66,11 @@ public class BookCommentServiceImpl implements BookCommentService {
         return RestResp.ok();
     }
 
+    /**
+     * 展示小说最新评论
+     * @param bookId 小说ID
+     * @return 最新评论列表
+     */
     @Override
     public RestResp<BookCommentRespDto> listNewestComments(Long bookId) {
         // 查询评论总数
@@ -86,13 +94,16 @@ public class BookCommentServiceImpl implements BookCommentService {
             Map<Long, UserInfoRespDto> userInfoMap = userInfos.stream()
                     .collect(Collectors.toMap(UserInfoRespDto::getId, Function.identity()));
             List<BookCommentRespDto.CommentInfo> commentInfos = bookComments.stream()
-                    .map(v -> BookCommentRespDto.CommentInfo.builder()
+                    .map(v -> {
+                        UserInfoRespDto userInfo = userInfoMap.get(v.getUserId());
+                        return BookCommentRespDto.CommentInfo.builder()
                             .id(v.getId())
                             .commentUserId(v.getUserId())
-                            .commentUser(userInfoMap.get(v.getUserId()).getUsername())
-                            .commentUserPhoto(userInfoMap.get(v.getUserId()).getUserPhoto())
+                            .commentUser(userInfo != null ? userInfo.getNickName() : "未知用户")
+                            .commentUserPhoto(userInfo != null ? userInfo.getUserPhoto() : "")
                             .commentContent(v.getCommentContent())
-                            .commentTime(v.getCreateTime()).build()).toList();
+                            .commentTime(v.getCreateTime()).build();
+                    }).toList();
             bookCommentRespDto.setComments(commentInfos);
         } else {
             bookCommentRespDto.setComments(Collections.emptyList());
@@ -100,6 +111,11 @@ public class BookCommentServiceImpl implements BookCommentService {
         return RestResp.ok(bookCommentRespDto);
     }
 
+    /**
+     * 删除评论
+     * @param dto 评论相关 DTO
+     * @return void
+     */
     @Override
     public RestResp<Void> deleteComment(BookCommentReqDto dto) {
         QueryWrapper<BookComment> queryWrapper = new QueryWrapper<>();
@@ -109,6 +125,11 @@ public class BookCommentServiceImpl implements BookCommentService {
         return RestResp.ok();
     }
 
+    /**
+     * 更新评论
+     * @param dto 评论相关 DTO
+     * @return void
+     */
     @Override
     public RestResp<Void> updateComment(BookCommentReqDto dto) {
         QueryWrapper<BookComment> queryWrapper = new QueryWrapper<>();

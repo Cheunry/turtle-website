@@ -2,6 +2,7 @@ package com.novel.user.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.novel.common.auth.JwtUtils;
+import com.novel.common.constant.CacheConsts;
 import com.novel.common.constant.DatabaseConsts;
 import com.novel.common.constant.ErrorCodeEnum;
 import com.novel.common.constant.SystemConfigConsts;
@@ -11,15 +12,16 @@ import com.novel.user.dao.entity.UserInfo;
 import com.novel.user.dao.mapper.UserInfoMapper;
 import com.novel.user.dto.req.UserRegisterReqDto;
 import com.novel.user.dto.resp.UserRegisterRespDto;
-import com.novel.user.manager.redis.VerifyCodeManager;
 import com.novel.user.service.UserRegisterService;
 import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @Slf4j
 @Service
@@ -28,14 +30,14 @@ public class UserRegisterServiceImpl implements UserRegisterService {
 
     private final UserInfoMapper userInfoMapper;
 
-    private final VerifyCodeManager verifyCodeManager;
+    private final StringRedisTemplate stringRedisTemplate;
 
 
     @Override
     public RestResp<UserRegisterRespDto> register(UserRegisterReqDto dto) {
 
         // 校验图形验证码是否正确
-        if (!verifyCodeManager.imgVerifyCodeOk(dto.getSessionId(), dto.getVelCode())) {
+        if (!imgVerifyCodeOk(dto.getSessionId(), dto.getVelCode())) {
             // 图形验证码校验失败
             throw new BusinessException(ErrorCodeEnum.USER_VERIFY_CODE_ERROR);
         }
@@ -61,7 +63,7 @@ public class UserRegisterServiceImpl implements UserRegisterService {
         userInfoMapper.insert(userInfo);
 
         // 删除验证码
-        verifyCodeManager.removeImgVerifyCode(dto.getSessionId());
+        removeImgVerifyCode(dto.getSessionId());
 
         // 生成JWT 并返回
         return RestResp.ok(
@@ -71,6 +73,21 @@ public class UserRegisterServiceImpl implements UserRegisterService {
                         .build()
         );
 
+    }
+
+    /**
+     * 校验图形验证码
+     */
+    public boolean imgVerifyCodeOk(String sessionId, String verifyCode) {
+        return Objects.equals(stringRedisTemplate.opsForValue()
+                .get(CacheConsts.IMG_VERIFY_CODE_CACHE_KEY + sessionId), verifyCode);
+    }
+
+    /**
+     * 从 Redis 中删除验证码
+     */
+    public void removeImgVerifyCode(String sessionId) {
+        stringRedisTemplate.delete(CacheConsts.IMG_VERIFY_CODE_CACHE_KEY + sessionId);
     }
 
 }

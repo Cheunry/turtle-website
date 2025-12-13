@@ -8,8 +8,6 @@ import org.springframework.stereotype.Service;
 @Service
 public interface AuthorInfoService {
 
-//    AuthorInfo getAuthorInfoByUserId(Long userId);
-
     RestResp<Void> authorRegister(AuthorRegisterReqDto dto);
 
     RestResp<Integer> getStatus(Long userId);

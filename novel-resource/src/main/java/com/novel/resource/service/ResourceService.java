@@ -2,8 +2,6 @@ package com.novel.resource.service;
 
 import com.novel.common.resp.RestResp;
 import com.novel.resource.dto.resp.ImgVerifyCodeRespDto;
-
-import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 
 /**
@@ -18,6 +16,5 @@ public interface ResourceService {
      * @return Base64编码的图片
      */
     RestResp<ImgVerifyCodeRespDto> getImgVerifyCode() throws IOException;
-
 
 }

@@ -2,9 +2,6 @@ package com.novel.common.constant;
 
 /**
  * 消息发送器的类型
- *
- * @author xiongxiaoyang
- * @date 2023/3/24
  */
 public class MessageSenderTypeConsts {
 

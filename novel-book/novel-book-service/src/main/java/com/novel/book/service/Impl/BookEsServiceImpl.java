@@ -21,7 +21,6 @@ public class BookEsServiceImpl implements BookEsService {
 
     /**
      * 查询下一批保存到 ES 中的小说列表
-     *
      * @param maxBookId 已查询的最大小说ID
      * @return 小说列表
      */
@@ -75,6 +74,11 @@ public class BookEsServiceImpl implements BookEsService {
 
     }
 
+    /**
+     * 根据 ID 获取 ES 书籍数据
+     * @param bookId 书籍ID
+     * @return Elasticsearch 存储小说 DTO
+     */
     @Override
     public RestResp<BookEsRespDto> getEsBookById(Long bookId) {
         

@@ -5,8 +5,8 @@ import com.novel.common.constant.DatabaseConsts;
 import com.novel.common.resp.RestResp;
 import com.novel.user.dao.entity.UserInfo;
 import com.novel.user.dao.mapper.UserInfoMapper;
+import com.novel.user.dto.UserInfoDto;
 import com.novel.user.dto.resp.UserInfoRespDto;
-import com.novel.user.manager.cache.UserCacheManager;
 import com.novel.user.service.UserSelectService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,16 +20,12 @@ import java.util.stream.Collectors;
 public class UserSelectServiceImpl implements UserSelectService {
 
     private final UserInfoMapper userInfoMapper;
-    private final UserCacheManager userCacheManager;
 
     @Override
     public RestResp<UserInfoRespDto> getUserInfo(Long userId) {
 
-        userCacheManager.getUserOrPutToCache(userId);
-
         UserInfo userInfo = userInfoMapper.selectById(userId);
-
-        if(Objects.isNull(userInfo)) {
+        if(Objects.isNull(userInfo)){
             return null;
         }
         return RestResp.ok(UserInfoRespDto.builder()
@@ -38,6 +34,7 @@ public class UserSelectServiceImpl implements UserSelectService {
                 .nickName(userInfo.getNickName())
                 .userSex(userInfo.getUserSex())
                 .userPhoto(userInfo.getUserPhoto())
+                .accountBalance(userInfo.getAccountBalance())
                 .build()
         );
     }
@@ -51,6 +48,7 @@ public class UserSelectServiceImpl implements UserSelectService {
                         .id(v.getId())
                         .username(v.getUsername())
                         .userPhoto(v.getUserPhoto())
+                        .nickName(v.getNickName())
                         .build()).collect(Collectors.toList()));
     }
 

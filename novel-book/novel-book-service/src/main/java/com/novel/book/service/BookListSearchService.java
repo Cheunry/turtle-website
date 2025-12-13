@@ -14,30 +14,25 @@ public interface BookListSearchService {
 
     /**
      * 小说点击榜查询
-     *
      * @return 小说点击排行列表
      */
     RestResp<List<BookRankRespDto>> listVisitRankBooks();
 
     /**
      * 小说新书榜查询
-     *
      * @return 小说新书排行列表
      */
     RestResp<List<BookRankRespDto>> listNewestRankBooks();
 
     /**
      * 小说更新榜查询
-     *
      * @return 小说更新排行列表
      */
     RestResp<List<BookRankRespDto>> listUpdateRankBooks();
 
 
-
     /**
      * 小说分类列表查询
-     *
      * @param workDirection 作品方向;0-男频 1-女频
      * @return 分类列表
      */
@@ -45,7 +40,6 @@ public interface BookListSearchService {
 
     /**
      * 小说推荐列表查询
-     *
      * @param bookId 小说ID
      * @return 推荐列表
      */

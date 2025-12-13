@@ -31,7 +31,6 @@ public class BookCommentRespDto {
         private String commentContent;
 
         @Schema(description = "评论用户")
-        @JsonSerialize(using = UsernameSerializer.class)
         private String commentUser;
 
         @Schema(description = "评论用户ID")

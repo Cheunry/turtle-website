@@ -46,20 +46,4 @@ public class UserInfo {
 //    最后更新时间
     private LocalDateTime updateTime;
 
-    @Override
-    public String toString() {
-        return "UserInfo{" +
-                "id=" + id +
-                ", userName='" + username + '\'' +
-                ", password='" + password + '\'' +
-                ", salt='" + salt + '\'' +
-                ", niceName='" + nickName + '\'' +
-                ", userPhoto='" + userPhoto + '\'' +
-                ", userSex=" + userSex +
-                ", accountBalance=" + accountBalance +
-                ", status=" + status +
-                ", createTime=" + createTime +
-                ", updateTime=" + updateTime +
-                '}';
-    }
 }

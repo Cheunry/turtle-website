@@ -5,13 +5,12 @@ import com.novel.common.auth.UserHolder;
 import com.novel.common.constant.ErrorCodeEnum;
 import com.novel.common.constant.SystemConfigConsts;
 import com.novel.config.exception.BusinessException;
-import com.novel.user.dto.UserInfoDto;
-import com.novel.user.manager.cache.UserCacheManager;
+import com.novel.user.dao.entity.UserInfo;
+import com.novel.user.dao.mapper.UserInfoMapper;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.HandlerInterceptor;
@@ -27,7 +26,7 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class AuthInterceptor implements HandlerInterceptor {
 
-    private final UserCacheManager userCacheManager;
+    private final UserInfoMapper userInfoMapper;
 
     /**
      * handle 执行前调用
@@ -50,9 +49,11 @@ public class AuthInterceptor implements HandlerInterceptor {
             throw new BusinessException(ErrorCodeEnum.USER_LOGIN_EXPIRED);
         }
 
-        UserInfoDto userInfoDto = userCacheManager.getUserAndPutToCache(userId);
+//        UserInfoDto userInfoDto = userCacheManager.getUserAndPutToCache(userId);
 
-        if (Objects.isNull(userInfoDto)) {
+        UserInfo userInfo = userInfoMapper.selectById(userId);
+
+        if (Objects.isNull(userInfo)) {
             // 用户不存在
             throw new BusinessException(ErrorCodeEnum.USER_ACCOUNT_NOT_EXIST);
         }

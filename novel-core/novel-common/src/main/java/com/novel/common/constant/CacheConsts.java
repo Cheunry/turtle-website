@@ -2,9 +2,6 @@ package com.novel.common.constant;
 
 /**
  * 缓存相关常量
- *
- * @author xiongxiaoyang
- * @date 2022/5/12
  */
 public class CacheConsts {
 
@@ -91,6 +88,18 @@ public class CacheConsts {
      */
     public static final String IMG_VERIFY_CODE_CACHE_KEY =
         REDIS_CACHE_PREFIX + "imgVerifyCodeCache::";
+
+    /**
+     * 用户登录次数限制配置
+     */
+    // 用户登录失败次数 key: login_fail_count:{username}
+    public static final String LOGIN_FAIL_COUNT = "login_fail_count:%s";
+
+    // 用户锁定状态 key: user_lock:{username}
+    public static final String USER_LOCK_STATUS = "user_lock:%s";
+
+    // 过期时间：30分钟
+    public static final long LOCK_EXPIRE_TIME = 30 * 60;
 
     /**
      * 用户信息缓存

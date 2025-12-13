@@ -1,12 +1,25 @@
 spring:
   application:
     name: novel-gateway
+  profiles:
+    # 引导文件建议只做 include，active 放在 application.yml 或 Nacos 配置中
+    active: dev                                         # 激活 dev 环境，将拉取 novel-gateway-dev.yml
   cloud:
     nacos:
+      server-addr: 120.53.89.103:52582                   # 统一配置 Nacos 服务器地址
+
       config:
-        server-addr: 120.53.89.103:8848
-        file-extension: yml
+        server-addr: ${spring.cloud.nacos.server-addr}  # 可以省略 server-addr，默认使用上层 nacos.server-addr
+        file-extension: yml                             # file-extension 必须配置，告诉Nacos拉取什么后缀的配置
 
+      discovery:                                        # 必须确保 discovery 存在，否则服务不会注册
+        server-addr: ${spring.cloud.nacos.server-addr}  # 可以省略 server-addr，默认使用上层 nacos.server-addr
 
-
-
+#spring:
+#  application:
+#    name: novel-gateway
+#  cloud:
+#    nacos:
+#      config:
+#        server-addr: 120.53.89.103:8848
+#        file-extension: yml

@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Objects;
+import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -30,12 +31,11 @@ public class BookAuthorServiceImpl implements BookAuthorService {
 
     private final BookInfoMapper bookInfoMapper;
     private final BookChapterMapper bookChapterMapper;
-    // 注入 RocketMQTemplate
     private final RocketMQTemplate rocketMQTemplate;
 
 
     /**
-     * 书籍保存
+     * 作家新增书籍
      * @param dto 新增书籍请求dto
      * @return 响应
      */
@@ -73,7 +73,68 @@ public class BookAuthorServiceImpl implements BookAuthorService {
         return RestResp.ok();
     }
 
+    @Override
+    public RestResp<Void> updateBook(BookUptReqDto dto) {
+        // 1. 校验小说是否存在且属于该作者
+        BookInfo bookInfo = bookInfoMapper.selectById(dto.getBookId());
+        if (Objects.isNull(bookInfo)) {
+            return RestResp.fail(ErrorCodeEnum.USER_REQUEST_PARAM_ERROR);
+        }
+        if (!Objects.equals(bookInfo.getAuthorId(), dto.getAuthorId())) {
+            return RestResp.fail(ErrorCodeEnum.USER_UN_AUTH);
+        }
 
+        // 2. 更新信息
+        BookInfo updateBook = new BookInfo();
+        updateBook.setId(dto.getBookId());
+        
+        boolean hasUpdate = false;
+        if (StringUtils.isNotBlank(dto.getBookName())) {
+            updateBook.setBookName(dto.getBookName());
+            hasUpdate = true;
+        }
+        if (StringUtils.isNotBlank(dto.getPicUrl())) {
+            updateBook.setPicUrl(dto.getPicUrl());
+            hasUpdate = true;
+        }
+        if (StringUtils.isNotBlank(dto.getBookDesc())) {
+            updateBook.setBookDesc(dto.getBookDesc());
+            hasUpdate = true;
+        }
+        if (dto.getCategoryId() != null) {
+            updateBook.setCategoryId(dto.getCategoryId());
+            hasUpdate = true;
+        }
+        if (StringUtils.isNotBlank(dto.getCategoryName())) {
+            updateBook.setCategoryName(dto.getCategoryName());
+            hasUpdate = true;
+        }
+        if (dto.getWorkDirection() != null) {
+            updateBook.setWorkDirection(dto.getWorkDirection());
+            hasUpdate = true;
+        }
+        if (dto.getIsVip() != null) {
+            updateBook.setIsVip(dto.getIsVip());
+            hasUpdate = true;
+        }
+
+        if (hasUpdate) {
+            updateBook.setUpdateTime(LocalDateTime.now());
+            bookInfoMapper.updateById(updateBook);
+            
+            // 【新增】发送 ES 更新消息
+            sendBookChangeMsg(dto.getBookId());
+        }
+
+        return RestResp.ok();
+    }
+
+
+    /**
+     * 作家新增书籍章节
+     * @param dto 新增章节Dto
+     * @return void
+     */
     @Transactional(rollbackFor = Exception.class)
     @Override
     public RestResp<Void> saveBookChapter(ChapterAddReqDto dto) {
@@ -187,7 +248,6 @@ public class BookAuthorServiceImpl implements BookAuthorService {
         return RestResp.ok(
                 PageRespDto.of(dto.getPageNum(), dto.getPageSize(), page.getTotal(),
                 bookChapterPage.getRecords().stream().map(v -> BookChapterRespDto.builder()
-//                        .id(v.getId())
                         .bookId(v.getBookId())
                         .chapterWordCount(v.getWordCount())
                         .chapterName(v.getChapterName())
@@ -198,10 +258,10 @@ public class BookAuthorServiceImpl implements BookAuthorService {
     }
 
 
-
-
     /**
-     * 删除章节
+     * 作家删除章节
+     * @param dto 删除请求
+     * @return void
      */
     @Transactional(rollbackFor = Exception.class)
     public RestResp<Void> deleteBookChapter(ChapterDelReqDto dto) {
@@ -232,13 +292,11 @@ public class BookAuthorServiceImpl implements BookAuthorService {
                         .orderByDesc(DatabaseConsts.BookChapterTable.COLUMN_CHAPTER_UPDATE_TIME)
                         .last("limit 1");
                 BookChapter bookChapter1 = bookChapterMapper.selectOne(bookChapterQueryWrapper);
-//                book.setLastChapterId(bookChapter1.getId());
                 book.setLastChapterNum(bookChapter1.getChapterNum());
                 book.setLastChapterName(bookChapter1.getChapterName());
                 book.setLastChapterUpdateTime(bookChapter1.getUpdateTime());
             } else if (book.getWordCount() <= 0 && book.getLastChapterNum().equals(bookChapter.getChapterNum())) {
                 book.setWordCount(0);
-//                book.setLastChapterId(null);
                 book.setLastChapterNum(null);
                 book.setLastChapterName(null);
                 book.setLastChapterUpdateTime(null);
@@ -255,7 +313,7 @@ public class BookAuthorServiceImpl implements BookAuthorService {
     }
 
     /**
-     * 获取章节内容
+     * 作家获取章节内容
      * @param bookId,chapterNum 书籍id，章节号
      * @return 章节内容
      */
@@ -268,7 +326,6 @@ public class BookAuthorServiceImpl implements BookAuthorService {
         BookChapter bookChapter = bookChapterMapper.selectOne(queryWrapper);
 
         return RestResp.ok(BookChapterRespDto.builder()
-//                .id(bookChapter.getId())
                 .bookId(bookChapter.getBookId())
                 .chapterNum(bookChapter.getChapterNum())
                 .chapterName(bookChapter.getChapterName())
@@ -279,6 +336,11 @@ public class BookAuthorServiceImpl implements BookAuthorService {
                 .build());
     }
 
+    /**
+     * 作家更新书籍章节
+     * @param dto 更新dto
+     * @return void
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public RestResp<Void> updateBookChapter(ChapterUptReqDto dto) {
@@ -332,6 +394,7 @@ public class BookAuthorServiceImpl implements BookAuthorService {
 
     /**
      * 更新书籍信息辅助函数
+     *
      * @param bookId 书籍ID
      * @param chapter 变更的章节
      * @param isNew 是否是新增章节
@@ -363,7 +426,6 @@ public class BookAuthorServiceImpl implements BookAuthorService {
         BookChapter realLastChapter = bookChapterMapper.selectOne(lastChapterQuery);
 
         if (realLastChapter != null) {
-//            updateBook.setLastChapterId(realLastChapter.getId());
             updateBook.setLastChapterNum(realLastChapter.getChapterNum());
             updateBook.setLastChapterName(realLastChapter.getChapterName());
             updateBook.setLastChapterUpdateTime(realLastChapter.getUpdateTime());

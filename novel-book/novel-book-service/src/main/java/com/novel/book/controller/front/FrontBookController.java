@@ -124,7 +124,7 @@ public class FrontBookController {
     public RestResp<Integer> getPreChapterId(
             @Parameter(description = "书籍ID") @PathVariable("bookId") Long bookId,
             @Parameter(description = "章节号") @PathVariable("chapterNum") Integer chapterNum) {
-        return bookReadService.getPreChapterId(bookId, chapterNum);
+        return bookReadService.getPreChapterNum(bookId, chapterNum);
     }
 
     /**
@@ -135,7 +135,7 @@ public class FrontBookController {
     public RestResp<Integer> getNextChapterId(
             @Parameter(description = "书籍ID") @PathVariable("bookId") Long bookId,
             @Parameter(description = "章节号") @PathVariable("chapterNum") Integer chapterNum) {
-        return bookReadService.getNextChapterId(bookId, chapterNum);
+        return bookReadService.getNextChapterNum(bookId, chapterNum);
     }
 
     /**

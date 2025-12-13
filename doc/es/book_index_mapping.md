@@ -25,7 +25,7 @@ PUT /book
 1.查询数量： GET book/_count
 执行结果：
 {
-    "count": 108,
+    "count": 110,
     "_shards": {
     "total": 1,
     "successful": 1,

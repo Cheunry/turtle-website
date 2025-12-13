@@ -30,6 +30,11 @@ public class BookSearchServiceImpl implements BookSearchService {
     private final BookChapterMapper bookChapterMapper;
     private final RocketMQTemplate rocketMQTemplate;
 
+    /**
+     * 查询书籍信息
+     * @param bookId 小说ID
+     * @return 书籍基础信息相应
+     */
     @Override
     public RestResp<BookInfoRespDto> getBookById(Long bookId) {
 
@@ -67,6 +72,11 @@ public class BookSearchServiceImpl implements BookSearchService {
     }
 
 
+    /**
+     * 获取书籍列表
+     * @param bookIds 小说ID列表
+     * @return 书籍基础信息列表
+     */
     @Override
     public RestResp<List<BookInfoRespDto>> listBookInfoByIds(List<Long> bookIds) {
         QueryWrapper<BookInfo> queryWrapper = new QueryWrapper<>();
@@ -81,6 +91,11 @@ public class BookSearchServiceImpl implements BookSearchService {
                         .build()).collect(Collectors.toList()));
     }
 
+    /**
+     * 增加书籍访问量
+     * @param bookId 小说ID
+     * @return void
+     */
     @Override
     public RestResp<Void> addVisitCount(Long bookId) {
         bookInfoMapper.addVisitCount(bookId);
@@ -89,6 +104,11 @@ public class BookSearchServiceImpl implements BookSearchService {
         return RestResp.ok();
     }
 
+    /**
+     * 获取书籍最新章节信息
+     * @param bookId 小说ID
+     * @return 书籍章节基础信息
+     */
     @Override
     public RestResp<BookChapterAboutRespDto> getLastChapterAbout(Long bookId) {
         // 查询小说信息

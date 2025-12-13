@@ -17,6 +17,11 @@ public class UserFeignManager {
 
     private final UserFeign userFeign;
 
+    /**
+     * 获取用户基础信息列表
+     * @param userIds 用户ID List
+     * @return 用户基础信息列表
+     */
     public List<UserInfoRespDto> listUserInfoByIds(List<Long> userIds) {
 
         RestResp<List<UserInfoRespDto>> resp = userFeign.listUserInfoByIds(userIds);

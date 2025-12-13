@@ -25,6 +25,10 @@ public class BookListSearchImpl implements BookListSearchService {
     private final BookInfoMapper bookInfoMapper;
     private final BookCategoryMapper bookCategoryMapper;
 
+    /**
+     * 获取最多访问的书籍列表
+     * @return 最多访问的书籍列表
+     */
     @Override
     public RestResp<List<BookRankRespDto>> listVisitRankBooks() {
         QueryWrapper<BookInfo> bookInfoQueryWrapper = new QueryWrapper<>();
@@ -32,6 +36,10 @@ public class BookListSearchImpl implements BookListSearchService {
         return RestResp.ok(listRankBooks(bookInfoQueryWrapper));
     }
 
+    /**
+     * 获取最近发布的书籍列表
+     * @return 最近发布的书籍列表
+     */
     @Override
     public RestResp<List<BookRankRespDto>> listNewestRankBooks() {
 
@@ -42,6 +50,10 @@ public class BookListSearchImpl implements BookListSearchService {
         return RestResp.ok(listRankBooks(bookInfoQueryWrapper));
     }
 
+    /**
+     * 获取最近更新的书籍列表
+     * @return 最近更新的书籍列表
+     */
     @Override
     public RestResp<List<BookRankRespDto>> listUpdateRankBooks() {
         QueryWrapper<BookInfo> bookInfoQueryWrapper = new QueryWrapper<>();
@@ -52,6 +64,11 @@ public class BookListSearchImpl implements BookListSearchService {
     }
 
 
+    /**
+     * 获取根据书籍方向获取这个方向的书籍类型列表
+     * @param workDirection 作品方向;0-男频 1-女频
+     * @return 书籍类型信息列表
+     */
     @Override
     public RestResp<List<BookCategoryRespDto>> listCategory(Integer workDirection) {
         QueryWrapper<BookCategory> queryWrapper = new QueryWrapper<>();
@@ -65,6 +82,11 @@ public class BookListSearchImpl implements BookListSearchService {
         return RestResp.ok(categoryList);
     }
 
+    /**
+     * 推荐同类书籍列表
+     * @param bookId 小说ID
+     * @return 同列书籍列表
+     */
     @Override
     public RestResp<List<BookInfoRespDto>> listRecBooks(Long bookId) {
 
@@ -90,8 +112,8 @@ public class BookListSearchImpl implements BookListSearchService {
     }
 
     /**
-     *
-     * @param bookInfoQueryWrapper
+     * 书籍榜单列表
+     * @param bookInfoQueryWrapper 数据库获取的书籍榜单列表
      * @return 排行榜列表
      */
     private List<BookRankRespDto> listRankBooks(QueryWrapper<BookInfo> bookInfoQueryWrapper) {

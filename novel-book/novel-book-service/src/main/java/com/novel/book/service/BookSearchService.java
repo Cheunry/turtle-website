@@ -9,7 +9,6 @@ public interface BookSearchService {
 
     /**
      * 小说信息查询
-     *
      * @param bookId 小说ID
      * @return 小说信息
      */
@@ -18,7 +17,6 @@ public interface BookSearchService {
 
     /**
      * 小说信息查询--批量
-     *
      * @param bookIds 小说ID列表
      * @return 小说信息列表
      */
@@ -26,7 +24,6 @@ public interface BookSearchService {
 
     /**
      * 增加小说点击量
-     *
      * @param bookId 小说ID
      * @return void
      */
@@ -34,7 +31,6 @@ public interface BookSearchService {
 
     /**
      * 小说最新章节相关信息查询
-     *
      * @param bookId 小说ID
      * @return 章节相关联的信息
      */

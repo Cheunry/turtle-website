@@ -1,15 +1,29 @@
 spring:
+  application:
+    # 必须指定一个应用名，用于构成默认的主配置 Data ID
+    name: novel-common
+  profiles:
+    # 声明当前环境，例如 dev
+    active: dev
   cloud:
     nacos:
       config:
-        server-addr: 120.53.89.103:8848
+        server-addr: 120.53.89.103:52582
         file-extension: yml
-        extension-configs[0]:
-          data‐id: novel-mysql.yml
-          refresh: true
-        extension-configs[1]:
-          data‐id: novel-redis.yml
-          refresh: true
-        extension-configs[2]:
-          data‐id: novel-rabbitmq.yml
-          refresh: true
+        # --- 声明要加载的共享配置 ---
+        extension-configs:
+          - data-id: novel-rocketmq.yml
+            group: DEFAULT_GROUP
+            refresh: true
+          - data-id: novel-redis.yml
+            group: DEFAULT_GROUP
+            refresh: true
+          - data-id: novel-mysql.yml
+            group: DEFAULT_GROUP
+            refresh: true
+          - data-id: novel-common-base.yml
+            group: DEFAULT_GROUP
+            refresh: true
+
+      discovery:
+        server-addr: 120.53.89.103:52582

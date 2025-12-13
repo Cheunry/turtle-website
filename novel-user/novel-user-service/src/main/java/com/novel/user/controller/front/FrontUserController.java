@@ -24,8 +24,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
-import com.novel.common.resp.PageRespDto;
-import com.novel.common.req.PageReqDto;
 
 @Tag(name = "UserController", description = "前台门户-会员模块")
 @SecurityRequirement(name = SystemConfigConsts.HTTP_AUTH_HEADER_NAME)
@@ -42,6 +40,7 @@ public class FrontUserController {
     private final UserBookshelfService userBookshelfService;
     private final BookFeignManager bookFeignManager;
 
+    /* ***********************用户服务基础接口************************* */
 
     @Operation(summary = "用户注册接口")
     @PostMapping("register")
@@ -70,7 +69,7 @@ public class FrontUserController {
     }
 
 
-    /* ***********************反馈相关************************* */
+    /* ***********************反馈相关接口************************* */
 
     /**
      * 用户反馈提交接口
@@ -91,8 +90,7 @@ public class FrontUserController {
     }
 
 
-    /* ************************评论相关************************* */
-
+    /* ************************评论相关接口************************* */
 
     /**
      * 发表评论接口
@@ -130,8 +128,7 @@ public class FrontUserController {
     }
 
 
-
-    /* ************************书架相关************************* */
+    /* ************************书架相关接口************************* */
 
     /**
      * 查询书架状态接口 0-不在书架 1-已在书架

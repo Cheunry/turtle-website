@@ -4,7 +4,6 @@ import lombok.Getter;
 
 /**
  * 数据库 常量
- *
  */
 public class DatabaseConsts {
 

@@ -21,6 +21,10 @@ public class NewsServiceImpl implements NewsService {
 
     private final NewsInfoMapper newsInfoMapper;
 
+    /**
+     * 最新新闻列表查询
+     * @return 新闻列表
+     */
     @Override
     public RestResp<List<NewsInfoRespDto>> listLatestNews() {
 
@@ -40,6 +44,11 @@ public class NewsServiceImpl implements NewsService {
         return RestResp.ok(newsInfoRespDtoList);
     }
 
+    /**
+     * 新闻信息查询
+     * @param id 新闻ID
+     * @return 新闻信息
+     */
     @Override
     public RestResp<NewsReadRespDto> getNews(Long id) {
         NewsInfo newsInfo = newsInfoMapper.selectById(id);

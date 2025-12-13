@@ -4,9 +4,6 @@ spring:
   profiles:
     active: dev
   cloud:
-    nacos:
-      discovery:
-        server-addr: 120.53.89.103:8848
     gateway:
       routes:
         - id: novel-home-front

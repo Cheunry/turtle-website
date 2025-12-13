@@ -16,9 +16,6 @@ import java.util.Objects;
 
 /**
  * JWT 工具类
- *
- * @author xiongxiaoyang
- * @date 2022/5/17
  */
 @UtilityClass
 @Slf4j

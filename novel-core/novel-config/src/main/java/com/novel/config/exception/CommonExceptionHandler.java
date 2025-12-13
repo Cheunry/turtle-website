@@ -9,9 +9,6 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 /**
  * 通用的异常处理器
- *
- * @author xiongxiaoyang
- * @date 2022/5/11
  */
 @Slf4j
 @RestControllerAdvice
