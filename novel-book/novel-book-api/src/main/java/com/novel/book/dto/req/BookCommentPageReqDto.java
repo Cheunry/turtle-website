@@ -18,4 +18,10 @@ public class BookCommentPageReqDto extends PageReqDto {
     @Parameter(description = "小说ID")
     private Long bookId;
 
+    /**
+     * 用户ID (用于筛选)
+     */
+    @Parameter(description = "用户ID")
+    private Long userId;
+
 }

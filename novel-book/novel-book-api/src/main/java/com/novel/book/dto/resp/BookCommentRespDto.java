@@ -37,9 +37,13 @@ public class BookCommentRespDto {
         @Schema(description = "评论用户头像")
         private String commentUserPhoto;
 
-        @Schema(description = "评论时间")
+        @Schema(description = "评论发表时间")
         @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-        private LocalDateTime commentTime;
+        private LocalDateTime commentCreateTime;
+
+        @Schema(description = "评论更新时间")
+        @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+        private LocalDateTime commentUpdateTime;
 
     }
 
