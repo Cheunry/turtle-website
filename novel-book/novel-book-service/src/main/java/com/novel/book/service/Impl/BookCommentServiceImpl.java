@@ -11,12 +11,12 @@ import com.novel.book.dto.resp.BookCommentRespDto;
 import com.novel.book.manager.feign.UserFeignManager;
 import com.novel.book.service.BookCommentService;
 import com.novel.common.constant.DatabaseConsts;
+import com.novel.common.constant.ErrorCodeEnum;
 import com.novel.common.resp.PageRespDto;
 import com.novel.common.resp.RestResp;
-import com.novel.config.annotation.Key;
-import com.novel.config.annotation.Lock;
 import com.novel.user.dto.resp.UserInfoRespDto;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
@@ -24,6 +24,7 @@ import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.Objects;
@@ -34,12 +35,13 @@ public class BookCommentServiceImpl implements BookCommentService {
 
     private final BookCommentMapper bookCommentMapper;
     private final UserFeignManager userFeignManager;
+    private final StringRedisTemplate stringRedisTemplate;
 
 
     /**
      * 保存用户评论到数据库。
      *
-     * <p>此方法实现了核心的评论发布逻辑，并通过分布式锁机制进行防重复提交处理。</p>
+     * <p>使用 Redis SETNX 实现防重复提交（防抖），防止用户在短时间内重复提交评论。</p>
      *
      * @param dto 包含书籍ID、用户ID和评论内容的请求DTO。
      * @return {@code RestResp<Void>} 表示操作成功的响应。
@@ -47,28 +49,37 @@ public class BookCommentServiceImpl implements BookCommentService {
      * @implNote
      * 业务规则说明：
      * 1. 允许同一用户对同一本书发表多条评论。
-     * 2. 依赖数据库的自增主键来区分每条评论。
+     * 2. 使用 Redis SETNX 防止 3 秒内的重复提交。
      */
-    @Lock(prefix = "userComment")
     @Override
-    public RestResp<Void> saveComment(
-            /*
-             * 分布式锁 Key 表达式：
-             * 用于生成 Redisson 分布式锁的唯一 Key。
-             * Key = "userComment:" + userId + "::" + bookId + "::" + commentContent
-             * 作用：实现“防抖”和“防并发重复提交”。
-             * 只要用户在极短的时间内（锁持有期间）再次提交**内容、书籍、用户ID完全相同**的请求，
-             * 后续请求将因无法获取锁而失败，从而避免了重复数据。
-             */
-            @Key(expr = "#{userId + '::' + bookId + '::' + commentContent}") BookCommentReqDto dto) {
-        BookComment bookComment = new BookComment();
-        bookComment.setBookId(dto.getBookId());
-        bookComment.setUserId(dto.getUserId());
-        bookComment.setCommentContent(dto.getCommentContent());
-        bookComment.setCreateTime(LocalDateTime.now());
-        bookComment.setUpdateTime(LocalDateTime.now());
-        bookCommentMapper.insert(bookComment);
-        return RestResp.ok();
+    public RestResp<Void> saveComment(BookCommentReqDto dto) {
+        // 生成防抖 Key：同一用户对同一本书的连续提交应该被防抖
+        String debounceKey = "comment:debounce:" + dto.getUserId() + ":" + dto.getBookId();
+        
+        // 尝试设置 Key，3 秒过期。如果已存在，说明是重复提交
+        Boolean success = stringRedisTemplate.opsForValue()
+                .setIfAbsent(debounceKey, "1", 3, TimeUnit.SECONDS);
+        
+        if (Boolean.FALSE.equals(success)) {
+            // Key 已存在，说明 3 秒内有重复提交
+            return RestResp.fail(ErrorCodeEnum.USER_REQ_MANY);
+        }
+        
+        try {
+            // 执行业务逻辑
+            BookComment bookComment = new BookComment();
+            bookComment.setBookId(dto.getBookId());
+            bookComment.setUserId(dto.getUserId());
+            bookComment.setCommentContent(dto.getCommentContent());
+            bookComment.setCreateTime(LocalDateTime.now());
+            bookComment.setUpdateTime(LocalDateTime.now());
+            bookCommentMapper.insert(bookComment);
+            return RestResp.ok();
+        } catch (Exception e) {
+            // 如果插入失败，删除防抖 Key，允许重试
+            stringRedisTemplate.delete(debounceKey);
+            throw e;
+        }
     }
 
 
