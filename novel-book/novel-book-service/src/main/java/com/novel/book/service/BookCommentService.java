@@ -1,7 +1,7 @@
 package com.novel.book.service;
 
+import com.novel.book.dto.req.BookCommentPageReqDto;
 import com.novel.book.dto.req.BookCommentReqDto;
-import com.novel.book.dto.req.CommentPageReqDto;
 import com.novel.book.dto.resp.BookCommentRespDto;
 import com.novel.common.resp.RestResp;
 import com.novel.common.req.PageReqDto;
@@ -16,12 +16,6 @@ public interface BookCommentService {
      */
     RestResp<Void> saveComment(BookCommentReqDto dto);
 
-    /**
-     * 小说最新评论查询
-     * @param bookId 小说ID
-     * @return 小说最新评论数据
-     */
-    RestResp<BookCommentRespDto> listNewestComments(Long bookId);
 
     /**
      * 删除评论
@@ -36,5 +30,14 @@ public interface BookCommentService {
      * @return void
      */
     RestResp<Void> updateComment(BookCommentReqDto dto);
+
+
+    /**
+     * 小说评论分页查询
+     * @param reqDto 分页请求DTO
+     * @return 小说评论分页数据
+     */
+    RestResp<PageRespDto<BookCommentRespDto.CommentInfo>> listCommentByPage(BookCommentPageReqDto reqDto);
+
 
 }

@@ -10,6 +10,9 @@ import com.qcloud.cos.COSClient;
 import com.qcloud.cos.ClientConfig;
 import com.qcloud.cos.auth.BasicCOSCredentials;
 import com.qcloud.cos.auth.COSCredentials;
+import com.qcloud.cos.exception.CosClientException;
+import com.qcloud.cos.exception.CosServiceException;
+import com.qcloud.cos.model.DeleteObjectRequest;
 import com.qcloud.cos.model.ObjectMetadata;
 import com.qcloud.cos.model.PutObjectRequest;
 import com.qcloud.cos.region.Region;
@@ -137,4 +140,77 @@ public class TencentCosServiceImpl implements TencentCosService {
             throw new BusinessException(ErrorCodeEnum.USER_UPLOAD_FILE_ERROR);
         }
     }
+
+
+    /**
+     * 从对象存储中删除图片
+     * @param fileUrl 要删除图片的完整 URL
+     * @return Void
+     */
+    @Override
+    public RestResp<String> deleteImageTencent(String fileUrl) {
+        String cosKey;
+        try {
+            // 从 URL 中解析出 COS Key
+            cosKey = extractCosKeyFromUrl(fileUrl);
+        } catch (BusinessException e) {
+            // 捕捉参数解析失败的异常，返回错误
+            return RestResp.fail(e.getErrorCodeEnum());
+        }
+
+        // 构造删除请求并执行
+        try {
+            DeleteObjectRequest deleteObjectRequest = new DeleteObjectRequest(bucketName, cosKey);
+            cosClient.deleteObject(deleteObjectRequest);
+
+            log.info("图片删除成功，URL: {}, COS Key: {}", fileUrl, cosKey);
+            return RestResp.ok("图片删除成功");
+
+        } catch (CosServiceException e) {
+            // 处理 COS 服务端异常
+            if ("NoSuchKey".equalsIgnoreCase(e.getErrorCode())) {
+                log.warn("尝试删除的对象不存在，URL: {}, COS Key: {}", fileUrl, cosKey);
+                // 认为删除操作“成功”完成（幂等性）
+                return RestResp.ok("对象不存在，无需删除");
+            }
+
+            log.error("从 COS 删除图片失败，URL: {}, COS Key: {}, 错误码: {}", fileUrl, cosKey, e.getErrorCode(), e);
+            throw new BusinessException(ErrorCodeEnum.THIRD_SERVICE_COS_ERROR);
+
+        } catch (CosClientException e) {
+            // 处理 COS 客户端异常
+            log.error("从 COS 删除图片失败，URL: {}, COS Key: {}", fileUrl, cosKey, e);
+            throw new BusinessException(ErrorCodeEnum.THIRD_SERVICE_COS_ERROR);
+        }
+    }
+
+    /**
+     * 辅助方法：从完整的 URL 中提取 COS Key
+     * @param fileUrl 完整的图片访问 URL
+     * @return COS 对象键 (Key)
+     */
+    private String extractCosKeyFromUrl(String fileUrl) {
+        if (fileUrl == null || fileUrl.trim().isEmpty()) {
+            throw new BusinessException(ErrorCodeEnum.USER_IMAGE_URL_NULL);
+        }
+
+        // 规范化 baseUrl：确保它以 "/" 结尾
+        String sanitizedBaseUrl = baseUrl;
+        if (!sanitizedBaseUrl.endsWith("/")) {
+            sanitizedBaseUrl += "/";
+        }
+
+        // 检查 fileUrl 是否以 baseUrl 开头，并截取后面的部分作为 Key
+        if (fileUrl.startsWith(sanitizedBaseUrl)) {
+            String cosKey = fileUrl.substring(sanitizedBaseUrl.length());
+            if (cosKey.isEmpty()) {
+                throw new BusinessException(ErrorCodeEnum.USER_IMAGE_URL_BROKEN);
+            }
+            return cosKey;
+        }
+
+        log.error("图片 URL [{}] 与配置的 baseUrl [{}] 不匹配。", fileUrl, baseUrl);
+        throw new BusinessException(ErrorCodeEnum.USER_IMAGE_URL_FALSE);
+    }
+
 }

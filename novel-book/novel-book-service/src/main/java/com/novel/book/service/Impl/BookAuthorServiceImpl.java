@@ -401,6 +401,11 @@ public class BookAuthorServiceImpl implements BookAuthorService {
         return RestResp.ok();
     }
 
+    /**
+     * 作者删除书籍
+     * @param dto 删除请求
+     * @return Void
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public RestResp<Void> deleteBook(BookDelReqDto dto) {

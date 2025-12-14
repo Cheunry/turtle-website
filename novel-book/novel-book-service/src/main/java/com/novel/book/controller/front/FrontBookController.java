@@ -8,6 +8,7 @@ import com.novel.book.service.BookListSearchService;
 import com.novel.book.service.BookReadService;
 import com.novel.book.service.BookSearchService;
 import com.novel.common.constant.ApiRouterConsts;
+import com.novel.common.resp.PageRespDto;
 import com.novel.common.resp.RestResp;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -16,6 +17,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import com.novel.book.dto.req.BookCommentPageReqDto;
+import org.springdoc.core.annotations.ParameterObject;
 
 
 @Tag(name = "FrontBookController", description = "前台门户-小说模块")
@@ -138,6 +141,17 @@ public class FrontBookController {
         return bookReadService.getNextChapterNum(bookId, chapterNum);
     }
 
+
+    /**
+     * 小说评论分页查询接口
+     */
+    @Operation(summary = "小说评论分页查询接口")
+    @GetMapping("comment/list_page")
+    public RestResp<PageRespDto<BookCommentRespDto.CommentInfo>> listCommentByPage(
+            @ParameterObject BookCommentPageReqDto dto) {
+        return bookCommentService.listCommentByPage(dto);
+    }
+
     /**
      * 小说信息查询接口（放在最后，因为路径最宽泛）
      */
@@ -146,16 +160,6 @@ public class FrontBookController {
     public RestResp<BookInfoRespDto> getBookById(
             @Parameter(description = "小说 ID") @PathVariable("id") Long bookId) {
         return bookSearchService.getBookById(bookId);
-    }
-
-    /**
-     * 小说最新评论查询接口
-     */
-    @Operation(summary = "小说最新评论查询接口")
-    @GetMapping("comment/newest_list")
-    public RestResp<BookCommentRespDto> listNewestComments(
-            @Parameter(description = "小说ID") Long bookId) {
-        return bookCommentService.listNewestComments(bookId);
     }
 
 }

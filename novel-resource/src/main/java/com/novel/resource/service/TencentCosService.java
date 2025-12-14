@@ -9,4 +9,6 @@ public interface TencentCosService {
 
 
     RestResp<String> uploadImageTencent(MultipartFile file);
+
+    RestResp<String> deleteImageTencent(String cosKey);
 }

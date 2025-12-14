@@ -77,7 +77,7 @@ public class BookChangeMqListener implements RocketMQListener<Long> {
     }
     
     /**
-     * 从 ES 删除数据（可选辅助方法）
+     * 从 ES 删除数据（辅助方法）
      */
     private void deleteFromEs(Long bookId) {
         try {
