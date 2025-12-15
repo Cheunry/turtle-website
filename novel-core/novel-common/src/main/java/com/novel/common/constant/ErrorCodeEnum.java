@@ -1,6 +1,5 @@
 package com.novel.common.constant;
 
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 /**
@@ -16,7 +15,6 @@ import lombok.Getter;
  * 在无法更加具体确定的错误场景中，可以直接使用一级宏观错误码。
  */
 @Getter
-@AllArgsConstructor
 public enum ErrorCodeEnum {
 
     /**
@@ -197,5 +195,29 @@ public enum ErrorCodeEnum {
      * 中文描述
      */
     private final String message;
+
+    /**
+     * 构造器
+     */
+    ErrorCodeEnum(String code, String message) {
+        this.code = code;
+        this.message = message;
+    }
+
+    /**
+     * 获取错误码
+     * @return 错误码
+     */
+    public String getCode() {
+        return code;
+    }
+
+    /**
+     * 获取错误消息
+     * @return 错误消息
+     */
+    public String getMessage() {
+        return message;
+    }
 
 }

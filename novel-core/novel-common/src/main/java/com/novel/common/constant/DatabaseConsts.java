@@ -188,6 +188,14 @@ public class DatabaseConsts {
             this.sql = sql;
         }
 
+        /**
+         * 获取SQL语句
+         * @return SQL语句
+         */
+        public String getSql() {
+            return sql;
+        }
+
     }
 
 }

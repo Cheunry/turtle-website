@@ -44,7 +44,6 @@
         <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-resolver-dns-native-macos</artifactId>
-            <!-- 不指定版本，让依赖管理自动处理 -->
         </dependency>
 
     </dependencies>

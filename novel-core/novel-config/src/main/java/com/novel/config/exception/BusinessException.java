@@ -20,4 +20,12 @@ public class BusinessException extends RuntimeException {
         this.errorCodeEnum = errorCodeEnum;
     }
 
+    /**
+     * 获取错误码枚举
+     * @return 错误码枚举
+     */
+    public ErrorCodeEnum getErrorCodeEnum() {
+        return errorCodeEnum;
+    }
+
 }

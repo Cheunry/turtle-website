@@ -17,8 +17,8 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.0.5</version>
-        <relativePath/> <!-- lookup parent from repository -->
+        <version>3.2.7</version>
+        <relativePath/>
     </parent>
 
     <groupId>com.novel</groupId>
@@ -26,24 +26,27 @@
     <packaging>pom</packaging>
     <version>1.0.0-SNAPSHOT</version>
     <name>turtle-website</name>
-    <description>基于 Spring Cloud 2022 构建的微服务小说系统</description>
+    <description>基于 Spring Cloud 构建的微服务小说系统</description>
     <properties>
-        <java.version>17</java.version>
+        <java.version>21</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <spring-cloud.version>2022.0.1</spring-cloud.version>
-        <spring-cloud-alibaba.version>2022.0.0.0-RC1</spring-cloud-alibaba.version>
-        <mybatis-plus.version>3.5.3</mybatis-plus.version>
-        <jjwt.version>0.11.5</jjwt.version>
+        <spring-cloud.version>2023.0.3</spring-cloud.version>
+        <spring-cloud-alibaba.version>2023.0.1.2</spring-cloud-alibaba.version>
+        <mybatis-plus.version>3.5.8</mybatis-plus.version>
+        <jjwt.version>0.12.6</jjwt.version>
         <xxl-job.version>2.3.1</xxl-job.version>
-        <elasticsearch.version>8.2.0</elasticsearch.version>
-        <shardingsphere-jdbc.version>5.1.1</shardingsphere-jdbc.version>
-        <redisson.version>3.19.1</redisson.version>
-        <spring-boot-admin.version>3.0.2</spring-boot-admin.version>
-        <springdoc-openapi.version>2.0.0</springdoc-openapi.version>
-        <spring-cloud-starter-bootstrap.version>3.1.1</spring-cloud-starter-bootstrap.version>
+        <elasticsearch.version>8.10.4</elasticsearch.version>
+<!--        <shardingsphere-jdbc.version>5.5.0</shardingsphere-jdbc.version>-->
+        <spring-boot-admin.version>3.3.2</spring-boot-admin.version>
+        <springdoc-openapi.version>2.5.0</springdoc-openapi.version>
+        <spring-cloud-starter-bootstrap.version>4.1.2</spring-cloud-starter-bootstrap.version>
         <cos_api-qcloud.version>5.6.227</cos_api-qcloud.version>
         <commons-io.version>2.16.1</commons-io.version>
         <rocketmq.version>2.3.0</rocketmq.version>
+        <spring-cloud-starter-alibaba-ai.version>2023.0.1.2</spring-cloud-starter-alibaba-ai.version>
+        <lombok.version>1.18.38</lombok.version>
+        <annotation.version>2.1.1</annotation.version>
+        <jaxb.version>2.3.1</jaxb.version>
     </properties>
     <dependencyManagement>
 
@@ -73,7 +76,7 @@
 
             <dependency>
                 <groupId>com.baomidou</groupId>
-                <artifactId>mybatis-plus-boot-starter</artifactId>
+                <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
                 <version>${mybatis-plus.version}</version>
             </dependency>
 
@@ -107,11 +110,26 @@
                 <version>${xxl-job.version}</version>
             </dependency>
 
-            <dependency>
-                <groupId>org.apache.shardingsphere</groupId>
-                <artifactId>shardingsphere-jdbc-core-spring-boot-starter</artifactId>
-                <version>${shardingsphere-jdbc.version}</version>
-            </dependency>
+<!--            <dependency>-->
+<!--                <groupId>org.apache.shardingsphere</groupId>-->
+<!--                <artifactId>shardingsphere-jdbc-core-spring-boot-starter</artifactId>-->
+<!--                <version>${shardingsphere-jdbc.version}</version>-->
+<!--            </dependency>-->
+
+            <!-- https://mvnrepository.com/artifact/org.apache.shardingsphere/shardingsphere-jdbc-core -->
+<!--            <dependency>-->
+<!--                <groupId>org.apache.shardingsphere</groupId>-->
+<!--                <artifactId>shardingsphere-jdbc-core</artifactId>-->
+<!--                <version>${shardingsphere-jdbc.version}</version>-->
+<!--            </dependency>-->
+
+
+            <!-- https://mvnrepository.com/artifact/org.apache.shardingsphere/shardingsphere-jdbc -->
+<!--            <dependency>-->
+<!--                <groupId>org.apache.shardingsphere</groupId>-->
+<!--                <artifactId>shardingsphere-jdbc</artifactId>-->
+<!--                <version>${shardingsphere-jdbc.version}</version>-->
+<!--            </dependency>-->
 
             <dependency>
                 <groupId>org.redisson</groupId>
@@ -125,7 +143,7 @@
                 <version>${springdoc-openapi.version}</version>
             </dependency>
 
-<!--            腾讯存储桶-->
+            <!--            腾讯存储桶-->
             <dependency>
                 <groupId>com.qcloud</groupId>
                 <artifactId>cos_api</artifactId>
@@ -145,6 +163,39 @@
                 <version>${rocketmq.version}</version>
             </dependency>
 
+            <!-- Spring ai相关 -->
+            <dependency>
+                <groupId>com.alibaba.cloud</groupId>
+                <artifactId>spring-cloud-starter-alibaba-ai</artifactId>
+                <version>${spring-cloud-starter-alibaba-ai.version}</version>
+            </dependency>
+
+            <!-- Lombok -->
+            <dependency>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>${lombok.version}</version>
+                <scope>provided</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>jakarta.annotation</groupId>
+                <artifactId>jakarta.annotation-api</artifactId>
+                <version>${annotation.version}</version>
+            </dependency>
+
+            <!-- JAXB 依赖（Java 9+ 需要） -->
+            <dependency>
+                <groupId>javax.xml.bind</groupId>
+                <artifactId>jaxb-api</artifactId>
+                <version>${jaxb.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.glassfish.jaxb</groupId>
+                <artifactId>jaxb-runtime</artifactId>
+                <version>${jaxb.version}</version>
+            </dependency>
+
         </dependencies>
     </dependencyManagement>
 
@@ -152,16 +203,34 @@
         <pluginManagement>
             <plugins>
                 <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.11.0</version>
                     <configuration>
-                        <!--指定 Java 编译器的 -source 参数 -->
                         <source>${java.version}</source>
-                        <!--指定 Java 编译器的 -target 参数 -->
                         <target>${java.version}</target>
+                        <encoding>UTF-8</encoding>
                     </configuration>
                 </plugin>
             </plugins>
         </pluginManagement>
+
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>1.18.38</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+        </plugins>
+
     </build>
 
     <repositories>
@@ -175,7 +244,26 @@
                 <enabled>false</enabled>
             </snapshots>
         </repository>
+        <repository>
+            <id>spring-milestones</id>
+            <name>Spring Milestones</name>
+            <url>https://repo.spring.io/milestone</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+        <repository>
+            <id>central</id>
+            <url>https://repo.maven.apache.org/maven2</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
     </repositories>
+
     <pluginRepositories>
         <pluginRepository>
             <id>aliyun</id>

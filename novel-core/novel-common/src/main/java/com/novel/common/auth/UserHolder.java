@@ -18,23 +18,23 @@ public class UserHolder {
      */
     private static final ThreadLocal<Long> authorIdTL = new ThreadLocal<>();
 
-    public void setUserId(Long userId) {
+    public static void setUserId(Long userId) {
         userIdTL.set(userId);
     }
 
-    public Long getUserId() {
+    public static Long getUserId() {
         return userIdTL.get();
     }
 
-    public void setAuthorId(Long authorId) {
+    public static void setAuthorId(Long authorId) {
         authorIdTL.set(authorId);
     }
 
-    public Long getAuthorId() {
+    public static Long getAuthorId() {
         return authorIdTL.get();
     }
 
-    public void clear() {
+    public static void clear() {
         userIdTL.remove();
         authorIdTL.remove();
     }

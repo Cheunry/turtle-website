@@ -6,10 +6,8 @@ import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import lombok.experimental.UtilityClass;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.stereotype.Component;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
@@ -18,8 +16,9 @@ import java.util.Objects;
  * JWT 工具类
  */
 @UtilityClass
-@Slf4j
 public class JwtUtils {
+
+    private static final Logger log = LoggerFactory.getLogger(JwtUtils.class);
 
     /**
      * JWT 加密密钥
@@ -38,7 +37,7 @@ public class JwtUtils {
      * @param systemKey 系统标识
      * @return JWT
      */
-    public String generateToken(Long uid, String systemKey) {
+    public static String generateToken(Long uid, String systemKey) {
 
         return Jwts.builder()
             .setHeaderParam(HEADER_SYSTEM_KEY, systemKey)
@@ -54,13 +53,13 @@ public class JwtUtils {
      * @param systemKey 系统标识
      * @return 用户ID
      */
-    public Long parseToken(String token, String systemKey) {
+    public static Long parseToken(String token, String systemKey) {
 
         Jws<Claims> claimsJws;
 
         try {
 
-            claimsJws = Jwts.parserBuilder()
+            claimsJws = Jwts.parser()
                 .setSigningKey(Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8)))
                 .build()
                 .parseClaimsJws(token);
