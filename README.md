@@ -10,3 +10,6 @@ novel-cloud
 ├── novel-author -- 作家微服务  
 ├──  novel-resource -- 资源微服务
 └── novel-ai -- AI微服务
+
+<!--        配置分库分表可以参考：https://blog.csdn.net/weixin_43100232/article/details/148258210-->
+

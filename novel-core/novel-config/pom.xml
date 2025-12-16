@@ -129,6 +129,12 @@
             <artifactId>spring-cloud-starter-bootstrap</artifactId>
         </dependency>
 
+<!--        <dependency>-->
+<!--            <groupId>org.apache.shardingsphere</groupId>-->
+<!--            <artifactId>shardingsphere-jdbc</artifactId>-->
+<!--        </dependency>-->
+
+
         <!-- JAXB 依赖（Java 21 需要） -->
         <dependency>
             <groupId>javax.xml.bind</groupId>
