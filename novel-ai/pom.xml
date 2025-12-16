@@ -9,13 +9,12 @@
         <version>1.0.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>novel-news</artifactId>
+    <artifactId>novel-ai</artifactId>
     <packaging>pom</packaging>
     <modules>
-        <module>novel-news-api</module>
-        <module>novel-news-service</module>
+        <module>novel-ai-service</module>
+        <module>novel-ai-api</module>
     </modules>
-
 
     <dependencyManagement>
         <dependencies>

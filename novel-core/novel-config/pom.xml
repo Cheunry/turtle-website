@@ -81,20 +81,6 @@
             <artifactId>hibernate-validator</artifactId>
         </dependency>
 
-
-        <!-- ShardingSphere-JDBC -->
-<!--        <dependency>-->
-<!--            <groupId>org.apache.shardingsphere</groupId>-->
-<!--            <artifactId>shardingsphere-jdbc-core</artifactId>-->
-<!--        </dependency>-->
-
-<!--        <dependency>-->
-<!--            <groupId>org.apache.shardingsphere</groupId>-->
-<!--            <artifactId>shardingsphere-jdbc</artifactId>-->
-<!--        </dependency>-->
-
-
-
         <!-- Spring Boot 管理和监控 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
