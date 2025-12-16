@@ -17,7 +17,7 @@ import com.novel.book.dto.resp.BookEsRespDto;
 import com.novel.book.dto.resp.BookInfoRespDto;
 import com.novel.common.resp.PageRespDto;
 import com.novel.common.resp.RestResp;
-import com.novel.search.constant.EsConsts;
+import com.novel.common.constant.EsConsts;
 import com.novel.search.service.SearchService;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;

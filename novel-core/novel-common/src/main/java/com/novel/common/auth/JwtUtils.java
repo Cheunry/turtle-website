@@ -40,10 +40,12 @@ public class JwtUtils {
     public static String generateToken(Long uid, String systemKey) {
 
         return Jwts.builder()
-            .setHeaderParam(HEADER_SYSTEM_KEY, systemKey)
-            .setSubject(uid.toString())
-            .signWith(Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8)))
-            .compact();
+                .header()
+                .add(HEADER_SYSTEM_KEY, systemKey)
+                .and()
+                .subject(uid.toString())
+                .signWith(Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8)))
+                .compact();
     }
 
     /**
@@ -60,14 +62,14 @@ public class JwtUtils {
         try {
 
             claimsJws = Jwts.parser()
-                .setSigningKey(Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8)))
-                .build()
-                .parseClaimsJws(token);
+                    .verifyWith(Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8)))
+                    .build()
+                    .parseSignedClaims(token);
 
             // OK, we can trust this JWT
             // 判断该 JWT 是否属于指定系统
             if (Objects.equals(claimsJws.getHeader().get(HEADER_SYSTEM_KEY), systemKey)) {
-                return Long.parseLong(claimsJws.getBody().getSubject());
+                return Long.parseLong(claimsJws.getPayload().getSubject());
             }
 
         } catch (JwtException e) {

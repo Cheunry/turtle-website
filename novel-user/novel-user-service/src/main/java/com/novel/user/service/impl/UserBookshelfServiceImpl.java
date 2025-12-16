@@ -9,7 +9,7 @@ import com.novel.common.resp.RestResp;
 import com.novel.user.dao.entity.UserBookshelf;
 import com.novel.user.dao.mapper.UserBookshelfMapper;
 import com.novel.user.dto.resp.UserBookshelfRespDto;
-import com.novel.user.manager.feign.BookFeignManager;
+import com.novel.user.feign.BookFeignManager;
 import com.novel.user.service.UserBookshelfService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

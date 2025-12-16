@@ -2,10 +2,10 @@ package com.novel.search.listener;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import com.novel.book.dto.resp.BookEsRespDto;
-import com.novel.book.manager.feign.BookFeign;
+import com.novel.book.feign.BookFeign;
 import com.novel.common.constant.AmqpConsts;
 import com.novel.common.resp.RestResp;
-import com.novel.search.constant.EsConsts;
+import com.novel.common.constant.EsConsts;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.spring.annotation.RocketMQMessageListener;

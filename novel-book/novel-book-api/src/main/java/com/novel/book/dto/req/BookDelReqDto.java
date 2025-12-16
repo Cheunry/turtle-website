@@ -4,12 +4,11 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
-import java.io.Serializable;
 
 @Data
-public class BookDelReqDto implements Serializable {
+public class BookDelReqDto {
 
-    @Schema(description = "小说ID", required = true)
+    @Schema(description = "小说ID", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotNull
     private Long bookId;
 

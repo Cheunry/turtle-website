@@ -12,7 +12,7 @@ import com.novel.user.dto.resp.UserBookshelfRespDto;
 import com.novel.user.dto.resp.UserInfoRespDto;
 import com.novel.user.dto.resp.UserLoginRespDto;
 import com.novel.user.dto.resp.UserRegisterRespDto;
-import com.novel.user.manager.feign.BookFeignManager;
+import com.novel.user.feign.BookFeignManager;
 import com.novel.user.service.*;
 
 import java.util.List;
@@ -23,8 +23,10 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
+@Slf4j
 @Tag(name = "UserController", description = "前台门户-会员模块")
 @SecurityRequirement(name = SystemConfigConsts.HTTP_AUTH_HEADER_NAME)
 @RestController
@@ -51,7 +53,7 @@ public class FrontUserController {
     @Operation(summary = "用户登录接口")
     @PostMapping("login")
     public RestResp<UserLoginRespDto> login(@Valid @RequestBody UserLoginReqDto dto) {
-        System.out.println(dto);
+        log.debug("用户登录请求: {}", dto);
         return userLoginService.login(dto);
     }
 

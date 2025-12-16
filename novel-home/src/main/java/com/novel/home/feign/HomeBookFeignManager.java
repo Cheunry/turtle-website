@@ -1,7 +1,7 @@
-package com.novel.home.manager.feign;
+package com.novel.home.feign;
 
 import com.novel.book.dto.resp.BookInfoRespDto;
-import com.novel.book.manager.feign.BookFeign;
+import com.novel.book.feign.BookFeign;
 import com.novel.common.constant.ErrorCodeEnum;
 import com.novel.common.resp.RestResp;
 import lombok.AllArgsConstructor;

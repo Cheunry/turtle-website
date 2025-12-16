@@ -1,7 +1,7 @@
 package com.novel.author.controller;
 
 import com.novel.author.dto.req.AuthorRegisterReqDto;
-import com.novel.author.manager.feign.BookFeignManager;
+import com.novel.author.feign.BookFeignManager;
 import com.novel.author.service.AuthorInfoService;
 import com.novel.book.dto.req.*;
 import com.novel.book.dto.resp.BookChapterRespDto;

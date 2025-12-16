@@ -29,7 +29,6 @@
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-openfeign-core</artifactId>
         </dependency>
-
     </dependencies>
 
     

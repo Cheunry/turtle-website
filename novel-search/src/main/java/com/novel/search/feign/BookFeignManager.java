@@ -1,15 +1,17 @@
-package com.novel.search.manager.feign;
+package com.novel.search.feign;
 
 import com.novel.book.dto.resp.BookEsRespDto;
-import com.novel.book.manager.feign.BookFeign;
+import com.novel.book.feign.BookFeign;
 import com.novel.common.constant.ErrorCodeEnum;
 import com.novel.common.resp.RestResp;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class BookFeignManager {
@@ -30,7 +32,7 @@ public class BookFeignManager {
             return listRestResp.getData();
         }
         //  打印异常原因
-        System.out.println(">>> Feign 调用失败或返回非 OK 状态: " + listRestResp.getMessage());
+        log.warn("Feign 调用失败或返回非 OK 状态: {}", listRestResp.getMessage());
         return new ArrayList<>(0);
     }
 

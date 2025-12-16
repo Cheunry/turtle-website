@@ -1,4 +1,4 @@
-package com.novel.author.manager.feign;
+package com.novel.author.feign;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.novel.author.dao.entity.AuthorInfo;
@@ -7,7 +7,7 @@ import com.novel.author.dto.AuthorInfoDto;
 import com.novel.book.dto.req.*;
 import com.novel.book.dto.resp.BookChapterRespDto;
 import com.novel.book.dto.resp.BookInfoRespDto;
-import com.novel.book.manager.feign.BookFeign;
+import com.novel.book.feign.BookFeign;
 import com.novel.common.auth.UserHolder;
 import com.novel.common.constant.DatabaseConsts;
 import com.novel.common.resp.PageRespDto;

@@ -10,7 +10,7 @@ import com.novel.home.dao.mapper.HomeBookMapper;
 import com.novel.home.dao.mapper.HomeFriendLinkMapper;
 import com.novel.home.dto.resp.HomeBookRespDto;
 import com.novel.home.dto.resp.HomeFriendLinkRespDto;
-import com.novel.home.manager.feign.HomeBookFeignManager;
+import com.novel.home.feign.HomeBookFeignManager;
 import com.novel.home.service.HomeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

@@ -30,6 +30,7 @@ public class UserBookshelfRespDto {
     private Integer firstChapterNum;
 
     @Schema(description = "上次阅读的章节号")
+
     private Integer preChapterNum;
 
 }

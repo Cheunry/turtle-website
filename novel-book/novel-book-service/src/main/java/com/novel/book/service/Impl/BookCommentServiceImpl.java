@@ -8,7 +8,7 @@ import com.novel.book.dao.mapper.BookCommentMapper;
 import com.novel.book.dto.req.BookCommentPageReqDto;
 import com.novel.book.dto.req.BookCommentReqDto;
 import com.novel.book.dto.resp.BookCommentRespDto;
-import com.novel.book.manager.feign.UserFeignManager;
+import com.novel.book.feign.UserFeignManager;
 import com.novel.book.service.BookCommentService;
 import com.novel.common.constant.DatabaseConsts;
 import com.novel.common.constant.ErrorCodeEnum;

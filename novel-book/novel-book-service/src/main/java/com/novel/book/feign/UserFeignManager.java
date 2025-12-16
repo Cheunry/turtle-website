@@ -1,4 +1,4 @@
-package com.novel.book.manager.feign;
+package com.novel.book.feign;
 
 import com.novel.common.constant.ErrorCodeEnum;
 import com.novel.common.resp.RestResp;

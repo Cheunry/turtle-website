@@ -7,7 +7,7 @@ import com.novel.common.constant.ApiRouterConsts;
 import com.novel.common.resp.PageRespDto;
 import com.novel.common.resp.RestResp;
 import com.novel.search.service.SearchService;
-import com.novel.search.task.AllBookToEsTask;
+import com.novel.search.config.AllBookToEsTask;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;

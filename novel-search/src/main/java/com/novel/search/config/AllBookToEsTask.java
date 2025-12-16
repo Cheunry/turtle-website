@@ -1,4 +1,4 @@
-package com.novel.search.task;
+package com.novel.search.config;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.Time;
@@ -6,8 +6,8 @@ import co.elastic.clients.elasticsearch.core.BulkRequest;
 import co.elastic.clients.elasticsearch.core.BulkResponse;
 import co.elastic.clients.elasticsearch.core.bulk.BulkResponseItem;
 import com.novel.book.dto.resp.BookEsRespDto;
-import com.novel.search.constant.EsConsts;
-import com.novel.search.manager.feign.BookFeignManager;
+import com.novel.common.constant.EsConsts;
+import com.novel.search.feign.BookFeignManager;
 import com.xxl.job.core.biz.model.ReturnT;
 import com.xxl.job.core.handler.annotation.XxlJob;
 import lombok.RequiredArgsConstructor;

@@ -1,6 +1,4 @@
-package com.novel.search.constant;
-
-import com.novel.common.constant.SystemConfigConsts;
+package com.novel.common.constant;
 
 /**
  * 提供一个集中的地方来定义和管理 Elasticsearch 索引名称 和 文档字段名

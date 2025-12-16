@@ -1,7 +1,7 @@
-package com.novel.user.manager.feign;
+package com.novel.user.feign;
 
 import com.novel.book.dto.req.BookCommentReqDto;
-import com.novel.book.manager.feign.BookFeign;
+import com.novel.book.feign.BookFeign;
 import com.novel.common.auth.UserHolder;
 import com.novel.common.resp.RestResp;
 import lombok.AllArgsConstructor;
@@ -9,8 +9,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import com.novel.book.dto.resp.BookInfoRespDto;
-import com.novel.common.req.PageReqDto;
-import com.novel.common.resp.PageRespDto;
 
 /**
  * 小说微服务调用 Feign 客户端管理

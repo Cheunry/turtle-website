@@ -11,7 +11,7 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 @MapperScan("com.novel.author.dao.mapper")
 @EnableCaching
 @EnableDiscoveryClient
-@EnableFeignClients(basePackages = {"com.novel.book.manager.feign"})
+@EnableFeignClients(basePackages = {"com.novel.book.feign"})
 public class NovelAuthorApplication {
 
     public static void main(String[] args) {

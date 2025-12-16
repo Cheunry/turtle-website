@@ -16,7 +16,7 @@ public class BookUptReqDto {
     /**
      * 小说ID
      */
-    @Schema(description = "小说ID", required = true)
+    @Schema(description = "小说ID", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotNull
     private Long bookId;
 

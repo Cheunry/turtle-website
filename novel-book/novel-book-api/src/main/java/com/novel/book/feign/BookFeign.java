@@ -1,4 +1,4 @@
-package com.novel.book.manager.feign;
+package com.novel.book.feign;
 
 import com.novel.book.dto.req.*;
 import com.novel.book.dto.resp.BookChapterRespDto;
