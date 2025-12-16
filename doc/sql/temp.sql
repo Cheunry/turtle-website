@@ -59,3 +59,6 @@ SET
     ni.update_time = NOW();
 
 DROP TABLE IF EXISTS `news_content`;
+
+Drop table if exists `test`
+
