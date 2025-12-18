@@ -8,6 +8,7 @@ import com.novel.book.service.BookListSearchService;
 import com.novel.book.service.BookReadService;
 import com.novel.book.service.BookSearchService;
 import com.novel.common.constant.ApiRouterConsts;
+import com.novel.common.constant.ErrorCodeEnum;
 import com.novel.common.resp.PageRespDto;
 import com.novel.common.resp.RestResp;
 import io.swagger.v3.oas.annotations.Operation;
@@ -95,6 +96,10 @@ public class FrontBookController {
     @GetMapping("chapter/list")
     public RestResp<List<BookChapterRespDto>> getChapterList(
             @Parameter(description = "小说ID") @RequestParam("bookId") Long bookId) {
+        // 参数验证：如果 bookId 为 null，返回空列表
+        if (bookId == null) {
+            return RestResp.ok(List.of());
+        }
         return bookReadService.getBookChapter(bookId);
     }
 
@@ -106,6 +111,23 @@ public class FrontBookController {
     public RestResp<BookContentAboutRespDto> getBookContentAbout(
             @Parameter(description = "书籍ID") @PathVariable("bookId") Long bookId,
             @Parameter(description = "章节号") @PathVariable("chapterNum") Integer chapterNum) {
+        // 参数验证：如果 bookId 或 chapterNum 为 null，返回空内容
+        if (bookId == null || chapterNum == null) {
+            return RestResp.ok(BookContentAboutRespDto.builder()
+                .bookInfo(BookContentAboutRespDto.BookInfo.builder()
+                    .categoryName(null)
+                    .authorName(null)
+                    .build())
+                .chapterInfo(BookContentAboutRespDto.ChapterInfo.builder()
+                    .bookId(null)
+                    .chapterNum(null)
+                    .chapterName(null)
+                    .chapterWordCount(null)
+                    .chapterUpdateTime(null)
+                    .build())
+                .bookContent(null)
+                .build());
+        }
         return bookReadService.getBookContentAbout(bookId, chapterNum);
     }
 
@@ -127,6 +149,10 @@ public class FrontBookController {
     public RestResp<Integer> getPreChapterId(
             @Parameter(description = "书籍ID") @PathVariable("bookId") Long bookId,
             @Parameter(description = "章节号") @PathVariable("chapterNum") Integer chapterNum) {
+        // 参数验证：如果 bookId 或 chapterNum 为 null，返回 null
+        if (bookId == null || chapterNum == null) {
+            return RestResp.ok(null);
+        }
         return bookReadService.getPreChapterNum(bookId, chapterNum);
     }
 
@@ -138,6 +164,10 @@ public class FrontBookController {
     public RestResp<Integer> getNextChapterId(
             @Parameter(description = "书籍ID") @PathVariable("bookId") Long bookId,
             @Parameter(description = "章节号") @PathVariable("chapterNum") Integer chapterNum) {
+        // 参数验证：如果 bookId 或 chapterNum 为 null，返回 null
+        if (bookId == null || chapterNum == null) {
+            return RestResp.ok(null);
+        }
         return bookReadService.getNextChapterNum(bookId, chapterNum);
     }
 
@@ -159,6 +189,10 @@ public class FrontBookController {
     @GetMapping("{id}")
     public RestResp<BookInfoRespDto> getBookById(
             @Parameter(description = "小说 ID") @PathVariable("id") Long bookId) {
+        // 参数验证：如果 bookId 为 null，返回错误
+        if (bookId == null) {
+            return RestResp.fail(ErrorCodeEnum.USER_REQUEST_PARAM_ERROR, "书籍ID不能为空");
+        }
         return bookSearchService.getBookById(bookId);
     }
 

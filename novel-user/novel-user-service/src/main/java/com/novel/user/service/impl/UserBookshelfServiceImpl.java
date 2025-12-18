@@ -76,7 +76,8 @@ public class UserBookshelfServiceImpl implements UserBookshelfService {
         }
 
         List<Long> bookIds = userBookshelves.stream().map(UserBookshelf::getBookId).toList();
-        RestResp<List<BookInfoRespDto>> bookInfoResp = bookFeignManager.listBookInfoByIds(bookIds);
+        // 使用专门的方法获取所有书籍（包括未审核通过的），用于书架显示
+        RestResp<List<BookInfoRespDto>> bookInfoResp = bookFeignManager.listBookInfoByIdsForBookshelf(bookIds);
         
         if (bookInfoResp == null || bookInfoResp.getData() == null) {
              return RestResp.ok(Collections.emptyList());
@@ -97,6 +98,7 @@ public class UserBookshelfServiceImpl implements UserBookshelfService {
                     .authorName(bookInfo.getAuthorName())
                     .firstChapterNum(bookInfo.getFirstChapterNum() == null ? 1  :  bookInfo.getFirstChapterNum())
                     .preChapterNum(v.getPreChapterNum())
+                    .auditStatus(bookInfo.getAuditStatus() != null ? bookInfo.getAuditStatus() : 0) // 包含审核状态
                     .build();
         }).filter(Objects::nonNull).toList());
     }

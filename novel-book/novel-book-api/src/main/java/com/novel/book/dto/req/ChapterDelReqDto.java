@@ -5,10 +5,6 @@ import lombok.Data;
 @Data
 public class ChapterDelReqDto {
 
-    /**
-     * 章节ID
-     */
-//    private Long chapterId;
 
     /**
      * 章节号

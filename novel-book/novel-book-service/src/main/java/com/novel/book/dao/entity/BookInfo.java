@@ -89,11 +89,6 @@ public class BookInfo {
     private Integer commentCount;
 
     /**
-     * 最新章节ID
-     */
-//    private Long lastChapterId;
-
-    /**
      * 最新章节NUM
      */
     private Integer lastChapterNum;
@@ -122,5 +117,16 @@ public class BookInfo {
      * 更新时间
      */
     private LocalDateTime updateTime;
+
+    /**
+     * 审核状态;0-待审核 1-审核通过 2-审核不通过
+     */
+    private Integer auditStatus;
+
+    /**
+     * 审核不通过原因
+     * 仅在审核状态为不通过(2)时才有值
+     */
+    private String auditReason;
 
 }

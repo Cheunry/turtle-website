@@ -135,6 +135,27 @@ public enum ErrorCodeEnum {
      */
     AUTHOR_PUBLISH("A3000", "作家发布异常"),
 
+
+    /**
+     * 审核相关错误
+     */
+    AUDIT_ERROR("A4000", "审核异常"),
+
+    /**
+     * 审核记录不存在
+     */
+    AUDIT_RECORD_NOT_EXIST("A4001", "审核记录不存在"),
+
+    /**
+     * 审核状态参数错误
+     */
+    AUDIT_STATUS_PARAM_ERROR("A4002", "审核状态参数错误"),
+
+    /**
+     * AI审核服务异常
+     */
+    AI_AUDIT_SERVICE_ERROR("C4000", "AI审核服务异常"),
+
     /**
      * 小说名已存在
      */
@@ -149,6 +170,16 @@ public enum ErrorCodeEnum {
      * 作家重复注册
      */
     AUTHOR_DUPLICATE_REGISTRATION("A3002", "您已经是作家了，无需重复注册"),
+
+    /**
+     * 书籍提交频率限制
+     */
+    AUTHOR_BOOK_SUBMIT_FREQUENCY_LIMIT("A3004", "提交频率过高，请稍后再试"),
+
+    /**
+     * 书籍更新频率限制
+     */
+    AUTHOR_BOOK_UPDATE_FREQUENCY_LIMIT("A3005", "更新频率过高，请稍后再试"),
 
     /**
      * 用户上传文件异常

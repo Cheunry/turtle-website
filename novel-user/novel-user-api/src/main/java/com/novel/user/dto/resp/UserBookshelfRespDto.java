@@ -1,11 +1,8 @@
 package com.novel.user.dto.resp;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Data;
-
-import java.time.LocalDateTime;
 
 /**
  * 用户书架 响应DTO
@@ -30,7 +27,9 @@ public class UserBookshelfRespDto {
     private Integer firstChapterNum;
 
     @Schema(description = "上次阅读的章节号")
-
     private Integer preChapterNum;
+
+    @Schema(description = "审核状态;0-待审核 1-审核通过 2-审核不通过")
+    private Integer auditStatus;
 
 }

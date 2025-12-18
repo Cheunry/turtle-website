@@ -1,4 +1,4 @@
-package com.novel.book.service.Impl;
+package com.novel.book.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.novel.book.dao.entity.BookInfo;
@@ -44,6 +44,7 @@ public class BookEsServiceImpl implements BookEsService {
         queryWrapper.orderByAsc(DatabaseConsts.CommonColumnEnum.ID.getName())
                 .gt(DatabaseConsts.CommonColumnEnum.ID.getName(), maxBookId)
                 .gt(DatabaseConsts.BookTable.COLUMN_WORD_COUNT,0)
+                .eq("audit_status", 1) // 只索引审核通过的书籍
                 .last(DatabaseConsts.SqlEnum.LIMIT_30.getSql());
 
         return RestResp.ok(
@@ -83,7 +84,8 @@ public class BookEsServiceImpl implements BookEsService {
     public RestResp<BookEsRespDto> getEsBookById(Long bookId) {
         
         BookInfo bookInfo = bookInfoMapper.selectById(bookId);
-        if (bookInfo == null) {
+        // 只有审核通过的书籍才能被索引到ES
+        if (bookInfo == null || bookInfo.getAuditStatus() == null || bookInfo.getAuditStatus() != 1) {
             return RestResp.ok(null);
         }
 

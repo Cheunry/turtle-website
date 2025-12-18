@@ -122,5 +122,10 @@ public class BookInfoRespDto {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm")
     private LocalDateTime updateTime;
 
+    /**
+     * 审核状态;0-待审核 1-审核通过 2-审核不通过
+     */
+    @Schema(description = "审核状态;0-待审核 1-审核通过 2-审核不通过")
+    private Integer auditStatus;
 
 }

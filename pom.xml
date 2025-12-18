@@ -33,26 +33,35 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
+
         <spring-cloud.version>2024.0.0</spring-cloud.version>
         <spring-cloud-alibaba.version>2023.0.1.2</spring-cloud-alibaba.version>
         <springdoc-openapi.version>2.8.13</springdoc-openapi.version>
         <spring-cloud-starter-bootstrap.version>4.1.2</spring-cloud-starter-bootstrap.version>
+        <spring-ai.version>1.0.0</spring-ai.version>
+        <spring-ai-alibaba.version>1.0.0.2</spring-ai-alibaba.version>
+        <dashscope-sdk-java.version>2.22.3</dashscope-sdk-java.version>
+
         <mybatis-plus.version>3.5.8</mybatis-plus.version>
         <jjwt.version>0.12.6</jjwt.version>
+        <commons-io.version>2.16.1</commons-io.version>
+        <lombok.version>1.18.38</lombok.version>
+        <annotation.version>2.1.1</annotation.version>
+
         <xxl-job.version>2.3.1</xxl-job.version>
         <elasticsearch.version>8.10.4</elasticsearch.version>
         <redisson.version>3.39.0</redisson.version>
         <cos_api-qcloud.version>5.6.227</cos_api-qcloud.version>
-        <commons-io.version>2.16.1</commons-io.version>
         <rocketmq.version>2.3.1</rocketmq.version>
         <rocketmq-client.version>5.3.3</rocketmq-client.version>
-        <spring-cloud-starter-alibaba-ai.version>2023.0.1.2</spring-cloud-starter-alibaba-ai.version>
-        <lombok.version>1.18.38</lombok.version>
-        <annotation.version>2.1.1</annotation.version>
+
+
         <jaxb.version>2.3.1</jaxb.version>
         <mchange-commons-java.version>0.2.20</mchange-commons-java.version>
         <checker-qual.version>3.49.0</checker-qual.version>
         <swagger-annotations-jakarta.version>2.2.30</swagger-annotations-jakarta.version>
+
+
 <!--        <shardingsphere-jdbc.version>5.5.2</shardingsphere-jdbc.version>-->
 <!--        配置分库分表可以参考：https://blog.csdn.net/weixin_43100232/article/details/148258210-->
 
@@ -159,14 +168,6 @@
                 <version>${rocketmq-client.version}</version>
             </dependency>
 
-
-            <!-- Spring ai相关 -->
-            <dependency>
-                <groupId>com.alibaba.cloud</groupId>
-                <artifactId>spring-cloud-starter-alibaba-ai</artifactId>
-                <version>${spring-cloud-starter-alibaba-ai.version}</version>
-            </dependency>
-
             <!-- Lombok -->
             <dependency>
                 <groupId>org.projectlombok</groupId>
@@ -220,6 +221,23 @@
 <!--            </dependency>-->
 
 
+            <dependency>
+                <groupId>org.springframework.ai</groupId>
+                <artifactId>spring-ai-bom</artifactId>
+                <version>${spring-ai.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>com.alibaba.cloud.ai</groupId>
+                <artifactId>spring-ai-alibaba-bom</artifactId>
+                <version>${spring-ai-alibaba.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+
         </dependencies>
     </dependencyManagement>
 
@@ -268,12 +286,16 @@
                 <enabled>false</enabled>
             </snapshots>
         </repository>
+
         <repository>
-            <id>spring-milestones</id>
-            <name>Spring Milestones</name>
-            <url>https://repo.spring.io/milestone</url>
-            <snapshots>
+            <name>Central Portal Snapshots</name>
+            <id>central-portal-snapshots</id>
+            <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+            <releases>
                 <enabled>false</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
             </snapshots>
         </repository>
         <repository>

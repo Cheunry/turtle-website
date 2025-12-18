@@ -23,6 +23,13 @@ public interface BookSearchService {
     RestResp<List<BookInfoRespDto>> listBookInfoByIds(List<Long> bookIds);
 
     /**
+     * 小说信息查询--批量（用于书架，不过滤审核状态）
+     * @param bookIds 小说ID列表
+     * @return 小说信息列表（包含所有审核状态的书籍）
+     */
+    RestResp<List<BookInfoRespDto>> listBookInfoByIdsForBookshelf(List<Long> bookIds);
+
+    /**
      * 增加小说点击量
      * @param bookId 小说ID
      * @return void

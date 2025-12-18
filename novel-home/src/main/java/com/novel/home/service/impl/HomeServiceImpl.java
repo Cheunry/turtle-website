@@ -54,21 +54,24 @@ public class HomeServiceImpl implements HomeService {
             // 根据小说ID列表查询相关的小说信息列表
             List<BookInfoRespDto> bookInfoRespDtos = homeBookFeignManager.listBookInfoById(bookIds);
 
-            // 组装 HomeBookRespDto 列表数据并返回
+            // 组装 HomeBookRespDto 列表数据并返回（只显示审核通过的书籍，auditStatus=1）
             if(!CollectionUtils.isEmpty(bookInfoRespDtos)) {
                 Map<Long, BookInfoRespDto> bookInfoRespDtoMap = bookInfoRespDtos.stream()
+                        .filter(book -> book.getAuditStatus() != null && book.getAuditStatus() == 1) // 只保留审核通过的书籍
                         .collect(Collectors.toMap(BookInfoRespDto::getId, Function.identity()));
-                return RestResp.ok(homeBooks.stream().map(v -> {
-                    BookInfoRespDto bookInfoRespDto = bookInfoRespDtoMap.get(v.getBookId());
-                    HomeBookRespDto homeBookRespDto = new HomeBookRespDto();
-                    homeBookRespDto.setType(v.getType());
-                    homeBookRespDto.setBookId(v.getBookId());
-                    homeBookRespDto.setBookName(bookInfoRespDto.getBookName());
-                    homeBookRespDto.setPicUrl(bookInfoRespDto.getPicUrl());
-                    homeBookRespDto.setAuthorName(bookInfoRespDto.getAuthorName());
-                    homeBookRespDto.setBookDesc(bookInfoRespDto.getBookDesc());
-                    return homeBookRespDto;
-                }).toList());
+                return RestResp.ok(homeBooks.stream()
+                        .filter(v -> bookInfoRespDtoMap.containsKey(v.getBookId())) // 只保留审核通过的书籍
+                        .map(v -> {
+                            BookInfoRespDto bookInfoRespDto = bookInfoRespDtoMap.get(v.getBookId());
+                            HomeBookRespDto homeBookRespDto = new HomeBookRespDto();
+                            homeBookRespDto.setType(v.getType());
+                            homeBookRespDto.setBookId(v.getBookId());
+                            homeBookRespDto.setBookName(bookInfoRespDto.getBookName());
+                            homeBookRespDto.setPicUrl(bookInfoRespDto.getPicUrl());
+                            homeBookRespDto.setAuthorName(bookInfoRespDto.getAuthorName());
+                            homeBookRespDto.setBookDesc(bookInfoRespDto.getBookDesc());
+                            return homeBookRespDto;
+                        }).toList());
             }
         }
         return RestResp.ok(Collections.emptyList());

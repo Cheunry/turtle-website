@@ -62,6 +62,15 @@ public class InnerBookController {
     }
 
     /**
+     * 批量查询小说信息（用于书架，不过滤审核状态）
+     */
+    @Operation(summary = "批量查询小说信息（用于书架）")
+    @PostMapping("listBookInfoByIdsForBookshelf")
+    RestResp<List<BookInfoRespDto>> listBookInfoByIdsForBookshelf(@RequestBody List<Long> bookIds) {
+        return bookSearchService.listBookInfoByIdsForBookshelf(bookIds);
+    }
+
+    /**
      * 小说发布接口
      */
     @Operation(summary = "小说发布接口")

@@ -70,6 +70,10 @@ public class BookChapterRespDto {
     @Schema(description = "是否收费;1-收费 0-免费")
     private Integer isVip;
 
-
+    /**
+     * 审核状态;0-待审核 1-审核通过 2-审核不通过
+     */
+    @Schema(description = "审核状态;0-待审核 1-审核通过 2-审核不通过")
+    private Integer auditStatus;
 
 }

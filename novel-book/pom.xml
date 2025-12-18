@@ -29,6 +29,11 @@
                 <artifactId>novel-config</artifactId>
                 <version>${project.parent.version}</version>
             </dependency>
+            <dependency>
+                <groupId>com.novel</groupId>
+                <artifactId>novel-ai-api</artifactId>
+                <version>${project.parent.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 

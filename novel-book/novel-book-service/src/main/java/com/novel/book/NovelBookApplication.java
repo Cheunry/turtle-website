@@ -12,7 +12,7 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 @MapperScan("com.novel.book.dao.mapper")
 @EnableCaching
 @EnableDiscoveryClient
-@EnableFeignClients(basePackages = {"com.novel.user.feign"})
+@EnableFeignClients(basePackages = {"com.novel.user.feign", "com.novel.ai.feign"})
 public class NovelBookApplication {
 
     public static void main(String[] args) {

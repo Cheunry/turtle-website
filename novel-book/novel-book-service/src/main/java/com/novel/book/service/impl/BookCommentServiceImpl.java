@@ -1,4 +1,4 @@
-package com.novel.book.service.Impl;
+package com.novel.book.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;

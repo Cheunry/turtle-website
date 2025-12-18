@@ -1,4 +1,4 @@
-package com.novel.book.service.Impl;
+package com.novel.book.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.novel.book.dao.entity.BookChapter;
@@ -7,7 +7,6 @@ import com.novel.book.dao.mapper.BookChapterMapper;
 import com.novel.book.dao.mapper.BookInfoMapper;
 import com.novel.book.dto.resp.BookChapterAboutRespDto;
 import com.novel.book.dto.resp.BookChapterRespDto;
-import com.novel.book.dto.resp.BookEsRespDto;
 import com.novel.book.dto.resp.BookInfoRespDto;
 import com.novel.common.constant.DatabaseConsts;
 import com.novel.common.resp.RestResp;
@@ -15,10 +14,9 @@ import com.novel.book.service.BookSearchService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.stream.Collectors;
-import com.novel.book.dto.req.BookVisitReqDto;
+
 import com.novel.common.constant.AmqpConsts;
 import org.apache.rocketmq.spring.core.RocketMQTemplate;
 
@@ -40,10 +38,18 @@ public class BookSearchServiceImpl implements BookSearchService {
 
         // 查询基础信息
         BookInfo bookInfo = bookInfoMapper.selectById(bookId);
-        // 查询首章ID
+        
+        // 检查书籍审核状态：只有审核通过的书籍才能被读者查看
+        if (bookInfo == null || bookInfo.getAuditStatus() == null || bookInfo.getAuditStatus() != 1) {
+            // 书籍不存在或未审核通过，返回错误
+            return RestResp.fail(com.novel.common.constant.ErrorCodeEnum.USER_REQUEST_PARAM_ERROR);
+        }
+        
+        // 查询首章ID（只查询审核通过的章节）
         QueryWrapper<BookChapter> queryWrapper = new QueryWrapper<>();
         queryWrapper
                 .eq(DatabaseConsts.BookChapterTable.COLUMN_BOOK_ID, bookId)
+                .eq("audit_status", 1) // 只查询审核通过的章节
                 .orderByAsc(DatabaseConsts.BookChapterTable.COLUMN_CHAPTER_NUM) // Asc 正序
                 .last(DatabaseConsts.SqlEnum.LIMIT_1.getSql());
         BookChapter firstBookChapter = bookChapterMapper.selectOne(queryWrapper);
@@ -81,7 +87,8 @@ public class BookSearchServiceImpl implements BookSearchService {
     @Override
     public RestResp<List<BookInfoRespDto>> listBookInfoByIds(List<Long> bookIds) {
         QueryWrapper<BookInfo> queryWrapper = new QueryWrapper<>();
-        queryWrapper.in(DatabaseConsts.CommonColumnEnum.ID.getName(), bookIds);
+        queryWrapper.in(DatabaseConsts.CommonColumnEnum.ID.getName(), bookIds)
+                .eq("audit_status", 1); // 只返回审核通过的书籍
         return RestResp.ok(
                 bookInfoMapper.selectList(queryWrapper).stream().map(v -> BookInfoRespDto.builder()
                         .id(v.getId())
@@ -89,7 +96,35 @@ public class BookSearchServiceImpl implements BookSearchService {
                         .authorName(v.getAuthorName())
                         .picUrl(v.getPicUrl())
                         .bookDesc(v.getBookDesc())
+                        .auditStatus(v.getAuditStatus()) // 包含审核状态
                         .build()).collect(Collectors.toList()));
+    }
+
+    @Override
+    public RestResp<List<BookInfoRespDto>> listBookInfoByIdsForBookshelf(List<Long> bookIds) {
+        // 用于书架查询，不过滤审核状态，返回所有书籍
+        QueryWrapper<BookInfo> queryWrapper = new QueryWrapper<>();
+        queryWrapper.in(DatabaseConsts.CommonColumnEnum.ID.getName(), bookIds);
+        return RestResp.ok(
+                bookInfoMapper.selectList(queryWrapper).stream().map(v -> {
+                    // 查询首章ID（只查询审核通过的章节）
+                    QueryWrapper<BookChapter> chapterQueryWrapper = new QueryWrapper<>();
+                    chapterQueryWrapper.eq(DatabaseConsts.BookChapterTable.COLUMN_BOOK_ID, v.getId())
+                            .eq("audit_status", 1) // 只查询审核通过的章节
+                            .orderByAsc(DatabaseConsts.BookChapterTable.COLUMN_CHAPTER_NUM)
+                            .last(DatabaseConsts.SqlEnum.LIMIT_1.getSql());
+                    BookChapter firstBookChapter = bookChapterMapper.selectOne(chapterQueryWrapper);
+                    
+                    return BookInfoRespDto.builder()
+                            .id(v.getId())
+                            .bookName(v.getBookName())
+                            .authorName(v.getAuthorName())
+                            .picUrl(v.getPicUrl())
+                            .bookDesc(v.getBookDesc())
+                            .auditStatus(v.getAuditStatus() != null ? v.getAuditStatus() : 0) // 包含审核状态
+                            .firstChapterNum(firstBookChapter != null ? firstBookChapter.getChapterNum() : null)
+                            .build();
+                }).collect(Collectors.toList()));
     }
 
     /**
@@ -116,9 +151,10 @@ public class BookSearchServiceImpl implements BookSearchService {
 //        BookInfoRespDto bookInfo = bookInfoCacheManager.getBookInfo(bookId);
 
 
-        // 查询最新章节信息（不依赖 bookInfo.getLastChapterNum()，直接查表获取真实最大章节号,因为旧数据没有lastChapterNum字段）
+        // 查询最新章节信息（只查询审核通过的章节，auditStatus=1）
         QueryWrapper<BookChapter> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq(DatabaseConsts.BookChapterTable.COLUMN_BOOK_ID, bookId)
+                .eq("audit_status", 1) // 只查询审核通过的章节
                 .orderByDesc(DatabaseConsts.BookChapterTable.COLUMN_CHAPTER_NUM)
                 .last(DatabaseConsts.SqlEnum.LIMIT_1.getSql());
         BookChapter latestChapter = bookChapterMapper.selectOne(queryWrapper);
@@ -145,9 +181,10 @@ public class BookSearchServiceImpl implements BookSearchService {
         // 章节内容
         String content = bookChapter.getContent();
         
-        // 查询章节总数
+        // 查询章节总数（只统计审核通过的章节）
         QueryWrapper<BookChapter> chapterQueryWrapper = new QueryWrapper<>();
-        chapterQueryWrapper.eq(DatabaseConsts.BookChapterTable.COLUMN_BOOK_ID, bookId);
+        chapterQueryWrapper.eq(DatabaseConsts.BookChapterTable.COLUMN_BOOK_ID, bookId)
+                .eq("audit_status", 1); // 只统计审核通过的章节
         Long chapterTotal = bookChapterMapper.selectCount(chapterQueryWrapper);
 
         // 组装数据并返回

@@ -27,6 +27,12 @@ public interface BookFeign {
     RestResp<List<BookInfoRespDto>> listBookInfoByIds(List<Long> bookIds);
 
     /**
+     * 批量查询小说信息（用于书架，不过滤审核状态）
+     */
+    @PostMapping(ApiRouterConsts.API_INNER_BOOK_URL_PREFIX + "/listBookInfoByIdsForBookshelf")
+    RestResp<List<BookInfoRespDto>> listBookInfoByIdsForBookshelf(List<Long> bookIds);
+
+    /**
      * 小说发布接口
      */
     @PostMapping(ApiRouterConsts.API_INNER_BOOK_URL_PREFIX + "/publishBook")
@@ -118,6 +124,11 @@ public interface BookFeign {
         @Override
         public RestResp<List<BookInfoRespDto>> listBookInfoByIds(List<Long> bookIds) {
 
+            return RestResp.ok(new ArrayList<>(0));
+        }
+
+        @Override
+        public RestResp<List<BookInfoRespDto>> listBookInfoByIdsForBookshelf(List<Long> bookIds) {
             return RestResp.ok(new ArrayList<>(0));
         }
 

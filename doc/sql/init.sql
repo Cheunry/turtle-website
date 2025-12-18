@@ -3,6 +3,33 @@ use `turtle_website`;
 
 SET NAMES utf8mb4;
 
+
+-- ----------------------------
+-- Table structure for content_audit
+-- ----------------------------
+DROP TABLE IF EXISTS `content_audit`;
+create table content_audit
+(
+    id            bigint unsigned              not null comment '顺序id',
+    source_type   tinyint unsigned             not null comment '数据来源;0-小说基本信息表 1-小说章节表',
+    source_id     bigint unsigned              not null comment '数据来源ID',
+    content_text  mediumtext                   not null comment '内容文本',
+    ai_confidence decimal(5, 2)                null comment 'AI审核置信度;范围0-1，NULL表示未进行AI审核',
+    audit_status  tinyint unsigned default '0' not null comment '审核状态;0-待审核 1-通过 2-不通过',
+    audit_reason  varchar(500)                 null comment '通过/不通过原因',
+    create_time   datetime                     null comment '创建时间',
+    update_time   datetime                     null comment '更新时间',
+    primary key (source_type, source_id) comment '数据来源唯一索引，确保同一数据源只有一条审核记录'
+)
+    comment '内容审核表（仅保存审核不通过和AI置信度过低的内容）';
+
+create index idx_auditStatus
+    on content_audit (audit_status)
+    comment '审核状态索引，方便查询待审核内容';
+
+create index pk_id
+    on content_audit (id);
+
 -- ----------------------------
 -- Table structure for author_code
 -- ----------------------------

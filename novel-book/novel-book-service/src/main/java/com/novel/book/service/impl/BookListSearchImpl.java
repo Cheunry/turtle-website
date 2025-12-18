@@ -1,4 +1,4 @@
-package com.novel.book.service.Impl;
+package com.novel.book.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.novel.book.dao.entity.BookCategory;
@@ -94,9 +94,10 @@ public class BookListSearchImpl implements BookListSearchService {
         if (bookInfo == null) {
             return RestResp.ok(Collections.emptyList());
         }
-        // 查询同类推荐（访问量最高的4本）
+        // 查询同类推荐（访问量最高的4本，只查询审核通过的书籍）
         QueryWrapper<BookInfo> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("category_id", bookInfo.getCategoryId())
+                .eq("audit_status", 1) // 只查询审核通过的书籍
                 .ne("id", bookId)
                 .orderByDesc("visit_count")
                 .last("limit 4");
@@ -119,6 +120,7 @@ public class BookListSearchImpl implements BookListSearchService {
     private List<BookRankRespDto> listRankBooks(QueryWrapper<BookInfo> bookInfoQueryWrapper) {
         bookInfoQueryWrapper
                 .gt(DatabaseConsts.BookTable.COLUMN_WORD_COUNT, 0)
+                .eq("audit_status", 1) // 只查询审核通过的书籍
                 .last(DatabaseConsts.SqlEnum.LIMIT_30.getSql());
         return bookInfoMapper.selectList(bookInfoQueryWrapper).stream().map(v -> {
             BookRankRespDto respDto = new BookRankRespDto();

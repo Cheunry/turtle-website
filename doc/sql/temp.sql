@@ -62,3 +62,26 @@ DROP TABLE IF EXISTS `news_content`;
 
 Drop table if exists `test`
 
+
+-- 为 book_info 表添加审核字段
+ALTER TABLE `book_info`
+    ADD COLUMN `audit_status` tinyint(3) unsigned NOT NULL DEFAULT '0' COMMENT '审核状态;0-待审核 1-审核通过 2-审核不通过';
+
+-- 在 book_info 表中添加审核不通过原因字段
+ALTER TABLE `book_info`
+    ADD COLUMN `audit_reason` varchar(500) DEFAULT NULL
+        COMMENT '审核不通过原因' AFTER `audit_status`;
+
+-- 为 book_chapter 表添加审核字段
+ALTER TABLE `book_chapter`
+    ADD COLUMN `audit_status` tinyint(3) unsigned NOT NULL DEFAULT '0' COMMENT '审核状态;0-待审核 1-审核通过 2-审核不通过';
+
+-- 在 book_chapter 表中添加审核不通过原因字段
+ALTER TABLE `book_chapter`
+    ADD COLUMN `audit_reason` varchar(500) DEFAULT NULL
+        COMMENT '审核不通过原因' AFTER `audit_status`;
+
+update book_chapter
+set audit_status = 1 where create_time < '2023-05-01';
+
+

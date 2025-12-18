@@ -37,4 +37,8 @@ public class BookFeignManager {
     public RestResp<List<BookInfoRespDto>> listBookInfoByIds(List<Long> bookIds) {
         return bookFeign.listBookInfoByIds(bookIds);
     }
+
+    public RestResp<List<BookInfoRespDto>> listBookInfoByIdsForBookshelf(List<Long> bookIds) {
+        return bookFeign.listBookInfoByIdsForBookshelf(bookIds);
+    }
 }

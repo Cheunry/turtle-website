@@ -1,4 +1,4 @@
-package com.novel.book.service.Impl;
+package com.novel.book.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -11,12 +11,14 @@ import com.novel.book.dto.req.*;
 import com.novel.book.dto.resp.BookChapterRespDto;
 import com.novel.book.dto.resp.BookInfoRespDto;
 import com.novel.book.service.BookAuthorService;
+import com.novel.book.service.BookAuditService;
 import com.novel.common.constant.AmqpConsts;
 import com.novel.common.constant.DatabaseConsts;
 import com.novel.common.constant.ErrorCodeEnum;
 import com.novel.common.resp.PageRespDto;
 import com.novel.common.resp.RestResp;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.spring.core.RocketMQTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +27,7 @@ import java.time.LocalDateTime;
 import java.util.Objects;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class BookAuthorServiceImpl implements BookAuthorService {
@@ -32,6 +35,7 @@ public class BookAuthorServiceImpl implements BookAuthorService {
     private final BookInfoMapper bookInfoMapper;
     private final BookChapterMapper bookChapterMapper;
     private final RocketMQTemplate rocketMQTemplate;
+    private final BookAuditService bookAuditService;
 
 
     /**
@@ -60,6 +64,7 @@ public class BookAuthorServiceImpl implements BookAuthorService {
                 .bookDesc(dto.getBookDesc())
                 .score(0)
                 .isVip(dto.getIsVip())
+                .auditStatus(0) // 初始状态为待审核
                 .createTime(LocalDateTime.now())
                 .updateTime(LocalDateTime.now())
                 .build();
@@ -67,8 +72,13 @@ public class BookAuthorServiceImpl implements BookAuthorService {
         // 保存小说信息
         bookInfoMapper.insert(bookInfo);
 
-        // 发送 MQ 消息
-        sendBookChangeMsg(bookInfo.getId());
+        // 立即触发AI审核（先写入审核表，然后进行AI审核）
+        try {
+            bookAuditService.auditBookInfo(bookInfo);
+        } catch (Exception e) {
+            log.error("AI审核失败，书籍ID: {}", bookInfo.getId(), e);
+            // 审核失败不影响保存，保持待审核状态
+        }
 
         return RestResp.ok();
     }
@@ -94,9 +104,12 @@ public class BookAuthorServiceImpl implements BookAuthorService {
         updateBook.setId(dto.getBookId());
         
         boolean hasUpdate = false;
+        boolean needAudit = false; // 标记是否需要重新审核
+        
         if (StringUtils.isNotBlank(dto.getBookName())) {
             updateBook.setBookName(dto.getBookName());
             hasUpdate = true;
+            needAudit = true; // 小说名变更需要重新审核
         }
         if (StringUtils.isNotBlank(dto.getPicUrl())) {
             updateBook.setPicUrl(dto.getPicUrl());
@@ -105,6 +118,7 @@ public class BookAuthorServiceImpl implements BookAuthorService {
         if (StringUtils.isNotBlank(dto.getBookDesc())) {
             updateBook.setBookDesc(dto.getBookDesc());
             hasUpdate = true;
+            needAudit = true; // 简介变更需要重新审核
         }
         if (dto.getCategoryId() != null) {
             updateBook.setCategoryId(dto.getCategoryId());
@@ -128,11 +142,28 @@ public class BookAuthorServiceImpl implements BookAuthorService {
         }
 
         if (hasUpdate) {
+            // 如果小说名或简介有变更，重置审核状态为待审核
+            if (needAudit) {
+                updateBook.setAuditStatus(0);
+                updateBook.setAuditReason(null);
+            }
+            
             updateBook.setUpdateTime(LocalDateTime.now());
             bookInfoMapper.updateById(updateBook);
             
-            // 发送 ES 更新消息
-            sendBookChangeMsg(dto.getBookId());
+            // 如果小说名或简介有变更，触发AI审核
+            if (needAudit) {
+                // 重新查询完整的书籍信息（包含更新后的内容）
+                BookInfo updatedBookInfo = bookInfoMapper.selectById(dto.getBookId());
+                try {
+                    bookAuditService.auditBookInfo(updatedBookInfo);
+                } catch (Exception e) {
+                    log.error("AI审核失败，书籍ID: {}", dto.getBookId(), e);
+                    // 审核失败不影响更新，保持待审核状态
+                }
+            }
+            
+            // 移除 sendBookChangeMsg 调用，审核通过后再发送
         }
 
         return RestResp.ok();
@@ -174,6 +205,7 @@ public class BookAuthorServiceImpl implements BookAuthorService {
         chapter.setContent(dto.getContent());
         chapter.setWordCount(dto.getContent().length());
         chapter.setIsVip(dto.getIsVip());
+        chapter.setAuditStatus(0); // 初始状态为待审核
         chapter.setCreateTime(LocalDateTime.now());
         chapter.setUpdateTime(LocalDateTime.now());
 
@@ -182,8 +214,15 @@ public class BookAuthorServiceImpl implements BookAuthorService {
         // 更新书籍字数和最新章节信息
         updateBookInfo(chapter.getBookId(), chapter, true, 0);
 
-        // 发送 MQ 消息
-        sendBookChangeMsg(dto.getBookId());
+        // 立即触发AI审核（先写入审核表，然后进行AI审核）
+        try {
+            bookAuditService.auditChapter(chapter);
+        } catch (Exception e) {
+            log.error("AI审核失败，章节ID: {}", chapter.getId(), e);
+            // 审核失败不影响保存，保持待审核状态
+        }
+
+        // 移除 sendBookChangeMsg 调用，审核通过后再发送
 
         return RestResp.ok();
 
@@ -221,6 +260,7 @@ public class BookAuthorServiceImpl implements BookAuthorService {
                         .wordCount(v.getWordCount())
                         .visitCount(v.getVisitCount())
                         .updateTime(v.getUpdateTime())
+                        .auditStatus(v.getAuditStatus() != null ? v.getAuditStatus() : 0)
                         .build()).toList()
                 )
         );
@@ -263,6 +303,7 @@ public class BookAuthorServiceImpl implements BookAuthorService {
                         .chapterNum(v.getChapterNum())
                         .chapterUpdateTime(v.getUpdateTime())
                         .isVip(v.getIsVip())
+                        .auditStatus(v.getAuditStatus() != null ? v.getAuditStatus() : 0)
                         .build()).toList()));
     }
 
@@ -293,17 +334,25 @@ public class BookAuthorServiceImpl implements BookAuthorService {
 
             book.setWordCount(book.getWordCount() - count);
 
-            // 如果删除的章节是该本小说的最新章节
+            // 如果删除的章节是该本小说的最新章节，需要重新查找最新的审核通过的章节
             if (book.getWordCount() > 0 && book.getLastChapterNum().equals(bookChapter.getChapterNum())) {
                 QueryWrapper<BookChapter> bookChapterQueryWrapper = new QueryWrapper<>();
                 bookChapterQueryWrapper.eq(DatabaseConsts.BookChapterTable.COLUMN_BOOK_ID, book.getId())
+                        .eq("audit_status", 1) // 只查询审核通过的章节
                         .ne(DatabaseConsts.BookChapterTable.COLUMN_CHAPTER_NUM, dto.getChapterNum()) // 明确排除正在删除的章节
                         .orderByDesc(DatabaseConsts.BookChapterTable.COLUMN_CHAPTER_UPDATE_TIME)
                         .last("limit 1");
                 BookChapter bookChapter1 = bookChapterMapper.selectOne(bookChapterQueryWrapper);
-                book.setLastChapterNum(bookChapter1.getChapterNum());
-                book.setLastChapterName(bookChapter1.getChapterName());
-                book.setLastChapterUpdateTime(bookChapter1.getUpdateTime());
+                if (bookChapter1 != null) {
+                    book.setLastChapterNum(bookChapter1.getChapterNum());
+                    book.setLastChapterName(bookChapter1.getChapterName());
+                    book.setLastChapterUpdateTime(bookChapter1.getUpdateTime());
+                } else {
+                    // 如果没有审核通过的章节了，清空最新章节信息
+                    book.setLastChapterNum(null);
+                    book.setLastChapterName(null);
+                    book.setLastChapterUpdateTime(null);
+                }
             } else if (book.getWordCount() <= 0 && book.getLastChapterNum().equals(bookChapter.getChapterNum())) {
                 book.setWordCount(0);
                 book.setLastChapterNum(null);
@@ -389,14 +438,27 @@ public class BookAuthorServiceImpl implements BookAuthorService {
         chapter.setIsVip(dto.getIsVip());
         chapter.setUpdateTime(LocalDateTime.now());
         chapter.setWordCount(dto.getContent().length()); // 确保字数被更新
+        
+        // 如果章节内容有变更，重置审核状态为待审核
+        chapter.setAuditStatus(0);
+        chapter.setAuditReason(null);
 
         bookChapterMapper.update(chapter, queryWrapper);
 
         // 更新书籍字数和最新章节信息
         updateBookInfo(chapter.getBookId(), chapter, false, oldWordCount);
 
-        // 发送 MQ 消息
-        sendBookChangeMsg(dto.getBookId());
+        // 如果章节内容有变更，触发AI审核
+        // 重新查询完整的章节信息（包含更新后的内容）
+        BookChapter updatedChapter = bookChapterMapper.selectById(chapter.getId());
+        try {
+            bookAuditService.auditChapter(updatedChapter);
+        } catch (Exception e) {
+            log.error("AI审核失败，章节ID: {}", chapter.getId(), e);
+            // 审核失败不影响更新，保持待审核状态
+        }
+
+        // 移除 sendBookChangeMsg 调用，审核通过后再发送（如果需要的话）
 
         return RestResp.ok();
     }
@@ -457,10 +519,11 @@ public class BookAuthorServiceImpl implements BookAuthorService {
             updateBook.setWordCount(currentTotal - oldChapterWordCount + newChapterWordCount);
         }
 
-        // 查询当前该书真正的最新章节
+        // 查询当前该书真正的最新章节（只查询审核通过的章节，auditStatus=1）
         // 因为用户可能插入的是中间章节，或者修改了旧章节，不能简单认为当前操作的章节就是最新的
         QueryWrapper<BookChapter> lastChapterQuery = new QueryWrapper<>();
         lastChapterQuery.eq(DatabaseConsts.BookChapterTable.COLUMN_BOOK_ID, bookId)
+                .eq("audit_status", 1) // 只查询审核通过的章节
                 .orderByDesc(DatabaseConsts.BookChapterTable.COLUMN_CHAPTER_NUM)
                 .last("limit 1");
         BookChapter realLastChapter = bookChapterMapper.selectOne(lastChapterQuery);

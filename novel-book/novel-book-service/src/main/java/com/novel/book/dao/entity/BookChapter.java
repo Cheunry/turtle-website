@@ -3,11 +3,13 @@ package com.novel.book.dao.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
@@ -53,5 +55,15 @@ public class BookChapter {
     private LocalDateTime createTime;
 
     private LocalDateTime updateTime;
+
+    /**
+     * 审核状态;0-待审核 1-审核通过 2-审核不通过
+     */
+    private Integer auditStatus;
+
+    /**
+     * 审核不通过原因（简要原因，完整原因在content_audit表中）
+     */
+    private String auditReason;
 
 }

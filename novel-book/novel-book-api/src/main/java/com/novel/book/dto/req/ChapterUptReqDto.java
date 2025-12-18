@@ -10,11 +10,6 @@ import org.hibernate.validator.constraints.Length;
 public class ChapterUptReqDto {
 
     /**
-     * 章节ID
-     */
-//    private Long chapterId;
-
-    /**
      * 小说ID
      */
     private Long bookId;
