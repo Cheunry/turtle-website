@@ -1,6 +1,7 @@
 package com.novel.ai.controller.inner;
 
 import com.novel.book.dto.req.BookAuditReqDto;
+import com.novel.book.dto.req.BookCoverReqDto;
 import com.novel.book.dto.req.ChapterAuditReqDto;
 import com.novel.book.dto.resp.BookAuditRespDto;
 import com.novel.book.dto.resp.ChapterAuditRespDto;
@@ -39,5 +40,14 @@ public class InnerAiController {
     @PostMapping("/audit/chapter")
     public RestResp<ChapterAuditRespDto> auditChapter(@RequestBody ChapterAuditReqDto req) {
         return textService.auditChapter(req);
+    }
+
+    /**
+     * 获取图片生成提示词
+     */
+    @Operation(summary = "获取图片生成提示词")
+    @PostMapping("/generate/image/prompt")
+    public RestResp<String> generateImagePrompt(@RequestBody BookCoverReqDto req) {
+        return textService.getBookCoverPrompt(req);
     }
 }

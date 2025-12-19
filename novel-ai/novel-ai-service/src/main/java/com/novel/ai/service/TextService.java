@@ -3,6 +3,7 @@ package com.novel.ai.service;
 import com.novel.ai.dto.req.TextPolishReqDto;
 import com.novel.ai.dto.resp.TextPolishRespDto;
 import com.novel.book.dto.req.BookAuditReqDto;
+import com.novel.book.dto.req.BookCoverReqDto;
 import com.novel.book.dto.req.ChapterAuditReqDto;
 import com.novel.book.dto.resp.BookAuditRespDto;
 import com.novel.book.dto.resp.ChapterAuditRespDto;
@@ -24,4 +25,10 @@ public interface TextService {
      * 文本润色
      */
     RestResp<TextPolishRespDto> polishText(TextPolishReqDto reqDto);
+
+    /**
+     * 获取小说封面生成提示词
+     */
+    RestResp<String> getBookCoverPrompt(BookCoverReqDto reqDto);
+
 }

@@ -31,6 +31,8 @@ import javax.imageio.ImageIO;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Objects;
@@ -74,7 +76,7 @@ public class TencentCosServiceImpl implements TencentCosService {
     }
 
     /**
-     * 上传图片到 COS 对象存储
+     * 客户端上传图片到 COS 对象存储
      * 使用 @SneakyThrows 简化异常处理
      */
     @SneakyThrows // 标记方法，将检查型异常转换为运行时异常
@@ -142,6 +144,102 @@ public class TencentCosServiceImpl implements TencentCosService {
         }
     }
 
+    /**
+     * 通过URL上传图片到 COS 对象存储
+     */
+    @Override
+    public RestResp<String> uploadImageFromUrl(String imageUrl) {
+        if (imageUrl == null || imageUrl.isEmpty()) {
+            throw new BusinessException(ErrorCodeEnum.USER_UPLOAD_FILE_ERROR);
+        }
+
+        try {
+            // 1. 下载图片
+            URL url = new java.net.URI(imageUrl).toURL();
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
+            connection.setConnectTimeout(5000);
+            connection.setReadTimeout(10000);
+
+            if (connection.getResponseCode() != 200) {
+                log.error("图片下载失败，URL: {}, 响应码: {}", imageUrl, connection.getResponseCode());
+                throw new BusinessException(ErrorCodeEnum.USER_UPLOAD_FILE_ERROR);
+            }
+
+            try (InputStream inputStream = connection.getInputStream()) {
+                // 2. 读取图片数据
+                byte[] fileBytes = inputStream.readAllBytes();
+                if (fileBytes.length == 0) {
+                    throw new BusinessException(ErrorCodeEnum.USER_UPLOAD_FILE_ERROR);
+                }
+
+                // 3. 校验图片类型
+                try (InputStream checkStream = new ByteArrayInputStream(fileBytes)) {
+                    if (Objects.isNull(ImageIO.read(checkStream))) {
+                        throw new BusinessException(ErrorCodeEnum.USER_UPLOAD_FILE_TYPE_NOT_MATCH);
+                    }
+                }
+
+
+                // 4. 准备上传参数
+                LocalDateTime now = LocalDateTime.now();
+                String prefix = "resource/" + now.format(DateTimeFormatter.ofPattern("yyyy/MM/dd"));
+                
+                // 尝试从URL或Content-Type获取后缀，默认为jpg
+                String extension = "jpg";
+                String contentType = connection.getContentType();
+                if (contentType != null && contentType.contains("/")) {
+                    extension = contentType.substring(contentType.lastIndexOf("/") + 1);
+                } else if (imageUrl.contains(".")) {
+                    extension = imageUrl.substring(imageUrl.lastIndexOf(".") + 1);
+                    // 如果后缀包含参数，截断它
+                    if (extension.contains("?")) {
+                        extension = extension.substring(0, extension.indexOf("?"));
+                    }
+                }
+                
+                // 处理一些特殊的后缀映射
+                if ("jpeg".equalsIgnoreCase(extension)) {
+                    extension = "jpg";
+                }
+
+                String cosKey = String.format("%s/%s.%s", prefix, IdWorker.get32UUID(), extension);
+
+                // 5. 上传到COS
+                try (InputStream uploadStream = new ByteArrayInputStream(fileBytes)) {
+                    ObjectMetadata metadata = new ObjectMetadata();
+                    metadata.setContentLength(fileBytes.length);
+                    if (contentType != null) {
+                        metadata.setContentType(contentType);
+                    } else {
+                        metadata.setContentType("image/" + extension);
+                    }
+
+                    PutObjectRequest putObjectRequest =
+                            new PutObjectRequest(bucketName, cosKey, uploadStream, metadata);
+
+                    cosClient.putObject(putObjectRequest);
+
+                    // 6. 构造返回URL
+                    String uploadedUrl;
+                    if (baseUrl.endsWith("/")) {
+                        uploadedUrl = baseUrl + cosKey;
+                    } else {
+                        uploadedUrl = baseUrl + "/" + cosKey;
+                    }
+
+                    log.info("URL图片转存成功，原URL: {}, COS Key: {}, 新URL: {}", imageUrl, cosKey, uploadedUrl);
+                    return RestResp.ok(uploadedUrl);
+                }
+            }
+
+        } catch (BusinessException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("URL图片转存失败，URL: {}", imageUrl, e);
+            throw new BusinessException(ErrorCodeEnum.USER_UPLOAD_FILE_ERROR);
+        }
+    }
 
     /**
      * 从对象存储中删除图片

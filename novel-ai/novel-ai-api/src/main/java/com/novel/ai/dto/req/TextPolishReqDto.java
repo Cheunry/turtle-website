@@ -9,8 +9,8 @@ import lombok.Data;
 public class TextPolishReqDto {
 
     @Schema(description = "待润色的文本内容")
-    @NotBlank(message = "文本内容不能为空")
-    private String text;
+    @NotBlank(message = "选中内容不能为空")
+    private String selectedText;
 
     @Schema(description = "润色风格，如：正式、简洁、生动等", example = "正式")
     private String style;

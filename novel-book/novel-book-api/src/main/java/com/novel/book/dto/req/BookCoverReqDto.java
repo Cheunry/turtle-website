@@ -6,9 +6,8 @@ import lombok.Data;
 
 @Data
 @Builder
-@Schema(description = "小说审核请求DTO")
-public class BookAuditReqDto {
-
+@Schema(description = "小说封面生图文本请求DTO")
+public class BookCoverReqDto {
     /**
      * 小说ID
      */
@@ -22,9 +21,14 @@ public class BookAuditReqDto {
     private String bookName;
 
     /**
+     * 类别名
+     */
+    @Schema(description = "小说类别名")
+    private String categoryName;
+
+    /**
      * 小说描述
      */
-     @Schema(description = "小说描述")
-      private String bookDesc;
-
+    @Schema(description = "小说描述")
+    private String bookDesc;
 }

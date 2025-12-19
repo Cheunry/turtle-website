@@ -2,6 +2,7 @@ package com.novel.book.feign;
 
 import com.novel.ai.feign.AiFeign;
 import com.novel.book.dto.req.BookAuditReqDto;
+import com.novel.book.dto.req.BookCoverReqDto;
 import com.novel.book.dto.req.ChapterAuditReqDto;
 import com.novel.book.dto.resp.BookAuditRespDto;
 import com.novel.book.dto.resp.ChapterAuditRespDto;

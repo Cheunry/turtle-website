@@ -4,10 +4,12 @@ import com.novel.ai.dto.req.TextPolishReqDto;
 import com.novel.ai.dto.resp.TextPolishRespDto;
 import com.novel.ai.service.TextService;
 import com.novel.book.dto.req.BookAuditReqDto;
+import com.novel.book.dto.req.BookCoverReqDto;
 import com.novel.book.dto.req.ChapterAuditReqDto;
 import com.novel.book.dto.resp.BookAuditRespDto;
 import com.novel.book.dto.resp.ChapterAuditRespDto;
 import com.novel.common.resp.RestResp;
+import com.novel.common.constant.ErrorCodeEnum;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
@@ -30,6 +32,7 @@ public class TextServiceImpl implements TextService {
 
     private static final int MAX_CONTENT_LENGTH = 5000;
     private static final int MAX_AUDIT_REASON_LENGTH = 500; // 数据库字段限制
+    private static final int MIN_BOOK_DESC_LENGTH = 30; // 最小小说简介长度
 
     /**
      * AI审核书籍（小说名和简介）
@@ -649,6 +652,152 @@ public class TextServiceImpl implements TextService {
 
     @Override
     public RestResp<TextPolishRespDto> polishText(TextPolishReqDto reqDto) {
-        return null;
+        try {
+            // 构建润色提示词
+            String prompt = buildPolishPrompt(reqDto);
+
+            // 调用AI模型
+            String aiResponse = chatClient.prompt()
+                    .user(prompt)
+                    .call()
+                    .content();
+
+            log.info("AI润色响应: {}", aiResponse);
+
+            // 解析响应
+            TextPolishRespDto result = parsePolishResponse(aiResponse);
+            return RestResp.ok(result);
+
+
+        } catch (Exception e) {
+            log.error("AI润色异常", e);
+            // 如果出错，返回空或错误信息
+            return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR, "AI润色服务暂时不可用，请稍后再试");
+        }
     }
+
+    /**
+     * 构建润色提示词
+     */
+    private String buildPolishPrompt(TextPolishReqDto reqDto) {
+        return String.format(
+                "你是一个专业的小说编辑。请对以下文本进行润色。\n\n" +
+                        "待润色文本：%s\n\n" +
+                        "润色风格：%s\n" +
+                        "具体要求：%s\n\n" +
+                        "请严格以JSON格式返回结果，不要包含Markdown标记或其他多余内容。注意合理小说需要分段。格式如下：\n" +
+                        "{\n" +
+                        "  \"polishedText\": \"润色后的文本内容\",\n" +
+                        "  \"explanation\": \"润色说明（修改了哪里，为什么要这样修改）\"\n" +
+                        "}",
+                reqDto.getSelectedText(),
+                reqDto.getStyle() != null ? reqDto.getStyle() : "通俗易懂",
+                reqDto.getRequirement() != null ? reqDto.getRequirement() : "保持原意，提升文学性"
+        );
+    }
+
+    /**
+     * 解析润色响应
+     */
+    private TextPolishRespDto parsePolishResponse(String aiResponse) {
+        try {
+            String jsonContent = extractJsonFromResponse(aiResponse);
+            
+            String polishedText = extractField(jsonContent, "polishedText", String.class);
+            String explanation = extractField(jsonContent, "explanation", String.class);
+            
+            // 如果解析失败，尝试直接使用响应作为润色文本（容错）
+            if (polishedText == null) {
+                polishedText = aiResponse;
+                explanation = "自动润色";
+            }
+            
+            TextPolishRespDto resp = new TextPolishRespDto();
+            resp.setPolishedText(polishedText);
+            resp.setExplanation(explanation);
+            return resp;
+        } catch (Exception e) {
+            log.warn("解析润色响应失败", e);
+            TextPolishRespDto resp = new TextPolishRespDto();
+            resp.setPolishedText(aiResponse); // 降级处理
+            resp.setExplanation("解析失败，显示原始内容");
+            return resp;
+        }
+    }
+
+    /**
+     * 获取小说封面生成提示词
+     */
+    @Override
+    public RestResp<String> getBookCoverPrompt(BookCoverReqDto reqDto) {
+        try {
+            // 1. 基础校验
+            if (reqDto == null || reqDto.getBookName() == null) {
+                return RestResp.fail(ErrorCodeEnum.USER_REQUEST_PARAM_ERROR);
+            }
+            
+            // 简介少于 MIN_BOOK_DESC_LENGTH 字，依据不足不予生成
+            if (reqDto.getBookDesc() == null || reqDto.getBookDesc().trim().length() < MIN_BOOK_DESC_LENGTH) {
+                 return RestResp.fail(ErrorCodeEnum.USER_REQUEST_PARAM_ERROR, "小说简介过短（需大于30字），无法生成精准封面");
+            }
+
+            // 2. 构建提示词
+            String prompt = buildImagePromptPrompt(reqDto);
+
+            // 3. 调用AI模型
+            String aiResponse = chatClient.prompt()
+                    .user(prompt)
+                    .call()
+                    .content();
+
+            log.info("生成封面提示词响应，小说ID: {}, 响应: {}", reqDto.getId(), aiResponse);
+            
+            // 4. 拼接后缀
+            String finalPrompt = aiResponse + "，高品质插画，书籍装帧风格，黄金比例构图，极致细节，最高解析度，(无文字，无水印：1.5)";
+
+            return RestResp.ok(finalPrompt);
+
+        } catch (Exception e) {
+            log.error("生成封面提示词异常，小说ID: {}", reqDto.getId(), e);
+            return RestResp.fail(ErrorCodeEnum.AI_COVER_TEXT_SERVICE_ERROR, "生成封面提示词服务暂时不可用");
+        }
+    }
+
+    /**
+     * 获取小说封面提示词生成的提示词
+     */
+    private String buildImagePromptPrompt(BookCoverReqDto dto) {
+        // 截取过长的简介
+        String bookDesc = dto.getBookDesc();
+        if (bookDesc.length() > 500) {
+            bookDesc = bookDesc.substring(0, 500);
+        }
+        
+        String categoryName = dto.getCategoryName();
+        if (categoryName == null) {
+            categoryName = "通俗小说";
+        }
+
+        // 构建发给 LLM 的请求
+        return String.format(
+                "你的角色： 资深 AI 插画提示词专家 & 书籍装帧设计师\n" +
+                "任务： 请根据提供的《%s》和《%s》，创作一段专为 AI 生图模型设计的视觉描述词。\n\n" +
+                "创作指南：\n" +
+                "去剧情化：不要描述故事情节（如“他爱上了她”），要描述具体的视觉画面（如“漫天大雪中，一个孤独的红色背影”）。\n" +
+                "三段式结构：\n" +
+                "[核心主体]：从小说的核心符号提取。可能是角色、一个象征性物体或标志性建筑。\n" +
+                "[环境氛围]：根据简介基调，确定色彩、天气、时代背景。\n" +
+                "[艺术规格]：统一使用：极高画质，电影级构图，高分辨率\n" +
+                "封面适配逻辑（核心）：\n" +
+                "禁忌词：禁止出现文字、人名、水印。\n\n" +
+                "输入格式： 小说名：%s 小说类别：%s 小说简介：%s\n\n" +
+                "输出格式要求（仅返回以下内容）： [视觉描述]：(100-150字内的结构化提示词)",
+                dto.getBookName(),
+                bookDesc,
+                dto.getBookName(),
+                categoryName,
+                bookDesc
+        );
+    }
+
 }

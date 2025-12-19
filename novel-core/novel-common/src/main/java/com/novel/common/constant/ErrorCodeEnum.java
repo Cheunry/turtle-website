@@ -157,6 +157,11 @@ public enum ErrorCodeEnum {
     AI_AUDIT_SERVICE_ERROR("C4000", "AI审核服务异常"),
 
     /**
+     * AI生成图片提示词服务异常
+     */
+    AI_COVER_TEXT_SERVICE_ERROR("C4001", "AI生成图片提示词服务异常"),
+
+    /**
      * 小说名已存在
      */
     AUTHOR_BOOK_NAME_EXIST("A3001", "小说名已存在"),

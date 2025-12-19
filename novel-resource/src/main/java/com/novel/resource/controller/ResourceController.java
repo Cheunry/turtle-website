@@ -46,4 +46,14 @@ public class ResourceController {
         return tencentCosService.uploadImageTencent(file);
     }
 
+    /**
+     * 图片转存接口（通过URL上传）
+     */
+    @Operation(summary = "图片转存接口（通过URL上传）")
+    @PostMapping("/image/url")
+    RestResp<String> uploadImageFromUrl(
+            @Parameter(description = "图片URL") @RequestParam("url") String url) {
+        return tencentCosService.uploadImageFromUrl(url);
+    }
+
 }
