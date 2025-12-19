@@ -23,7 +23,14 @@ public class AiConfig {
     public ImageModel imageModel(DashScopeImageModel dashScopeImageModel) {
         return dashScopeImageModel;
     }
-    /*
+}
+/*
+        阿里云百炼平台模型使用说明
+        qwen3-max：https://bailian.console.aliyun.com/?spm=5176.30510405.J_bQ9d6wtWdX1_RtKN0y7Ar.1.d05159deC7bd3D&tab=model#/model-market/detail/qwen3-max
+        qwen-image-plus：https://bailian.console.aliyun.com/?spm=5176.30510405.J_bQ9d6wtWdX1_RtKN0y7Ar.1.d05159deC7bd3D&tab=model#/model-market/detail/qwen-image-plus
+        文本生成文档：https://bailian.console.aliyun.com/?spm=5176.30510405.J_bQ9d6wtWdX1_RtKN0y7Ar.1.d05159deC7bd3D&tab=doc#/doc/?type=model&url=2841718
+        文生图文档：https://bailian.console.aliyun.com/?spm=5176.30510405.J_bQ9d6wtWdX1_RtKN0y7Ar.1.d05159deC7bd3D&tab=doc#/doc/?type=model&url=2848513
+
         DashScope平台的文生图容错策略
         处理限流：当 API 返回 Throttling 错误码或 HTTP 429 状态码时，表明已触发限流，限流处理请参见限流。
         异步任务轮询：轮询查询异步任务结果时，建议采用合理的轮询策略（如前30秒每3秒一次，之后拉长间隔），
@@ -35,6 +42,4 @@ public class AiConfig {
         请求将被拦截并返回 DataInspectionFailed 错误。
         生成内容的版权与合规风险：请确保您的提示词内容符合相关法律法规。
         生成包含品牌商标、名人肖像、受版权保护的 IP 形象等内容可能涉及侵权风险，请您自行评估并承担相应责任。
-     */
-}
-
+*/

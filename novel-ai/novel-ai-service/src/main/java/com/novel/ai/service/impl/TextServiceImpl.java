@@ -36,6 +36,8 @@ public class TextServiceImpl implements TextService {
 
     /**
      * AI审核书籍（小说名和简介）
+     * @param reqDto 书籍审核请求参数
+     * @return 书籍审核结果
      */
     @Override
     public RestResp<BookAuditRespDto> auditBook(BookAuditReqDto reqDto) {
@@ -85,6 +87,8 @@ public class TextServiceImpl implements TextService {
 
     /**
      * AI审核章节（章节名和内容）
+     * @param reqDto 章节审核请求参数
+     * @return 章节审核结果
      */
     @Override
     public RestResp<ChapterAuditRespDto> auditChapter(ChapterAuditReqDto reqDto) {
@@ -273,7 +277,10 @@ public class TextServiceImpl implements TextService {
     }
 
     /**
-     * 解析AI响应-小说基本信息审核
+     * 解析AI响应-书籍基本信息审核
+     * @param aiResponse AI响应
+     * @param bookId 书籍 ID
+     * @return 书籍审核结果
      */
     private BookAuditRespDto parseAuditResponse(String aiResponse, Long bookId) {
         try {
@@ -317,6 +324,10 @@ public class TextServiceImpl implements TextService {
 
     /**
      * 解析AI响应-章节审核
+     * @param aiResponse AI响应
+     * @param bookId 书籍 ID
+     * @param chapterNum 章节编号
+     * @return 章节审核结果
      */
     private ChapterAuditRespDto parseChapterAuditResponse(String aiResponse, Long bookId, Integer chapterNum) {
         try {
@@ -362,6 +373,8 @@ public class TextServiceImpl implements TextService {
 
     /**
      * 从响应中提取JSON内容
+     * @param response 响应字符串
+     * @return JSON内容
      */
     private String extractJsonFromResponse(String response) {
         // 尝试提取JSON对象
@@ -375,6 +388,11 @@ public class TextServiceImpl implements TextService {
 
     /**
      * 从JSON字符串中提取字段值（简化版解析，存入书籍表或者章节表）
+     * @param json JSON字符串
+     * @param fieldName 字段名
+     * @param type 字段类型
+     * @return 字段值
+     * @param <T> 字段类型
      */
     @SuppressWarnings("unchecked")
     private <T> T extractField(String json, String fieldName, Class<T> type) {
@@ -650,6 +668,11 @@ public class TextServiceImpl implements TextService {
         return false;
     }
 
+    /**
+     * 润色文本
+     * @param reqDto 润色请求参数
+     * @return 润色结果
+     */
     @Override
     public RestResp<TextPolishRespDto> polishText(TextPolishReqDto reqDto) {
         try {
@@ -678,6 +701,8 @@ public class TextServiceImpl implements TextService {
 
     /**
      * 构建润色提示词
+     * @param reqDto 润色请求参数
+     * @return 提示词
      */
     private String buildPolishPrompt(TextPolishReqDto reqDto) {
         return String.format(
@@ -698,6 +723,8 @@ public class TextServiceImpl implements TextService {
 
     /**
      * 解析润色响应
+     * @param aiResponse AI模型返回的响应
+     * @return 润色结果
      */
     private TextPolishRespDto parsePolishResponse(String aiResponse) {
         try {
