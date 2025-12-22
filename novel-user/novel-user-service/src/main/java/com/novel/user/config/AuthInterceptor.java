@@ -2,11 +2,15 @@ package com.novel.user.config;
 
 import com.novel.common.auth.JwtUtils;
 import com.novel.common.auth.UserHolder;
+import com.novel.common.constant.DatabaseConsts;
 import com.novel.common.constant.ErrorCodeEnum;
 import com.novel.common.constant.SystemConfigConsts;
 import com.novel.config.exception.BusinessException;
+import com.novel.user.dao.entity.AuthorInfo;
 import com.novel.user.dao.entity.UserInfo;
+import com.novel.user.dao.mapper.AuthorInfoMapper;
 import com.novel.user.dao.mapper.UserInfoMapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -27,6 +31,8 @@ import java.util.Objects;
 public class AuthInterceptor implements HandlerInterceptor {
 
     private final UserInfoMapper userInfoMapper;
+
+    private final AuthorInfoMapper authorInfoMapper;
 
     /**
      * handle 执行前调用
@@ -60,6 +66,17 @@ public class AuthInterceptor implements HandlerInterceptor {
 
         // 设置 userId 到当前线程
         UserHolder.setUserId(userId);
+
+        // 查询并设置 AuthorId (如果存在)
+        QueryWrapper<AuthorInfo> queryWrapper = new QueryWrapper<>();
+        queryWrapper
+                .eq(DatabaseConsts.AuthorInfoTable.COLUMN_USER_ID, userId)
+                .last(DatabaseConsts.SqlEnum.LIMIT_1.getSql());
+        AuthorInfo authorInfo = authorInfoMapper.selectOne(queryWrapper);
+        if (Objects.nonNull(authorInfo)) {
+            UserHolder.setAuthorId(authorInfo.getId());
+        }
+
         return HandlerInterceptor.super.preHandle(request, response, handler);
     }
 

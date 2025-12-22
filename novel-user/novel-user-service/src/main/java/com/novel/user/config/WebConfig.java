@@ -22,7 +22,8 @@ public class WebConfig implements WebMvcConfigurer {
         // 权限认证拦截
         registry.addInterceptor(authInterceptor)
                 // 拦截会员中心相关请求接口
-                .addPathPatterns(ApiRouterConsts.API_FRONT_USER_URL_PREFIX + "/**")
+                .addPathPatterns(ApiRouterConsts.API_FRONT_USER_URL_PREFIX + "/**",
+                        ApiRouterConsts.API_AUTHOR_URL_PREFIX + "/**")
                 // 放行登录注册相关请求接口
                 .excludePathPatterns(ApiRouterConsts.API_FRONT_USER_URL_PREFIX + "/register",
                         ApiRouterConsts.API_FRONT_USER_URL_PREFIX + "/login")

@@ -25,9 +25,11 @@ public class ImageServiceImpl implements ImageService {
      * 策略优化：采用指数退避（Exponential Backoff）以符合 DashScope 的轮询建议
      * maxAttempts = 15: 覆盖约 1-2 分钟的等待时间
      * backoff: 初始间隔 3000ms (3秒)，倍率 1.5，最大间隔 10000ms (10秒)
+     * 参考链接：https://bailian.console.aliyun.com/?spm=5176.30510405.J_bQ9d6wtWdX1_RtKN0y7Ar.1.d05159deC7bd3D&tab=doc#/doc/?type=model&url=2848513
      */
     @Override
-    @Retryable(retryFor = {Exception.class}, maxAttempts = 15, backoff = @Backoff(delay = 3000, multiplier = 1.5, maxDelay = 10000))
+    @Retryable(retryFor = {Exception.class}, maxAttempts = 15,
+            backoff = @Backoff(delay = 3000, multiplier = 1.5, maxDelay = 10000))
     public RestResp<String> generateImage(String prompt) {
         try {
             log.info("开始调用AI生图，prompt前50字: {}", prompt);

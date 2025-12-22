@@ -85,3 +85,37 @@ update book_chapter
 set audit_status = 1 where create_time < '2023-05-01';
 
 
+CREATE TABLE `message_content` (
+                                   `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+                                   `title` VARCHAR(150) NOT NULL COMMENT '消息标题',
+                                   `content` TEXT NOT NULL COMMENT '消息正文',
+                                   `type` TINYINT NOT NULL DEFAULT 1 COMMENT '消息类型 (0:系统公告, 1:业务提醒, 2:私信)',
+
+    -- 新增：发送者类型，防止ID冲突
+                                   `sender_type` TINYINT NOT NULL DEFAULT 0 COMMENT '发送者类型 (0:系统, 1:用户, 2:作者)',
+                                   `sender_id` BIGINT NOT NULL DEFAULT 0 COMMENT '发送者ID (0表示系统)',
+
+                                   `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+                                   PRIMARY KEY (`id`),
+                                   INDEX `idx_sender` (`sender_id`, `sender_type`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='消息内容表';
+
+CREATE TABLE `message_receive` (
+                                   `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+                                   `message_id` BIGINT UNSIGNED NOT NULL COMMENT '关联内容表ID',
+
+    -- 新增：接收者类型，彻底解决作者与用户ID冲突问题
+                                   `receiver_type` TINYINT NOT NULL DEFAULT 1 COMMENT '接收者类型 (1:用户, 2:作者)',
+                                   `receiver_id` BIGINT UNSIGNED NOT NULL COMMENT '接收者ID',
+
+                                   `is_read` TINYINT NOT NULL DEFAULT 0 COMMENT '阅读状态 (0:未读, 1:已读)',
+                                   `read_time` DATETIME DEFAULT NULL COMMENT '阅读时间',
+
+    -- 新增：逻辑删除，用户删除了信箱消息，不影响原内容
+                                   `is_deleted` TINYINT NOT NULL DEFAULT 0 COMMENT '是否删除 (0:正常, 1:已删除)',
+
+                                   PRIMARY KEY (`id`),
+    -- 核心联合索引修改：查询时必须带上 receiver_type
+                                   INDEX `idx_receiver_read` (`receiver_id`, `receiver_type`, `is_read`),
+                                   INDEX `idx_message_id` (`message_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='消息接收关联表';

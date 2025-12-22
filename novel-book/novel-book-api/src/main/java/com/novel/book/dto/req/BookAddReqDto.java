@@ -42,8 +42,7 @@ public class BookAddReqDto {
     /**
      * 小说封面地址
      */
-    @Schema(description = "小说封面地址", requiredMode = Schema.RequiredMode.REQUIRED)
-    @NotBlank
+    @Schema(description = "小说封面地址")
     private String picUrl;
 
     /**
@@ -66,5 +65,12 @@ public class BookAddReqDto {
     @Schema(description = "是否收费;1-收费 0-免费", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotNull
     private Integer isVip;
+
+    /**
+     * 书籍状态;0-连载中 1-已完结
+     */
+    @Schema(description = "书籍状态;0-连载中 1-已完结", requiredMode = Schema.RequiredMode.REQUIRED)
+    @NotNull
+    private Integer bookStatus;
 
 }

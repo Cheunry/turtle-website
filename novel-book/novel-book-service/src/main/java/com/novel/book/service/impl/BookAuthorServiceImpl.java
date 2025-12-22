@@ -57,7 +57,7 @@ public class BookAuthorServiceImpl implements BookAuthorService {
                 .workDirection(dto.getWorkDirection())
                 .categoryId(dto.getCategoryId())
                 .categoryName(dto.getCategoryName())
-                .picUrl(dto.getPicUrl())
+                .picUrl(StringUtils.isBlank(dto.getPicUrl()) ? "https://turtle-website-1379089820.cos.ap-beijing.myqcloud.com/resource/2025/12/22/b1b7e29159423d4f0ab605a35245a3ed.png" : dto.getPicUrl())
                 .bookName(dto.getBookName())
                 .authorId(dto.getAuthorId())
                 .authorName(dto.getPenName())
