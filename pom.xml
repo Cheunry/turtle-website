@@ -10,9 +10,7 @@
         <module>novel-home</module>
         <module>novel-book</module>
         <module>novel-search</module>
-        <module>novel-news</module>
         <module>novel-ai</module>
-        <module>novel-message</module>
     </modules>
 
     <parent>

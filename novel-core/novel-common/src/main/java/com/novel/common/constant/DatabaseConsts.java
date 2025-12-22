@@ -144,7 +144,14 @@ public class DatabaseConsts {
             throw new IllegalStateException(SystemConfigConsts.CONST_INSTANCE_EXCEPTION_MSG);
         }
 
-        public static final String COLUMN_NEWS_ID = "news_id";
+        // 修改为 id，因为 news_info 表的主键通常是 id，除非你确实有 news_id 这个列
+        // 假设表结构是 news_info(id, title, ...)，查询时应该是 where id = ?
+        // 原来的常量可能是为了做连接查询用的。
+        // 根据 NewsServiceImpl.getNews 方法：newsInfoMapper.selectById(id) 用的是 id
+        // queryWrapper.eq(DatabaseConsts.NewsContentTable.COLUMN_NEWS_ID, id)
+        // 这行代码看起来像是为了兼容以前的逻辑，或者 news_info 表里真的有一个 news_id 列（这很奇怪，通常主键是 id）。
+        // 假设这里指的是主键 ID。
+        public static final String COLUMN_NEWS_ID = "id";
 
     }
 

@@ -3,7 +3,7 @@ package com.novel.user.controller.inner;
 import com.novel.common.constant.ApiRouterConsts;
 import com.novel.common.resp.RestResp;
 import com.novel.user.dto.resp.UserInfoRespDto;
-import com.novel.user.service.UserSelectService;
+import com.novel.user.service.UserInfoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +20,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class InnerUserController {
 
-    private final UserSelectService userSelectService;
+    private final UserInfoService userInfoService;
 
     /**
      * 批量查询用户信息
@@ -28,7 +28,7 @@ public class InnerUserController {
     @Operation(summary = "批量查询用户信息")
     @PostMapping("listUserInfoByIds")
     RestResp<List<UserInfoRespDto>> listUserInfoByIds(@RequestBody List<Long> userIds) {
-        return userSelectService.listUserInfoByIds(userIds);
+        return userInfoService.listUserInfoByIds(userIds);
     }
 
 }

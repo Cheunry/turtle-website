@@ -13,10 +13,8 @@ import com.novel.user.dto.resp.UserInfoRespDto;
 import com.novel.user.dto.resp.UserLoginRespDto;
 import com.novel.user.dto.resp.UserRegisterRespDto;
 import com.novel.user.feign.BookFeignManager;
-import com.novel.user.service.*;
-
-import java.util.List;
-
+import com.novel.user.service.UserBookshelfService;
+import com.novel.user.service.UserInfoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -26,6 +24,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @Slf4j
 @Tag(name = "UserController", description = "前台门户-会员模块")
 @SecurityRequirement(name = SystemConfigConsts.HTTP_AUTH_HEADER_NAME)
@@ -34,11 +34,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class FrontUserController {
 
-    private final UserRegisterService userRegisterService;
-    private final UserLoginService userLoginService;
-    private final UserUpdateService userUpdateService;
-    private final UserSelectService userSelectService;
-    private final UserFeedbackService userFeedbackService;
+    private final UserInfoService userInfoService;
     private final UserBookshelfService userBookshelfService;
     private final BookFeignManager bookFeignManager;
 
@@ -47,27 +43,27 @@ public class FrontUserController {
     @Operation(summary = "用户注册接口")
     @PostMapping("register")
     public RestResp<UserRegisterRespDto> register(@Valid @RequestBody UserRegisterReqDto dto) {
-        return userRegisterService.register(dto);
+        return userInfoService.register(dto);
     }
 
     @Operation(summary = "用户登录接口")
     @PostMapping("login")
     public RestResp<UserLoginRespDto> login(@Valid @RequestBody UserLoginReqDto dto) {
         log.debug("用户登录请求: {}", dto);
-        return userLoginService.login(dto);
+        return userInfoService.login(dto);
     }
 
     @Operation(summary = "用户信息查询接口")
     @GetMapping
     public RestResp<UserInfoRespDto> getUserInfo() {
-        return userSelectService.getUserInfo(UserHolder.getUserId());
+        return userInfoService.getUserInfo(UserHolder.getUserId());
     }
 
     @Operation(summary = "用户信息修改接口")
     @PutMapping
     public RestResp<Void> updateUserInfo(@Valid @RequestBody UserInfoUptReqDto dto) {
         dto.setUserId(UserHolder.getUserId());
-        return userUpdateService.updateUserInfo(dto);
+        return userInfoService.updateUserInfo(dto);
     }
 
 
@@ -79,7 +75,7 @@ public class FrontUserController {
     @Operation(summary = "用户反馈提交接口")
     @PostMapping("feedback")
     public RestResp<Void> submitFeedback(@RequestBody String content) {
-        return userFeedbackService.saveFeedback(UserHolder.getUserId(), content);
+        return userInfoService.saveFeedback(UserHolder.getUserId(), content);
     }
 
     /**
@@ -88,7 +84,7 @@ public class FrontUserController {
     @Operation(summary = "用户反馈删除接口")
     @DeleteMapping("feedback/{id}")
     public RestResp<Void> deleteFeedback(@Parameter(description = "反馈ID") @PathVariable Long id) {
-        return userFeedbackService.deleteFeedback(UserHolder.getUserId(), id);
+        return userInfoService.deleteFeedback(UserHolder.getUserId(), id);
     }
 
 
