@@ -93,6 +93,10 @@ public class AuthorInfoServiceImpl implements AuthorInfoService {
         Long authorId = authorInfoDto.getId();
         initPointsIfNeeded(authorId);
         
+        // 检查并重置免费积分（每日重置）
+        LocalDate today = LocalDate.now();
+        resetFreePointsIfNeeded(authorId, today);
+        
         int freePoints = getFreePoints(authorId);
         int paidPoints = getPaidPoints(authorId);
         
