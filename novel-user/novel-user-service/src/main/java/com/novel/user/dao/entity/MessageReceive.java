@@ -3,17 +3,15 @@ package com.novel.user.dao.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import lombok.Builder;
 import lombok.Data;
 
 import java.time.LocalDateTime;
 
 /**
- * 消息接收关联表
+ * 消息接收关联实体
  */
-@TableName("message_receive")
 @Data
-@Builder
+@TableName("message_receive")
 public class MessageReceive {
 
     /**
@@ -28,14 +26,14 @@ public class MessageReceive {
     private Long messageId;
 
     /**
-     * 接收者类型 (1:用户, 2:作者)
-     */
-    private Integer receiverType;
-
-    /**
-     * 接收者ID
+     * 接收者ID (对应UserID或AuthorID)
      */
     private Long receiverId;
+
+    /**
+     * 接收者身份类型 (1:普通用户/UserID, 2:作者/AuthorID)
+     */
+    private Integer receiverType;
 
     /**
      * 阅读状态 (0:未读, 1:已读)
@@ -48,9 +46,8 @@ public class MessageReceive {
     private LocalDateTime readTime;
 
     /**
-     * 是否删除 (0:正常, 1:已删除)
+     * 是否逻辑删除 (0:正常, 1:用户已删)
      */
     private Integer isDeleted;
 
 }
-

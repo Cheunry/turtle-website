@@ -4,10 +4,8 @@ novel-cloud
 ├── novel-monitor -- 基于 Spring Boot Admin 构建的微服务监控中心
 ├── novel-search -- 基于 Elasticsearch 构建的搜索服务
 ├── novel-home -- 首页微服务
-├── novel-news -- 新闻微服务
 ├── novel-book -- 小说微服务
 ├── novel-user -- 会员微服务
-├── novel-author -- 作家微服务  
 ├──  novel-resource -- 资源微服务
 └── novel-ai -- AI微服务
 

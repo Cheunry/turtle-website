@@ -12,11 +12,13 @@ import com.novel.book.dto.req.ChapterAuditReqDto;
 import com.novel.book.dto.resp.BookAuditRespDto;
 import com.novel.book.dto.resp.ChapterAuditRespDto;
 import com.novel.book.feign.AiFeignManager;
+import com.novel.book.feign.UserFeignManager;
 import com.novel.book.service.BookAuditService;
 import com.novel.common.constant.AmqpConsts;
 import com.novel.common.constant.DatabaseConsts;
 import com.novel.common.constant.ErrorCodeEnum;
 import com.novel.common.resp.RestResp;
+import com.novel.user.dto.req.MessageSendReqDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.spring.core.RocketMQTemplate;
@@ -40,6 +42,7 @@ public class BookAuditServiceImpl implements BookAuditService {
     private final ContentAuditMapper contentAuditMapper;
     private final AiFeignManager aiFeignManager;
     private final RocketMQTemplate rocketMQTemplate; // 添加MQ依赖
+    private final UserFeignManager userFeignManager; // 添加用户服务依赖，用于发送消息
 
     /**
      * AI审核置信度阈值，低于此值需要人工审核
@@ -229,6 +232,15 @@ public class BookAuditServiceImpl implements BookAuditService {
             } catch (Exception e) {
                 log.error("发送ES消息失败，书籍ID: {}", bookInfo.getId(), e);
                 // ES消息发送失败不影响审核结果
+            }
+            
+            // 审核通过后发送消息给作者
+            try {
+                sendAuditPassMessageToAuthor(bookInfo.getId(), bookInfo.getBookName(), true);
+                log.info("书籍[{}]审核通过，已发送消息给作者", bookInfo.getId());
+            } catch (Exception e) {
+                log.error("发送消息给作者失败，书籍ID: {}", bookInfo.getId(), e);
+                // 消息发送失败不影响审核结果
             }
 
         } else if (isPassed && !isHighConfidence) {
@@ -434,6 +446,19 @@ public class BookAuditServiceImpl implements BookAuditService {
                 // ES消息发送失败不影响审核结果
             }
             
+            // 审核通过后发送消息给作者
+            try {
+                BookInfo bookInfo = bookInfoMapper.selectById(bookChapter.getBookId());
+                if (bookInfo != null) {
+                    sendAuditPassMessageToAuthor(bookChapter.getBookId(), 
+                            bookInfo.getBookName() + " - " + bookChapter.getChapterName(), false);
+                    log.info("章节[{}]审核通过，已发送消息给作者", bookChapter.getId());
+                }
+            } catch (Exception e) {
+                log.error("发送消息给作者失败，章节ID: {}", bookChapter.getId(), e);
+                // 消息发送失败不影响审核结果
+            }
+            
             log.info("章节[{}]AI审核通过，置信度: {}，已更新审核表和章节表", bookChapter.getId(), aiConfidence);
 
         } else if (isPassed && !isHighConfidence) {
@@ -514,6 +539,18 @@ public class BookAuditServiceImpl implements BookAuditService {
                     log.error("发送ES消息失败，书籍ID: {}", audit.getDataSourceId(), e);
                     // ES消息发送失败不影响审核结果
                 }
+                
+                // 审核通过后发送消息给作者
+                try {
+                    BookInfo bookInfo = bookInfoMapper.selectById(audit.getDataSourceId());
+                    if (bookInfo != null) {
+                        sendAuditPassMessageToAuthor(bookInfo.getId(), bookInfo.getBookName(), true);
+                        log.info("人工审核通过，书籍[{}]已发送消息给作者", audit.getDataSourceId());
+                    }
+                } catch (Exception e) {
+                    log.error("发送消息给作者失败，书籍ID: {}", audit.getDataSourceId(), e);
+                    // 消息发送失败不影响审核结果
+                }
             }
         } else if (DATA_SOURCE_BOOK_CHAPTER.equals(audit.getDataSource())) {
             // 更新章节表
@@ -537,6 +574,19 @@ public class BookAuditServiceImpl implements BookAuditService {
                     } catch (Exception e) {
                         log.error("发送ES消息失败，章节ID: {}", audit.getDataSourceId(), e);
                         // ES消息发送失败不影响审核结果
+                    }
+                    
+                    // 审核通过后发送消息给作者
+                    try {
+                        BookInfo bookInfo = bookInfoMapper.selectById(chapter.getBookId());
+                        if (bookInfo != null) {
+                            sendAuditPassMessageToAuthor(chapter.getBookId(), 
+                                    bookInfo.getBookName() + " - " + chapter.getChapterName(), false);
+                            log.info("人工审核通过，章节[{}]已发送消息给作者", audit.getDataSourceId());
+                        }
+                    } catch (Exception e) {
+                        log.error("发送消息给作者失败，章节ID: {}", audit.getDataSourceId(), e);
+                        // 消息发送失败不影响审核结果
                     }
                 }
             }
@@ -808,5 +858,51 @@ public class BookAuditServiceImpl implements BookAuditService {
         }
 
         return shortReason;
+    }
+
+    /**
+     * 发送审核通过消息给作者
+     * @param bookId 书籍ID
+     * @param contentName 内容名称（书籍名或章节名）
+     * @param isBook 是否为书籍审核（true为书籍，false为章节）
+     */
+    private void sendAuditPassMessageToAuthor(Long bookId, String contentName, boolean isBook) {
+        if (bookId == null) {
+            return;
+        }
+        
+        try {
+            // 查询书籍信息获取作者ID
+            BookInfo bookInfo = bookInfoMapper.selectById(bookId);
+            if (bookInfo == null || bookInfo.getAuthorId() == null) {
+                log.warn("无法获取书籍信息或作者ID，书籍ID: {}", bookId);
+                return;
+            }
+            
+            // 构建消息内容
+            String title = isBook ? "您的作品审核通过" : "您的章节审核通过";
+            String content = String.format("恭喜！您的%s《%s》已通过审核，现已上线。", 
+                    isBook ? "作品" : "章节", contentName);
+            String link = isBook ? "/author/book/list" : "/author/chapter/list?bookId=" + bookId;
+            
+            // 构建消息发送DTO
+            MessageSendReqDto messageDto = MessageSendReqDto.builder()
+                    .receiverId(bookInfo.getAuthorId())
+                    .receiverType(2) // 2表示作者
+                    .title(title)
+                    .content(content)
+                    .type(2) // 2表示作家助手/审核消息
+                    .link(link)
+                    .busId(bookId)
+                    .busType(isBook ? "BOOK_AUDIT" : "CHAPTER_AUDIT")
+                    .build();
+            
+            // 发送消息
+            userFeignManager.sendMessage(messageDto);
+            log.debug("已发送审核通过消息给作者，作者ID: {}, 书籍ID: {}", bookInfo.getAuthorId(), bookId);
+        } catch (Exception e) {
+            log.error("发送审核通过消息给作者失败，书籍ID: {}", bookId, e);
+            // 不抛出异常，避免影响审核流程
+        }
     }
 }

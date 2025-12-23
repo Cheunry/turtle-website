@@ -1,8 +1,11 @@
-package com.novel.user.controller.author;
+package com.novel.user.controller.front;
 
-import com.novel.user.dto.author.req.AuthorRegisterReqDto;
+import com.novel.user.dto.req.AuthorRegisterReqDto;
+import com.novel.user.dto.req.MessagePageReqDto;
+import com.novel.user.dto.resp.MessageRespDto;
 import com.novel.user.feign.BookFeignManager;
 import com.novel.user.service.AuthorInfoService;
+import com.novel.user.service.MessageService;
 import com.novel.book.dto.req.*;
 import com.novel.book.dto.resp.BookChapterRespDto;
 import com.novel.book.dto.resp.BookInfoRespDto;
@@ -12,6 +15,7 @@ import com.novel.common.constant.SystemConfigConsts;
 import com.novel.common.req.PageReqDto;
 import com.novel.common.resp.PageRespDto;
 import com.novel.common.resp.RestResp;
+import com.novel.user.service.impl.MessageServiceImpl;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -32,6 +36,7 @@ public class AuthorController {
 
     private final AuthorInfoService authorInfoService;
     private final BookFeignManager bookFeignManager;
+    private final MessageService messageService; // Add field
 
     /**
      * 校验用户是否是作家
@@ -54,7 +59,6 @@ public class AuthorController {
         dto.setUserId(UserHolder.getUserId());
         return authorInfoService.authorRegister(dto);
     }
-
 
     /**
      * 发布书籍接口
@@ -173,5 +177,65 @@ public class AuthorController {
         return bookFeignManager.deleteBookChapter(dto);
     }
 
-}
+    /* ************************作家消息相关接口************************* */
 
+    @Operation(summary = "获取作家消息列表")
+    @PostMapping("message/list")
+    public RestResp<PageRespDto<MessageRespDto>> listAuthorMessages(
+        @Parameter(description = "分页参数") @RequestBody MessagePageReqDto pageReqDto
+        ) {
+        // 明确指定只查询作者消息（receiver_type=2），避免与普通用户消息混淆
+        pageReqDto.setReceiverType(2);
+        // 如果未指定消息类型，默认只查作家相关的消息（类型2:作家助手/审核）
+        // 但允许前端通过busType进一步筛选（如：BOOK_AUDIT, CHAPTER_AUDIT, BOOK_COVER等）
+        if (pageReqDto.getMessageType() == null) {
+            pageReqDto.setMessageType(2);
+        }
+        return messageService.listMessages(pageReqDto);
+    }
+
+    @Operation(summary = "获取作家未读消息数量")
+    @GetMapping("message/unread_count")
+    public RestResp<Long> getAuthorUnReadCount() {
+        // 调用专门的方法统计作者消息（receiver_type=2）
+        MessageServiceImpl messageServiceImpl = (MessageServiceImpl) messageService;
+        return messageServiceImpl.getUnReadCountByReceiverType(2, 2);
+    }
+
+    @Operation(summary = "标记作家消息为已读")
+    @PutMapping("message/read/{id}")
+    public RestResp<Void> readAuthorMessage(@Parameter(description = "消息ID") @PathVariable Long id) {
+        return messageService.readMessage(id);
+    }
+
+    @Operation(summary = "删除作家消息")
+    @DeleteMapping("message/{id}")
+    public RestResp<Void> deleteAuthorMessage(@Parameter(description = "消息ID") @PathVariable Long id) {
+        return messageService.deleteMessage(id);
+    }
+
+    @Operation(summary = "批量标记作家消息为已读")
+    @PutMapping("message/batch_read")
+    public RestResp<Void> batchReadAuthorMessages(@RequestBody java.util.List<Long> ids) {
+        return messageService.batchReadMessages(2, ids);
+    }
+
+    @Operation(summary = "批量删除作家消息")
+    @PostMapping("message/batch_delete")
+    public RestResp<Void> batchDeleteAuthorMessages(@RequestBody java.util.List<Long> ids) {
+        return messageService.batchDeleteMessages(2, ids);
+    }
+
+    @Operation(summary = "全部标记作家消息为已读")
+    @PutMapping("message/all_read")
+    public RestResp<Void> allReadAuthorMessages() {
+        return messageService.allReadMessages(2);
+    }
+
+    @Operation(summary = "全部删除作家消息")
+    @PostMapping("message/all_delete")
+    public RestResp<Void> allDeleteAuthorMessages() {
+        return messageService.allDeleteMessages(2);
+    }
+
+}

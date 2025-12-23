@@ -10,7 +10,7 @@ import com.novel.common.resp.PageRespDto;
 import com.novel.common.resp.RestResp;
 import com.novel.user.dao.entity.AuthorInfo;
 import com.novel.user.dao.mapper.AuthorInfoMapper;
-import com.novel.user.dto.author.AuthorInfoDto;
+import com.novel.user.dto.AuthorInfoDto;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Component;
 

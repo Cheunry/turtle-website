@@ -1,4 +1,4 @@
-package com.novel.user.dto.author;
+package com.novel.user.dto;
 
 import lombok.Builder;
 import lombok.Data;

@@ -1,11 +1,9 @@
 package com.novel.book.dto.req;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
-import java.io.Serializable;
 
 /**
  * 小说更新请求 DTO

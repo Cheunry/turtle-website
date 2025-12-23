@@ -28,6 +28,19 @@
                 <artifactId>novel-config</artifactId>
                 <version>${project.parent.version}</version>
             </dependency>
+
+            <dependency>
+                <groupId>com.novel</groupId>
+                <artifactId>novel-book-api</artifactId>
+                <version>${project.parent.version}</version>
+            </dependency>
+
+
+            <dependency>
+                <groupId>com.novel</groupId>
+                <artifactId>novel-user-api</artifactId>
+                <version>${project.parent.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 

@@ -2,6 +2,7 @@ package com.novel.book.feign;
 
 import com.novel.common.constant.ErrorCodeEnum;
 import com.novel.common.resp.RestResp;
+import com.novel.user.dto.req.MessageSendReqDto;
 import com.novel.user.dto.resp.UserInfoRespDto;
 import com.novel.user.feign.UserFeign;
 import lombok.AllArgsConstructor;
@@ -29,5 +30,12 @@ public class UserFeignManager {
             return resp.getData();
         }
         return new ArrayList<>(0);
+    }
+
+    /**
+     * 发送消息
+     */
+    public void sendMessage(MessageSendReqDto dto) {
+        userFeign.sendMessage(dto);
     }
 }

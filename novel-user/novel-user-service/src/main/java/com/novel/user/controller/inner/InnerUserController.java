@@ -2,6 +2,8 @@ package com.novel.user.controller.inner;
 
 import com.novel.common.constant.ApiRouterConsts;
 import com.novel.common.resp.RestResp;
+import com.novel.user.dto.req.MessageSendReqDto;
+import com.novel.user.service.MessageService;
 import com.novel.user.dto.resp.UserInfoRespDto;
 import com.novel.user.service.UserInfoService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -21,6 +23,7 @@ import java.util.List;
 public class InnerUserController {
 
     private final UserInfoService userInfoService;
+    private final MessageService messageService;
 
     /**
      * 批量查询用户信息
@@ -31,4 +34,13 @@ public class InnerUserController {
         return userInfoService.listUserInfoByIds(userIds);
     }
 
+    /**
+     * 发送消息
+     */
+    @Operation(summary = "发送消息")
+    @PostMapping("sendMessage")
+    RestResp<Void> sendMessage(@RequestBody MessageSendReqDto dto) {
+        messageService.sendMessage(dto);
+        return RestResp.ok();
+    }
 }

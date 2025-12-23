@@ -1,6 +1,6 @@
 package com.novel.user.service;
 
-import com.novel.user.dto.author.req.AuthorRegisterReqDto;
+import com.novel.user.dto.req.AuthorRegisterReqDto;
 import com.novel.common.resp.RestResp;
 import org.springframework.stereotype.Service;
 

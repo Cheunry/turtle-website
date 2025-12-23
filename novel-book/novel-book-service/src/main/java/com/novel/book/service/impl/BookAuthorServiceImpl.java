@@ -7,11 +7,11 @@ import com.novel.book.dao.entity.BookChapter;
 import com.novel.book.dao.entity.BookInfo;
 import com.novel.book.dao.mapper.BookChapterMapper;
 import com.novel.book.dao.mapper.BookInfoMapper;
+import com.novel.book.dto.mq.BookChapterUpdateDto;
 import com.novel.book.dto.req.*;
 import com.novel.book.dto.resp.BookChapterRespDto;
 import com.novel.book.dto.resp.BookInfoRespDto;
 import com.novel.book.service.BookAuthorService;
-import com.novel.book.service.BookAuditService;
 import com.novel.common.constant.AmqpConsts;
 import com.novel.common.constant.DatabaseConsts;
 import com.novel.common.constant.ErrorCodeEnum;
@@ -22,6 +22,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.spring.core.RocketMQTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
 import java.util.Objects;
@@ -35,7 +37,6 @@ public class BookAuthorServiceImpl implements BookAuthorService {
     private final BookInfoMapper bookInfoMapper;
     private final BookChapterMapper bookChapterMapper;
     private final RocketMQTemplate rocketMQTemplate;
-    private final BookAuditService bookAuditService;
 
 
     /**
@@ -43,6 +44,7 @@ public class BookAuthorServiceImpl implements BookAuthorService {
      * @param dto 新增书籍请求dto
      * @return 响应
      */
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public RestResp<Void> saveBook(BookAddReqDto dto) {
 
@@ -72,13 +74,13 @@ public class BookAuthorServiceImpl implements BookAuthorService {
         // 保存小说信息
         bookInfoMapper.insert(bookInfo);
 
-        // 立即触发AI审核（先写入审核表，然后进行AI审核）
-        try {
-            bookAuditService.auditBookInfo(bookInfo);
-        } catch (Exception e) {
-            log.error("AI审核失败，书籍ID: {}", bookInfo.getId(), e);
-            // 审核失败不影响保存，保持待审核状态
-        }
+        // 立即触发AI审核（改为发送MQ异步审核）
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                rocketMQTemplate.convertAndSend(AmqpConsts.BookAuditMq.TOPIC + ":" + AmqpConsts.BookAuditMq.TAG_AUDIT_BOOK, bookInfo.getId());
+            }
+        });
 
         return RestResp.ok();
     }
@@ -88,6 +90,7 @@ public class BookAuthorServiceImpl implements BookAuthorService {
      * @param dto 更新书籍请求dto
      * @return Void
      */
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public RestResp<Void> updateBook(BookUptReqDto dto) {
         // 1. 校验小说是否存在且属于该作者
@@ -153,16 +156,23 @@ public class BookAuthorServiceImpl implements BookAuthorService {
             
             // 如果小说名或简介有变更，触发AI审核
             if (needAudit) {
-                // 重新查询完整的书籍信息（包含更新后的内容）
-                BookInfo updatedBookInfo = bookInfoMapper.selectById(dto.getBookId());
-                try {
-                    bookAuditService.auditBookInfo(updatedBookInfo);
-                } catch (Exception e) {
-                    log.error("AI审核失败，书籍ID: {}", dto.getBookId(), e);
-                    // 审核失败不影响更新，保持待审核状态
+                // 改为发送MQ异步审核
+                if (TransactionSynchronizationManager.isSynchronizationActive()) {
+                    TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                        @Override
+                        public void afterCommit() {
+                            try {
+                                rocketMQTemplate.convertAndSend(AmqpConsts.BookAuditMq.TOPIC + ":" + AmqpConsts.BookAuditMq.TAG_AUDIT_BOOK, dto.getBookId());
+                            } catch (Exception e) {
+                                log.error("发送书籍更新审核MQ失败，bookId: {}", dto.getBookId(), e);
+                            }
+                        }
+                    });
+                } else {
+                    rocketMQTemplate.convertAndSend(AmqpConsts.BookAuditMq.TOPIC + ":" + AmqpConsts.BookAuditMq.TAG_AUDIT_BOOK, dto.getBookId());
                 }
             }
-            
+
             // 移除 sendBookChangeMsg 调用，审核通过后再发送
         }
 
@@ -211,19 +221,57 @@ public class BookAuthorServiceImpl implements BookAuthorService {
 
         bookChapterMapper.insert(chapter);
 
+        // 2. 直接使用 DTO 里的 chapterNum，且 insert 后 ID 应该已经回填
+        final Long chapterId = chapter.getId();
+
         // 更新书籍字数和最新章节信息
         updateBookInfo(chapter.getBookId(), chapter, true, 0);
 
-        // 立即触发AI审核（先写入审核表，然后进行AI审核）
-        try {
-            bookAuditService.auditChapter(chapter);
-        } catch (Exception e) {
-            log.error("AI审核失败，章节ID: {}", chapter.getId(), e);
-            // 审核失败不影响保存，保持待审核状态
+        // 使用事务同步管理器，确保事务提交后再发送 MQ
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    try {
+                        // 立即触发AI审核（改为发送MQ异步审核）
+                        rocketMQTemplate.convertAndSend(AmqpConsts.BookAuditMq.TOPIC + ":" + AmqpConsts.BookAuditMq.TAG_AUDIT_CHAPTER, chapterId);
+
+                        // 发送书籍章节更新通知消息
+                        BookChapterUpdateDto updateDto = BookChapterUpdateDto.builder()
+                                .bookId(bookInfo.getId())
+                                .bookName(bookInfo.getBookName())
+                                .authorId(bookInfo.getAuthorId())
+                                .authorName(bookInfo.getAuthorName())
+                                .chapterId(chapterId)
+                                .chapterName(chapter.getChapterName())
+                                .chapterNum(chapter.getChapterNum())
+                                .updateTime(LocalDateTime.now())
+                                .build();
+                        rocketMQTemplate.convertAndSend(AmqpConsts.BookChangeMq.TOPIC + ":" + AmqpConsts.BookChangeMq.TAG_CHAPTER_UPDATE, updateDto);
+                    } catch (Exception e) {
+                        log.error("发送章节创建MQ消息失败，chapterId: {}", chapterId, e);
+                    }
+                }
+            });
+        } else {
+            // 如果不在事务中（理论上不会，因为有 @Transactional），直接发送
+            rocketMQTemplate.convertAndSend(AmqpConsts.BookAuditMq.TOPIC + ":" + AmqpConsts.BookAuditMq.TAG_AUDIT_CHAPTER, chapterId);
+            
+            BookChapterUpdateDto updateDto = BookChapterUpdateDto.builder()
+                    .bookId(bookInfo.getId())
+                    .bookName(bookInfo.getBookName())
+                    .authorId(bookInfo.getAuthorId())
+                    .authorName(bookInfo.getAuthorName())
+                    .chapterId(chapterId)
+                    .chapterName(chapter.getChapterName())
+                    .chapterNum(chapter.getChapterNum())
+                    .updateTime(LocalDateTime.now())
+                    .build();
+            rocketMQTemplate.convertAndSend(AmqpConsts.BookChangeMq.TOPIC + ":" + AmqpConsts.BookChangeMq.TAG_CHAPTER_UPDATE, updateDto);
         }
 
         // 移除 sendBookChangeMsg 调用，审核通过后再发送
-
+        
         return RestResp.ok();
 
     }
@@ -449,13 +497,19 @@ public class BookAuthorServiceImpl implements BookAuthorService {
         updateBookInfo(chapter.getBookId(), chapter, false, oldWordCount);
 
         // 如果章节内容有变更，触发AI审核
-        // 重新查询完整的章节信息（包含更新后的内容）
-        BookChapter updatedChapter = bookChapterMapper.selectById(chapter.getId());
-        try {
-            bookAuditService.auditChapter(updatedChapter);
-        } catch (Exception e) {
-            log.error("AI审核失败，章节ID: {}", chapter.getId(), e);
-            // 审核失败不影响更新，保持待审核状态
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    try {
+                        rocketMQTemplate.convertAndSend(AmqpConsts.BookAuditMq.TOPIC + ":" + AmqpConsts.BookAuditMq.TAG_AUDIT_CHAPTER, chapter.getId());
+                    } catch (Exception e) {
+                        log.error("发送章节更新审核MQ失败，chapterId: {}", chapter.getId(), e);
+                    }
+                }
+            });
+        } else {
+            rocketMQTemplate.convertAndSend(AmqpConsts.BookAuditMq.TOPIC + ":" + AmqpConsts.BookAuditMq.TAG_AUDIT_CHAPTER, chapter.getId());
         }
 
         // 移除 sendBookChangeMsg 调用，审核通过后再发送（如果需要的话）
@@ -547,7 +601,22 @@ public class BookAuthorServiceImpl implements BookAuthorService {
         }
         // 构建 Destination: Topic:Tag
         String destination = AmqpConsts.BookChangeMq.TOPIC + ":" + AmqpConsts.BookChangeMq.TAG_UPDATE;
-        // 发送消息，消息体就是 bookId
-        rocketMQTemplate.convertAndSend(destination, bookId);
+
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    try {
+                        // 发送消息，消息体就是 bookId
+                        rocketMQTemplate.convertAndSend(destination, bookId);
+                    } catch (Exception e) {
+                        log.error("发送书籍ChangeMsg MQ失败，bookId: {}", bookId, e);
+                    }
+                }
+            });
+        } else {
+            // 发送消息，消息体就是 bookId
+            rocketMQTemplate.convertAndSend(destination, bookId);
+        }
     }
 }

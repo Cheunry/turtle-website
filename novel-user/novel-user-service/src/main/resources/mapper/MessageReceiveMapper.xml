@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.novel.user.dao.mapper.MessageReceiveMapper">
+
+    <!-- 结果映射：MessageRespDto -->
+    <resultMap id="MessageRespDtoMap" type="com.novel.user.dto.resp.MessageRespDto">
+        <id column="id" property="id" />
+        <result column="title" property="title" />
+        <result column="content" property="content" />
+        <result column="type" property="type" />
+        <result column="link" property="link" />
+        <result column="extension" property="extension" />
+        <result column="bus_type" property="busType" />
+        <result column="is_read" property="isRead" />
+        <result column="create_time" property="createTime" />
+    </resultMap>
+
+    <!-- 查询消息列表 -->
+    <select id="selectMessageList" resultMap="MessageRespDtoMap">
+        SELECT
+            r.id,
+            c.title,
+            c.content,
+            c.type,
+            c.link,
+            c.extension,
+            c.bus_type,
+            r.is_read,
+            c.create_time
+        FROM message_receive r
+        INNER JOIN message_content c ON r.message_id = c.id
+        WHERE r.receiver_id = #{receiverId}
+          AND r.receiver_type = #{receiverType}
+          AND r.is_deleted = 0
+        <if test="messageType != null">
+          AND c.type = #{messageType}
+        </if>
+        <if test="busType != null and busType != ''">
+          <choose>
+            <!-- 如果busType以'AUDIT'结尾，表示查询所有审核相关的（BOOK_AUDIT, CHAPTER_AUDIT） -->
+            <when test="busType == 'AUDIT'">
+              AND (c.bus_type = 'BOOK_AUDIT' OR c.bus_type = 'CHAPTER_AUDIT')
+            </when>
+            <!-- 否则使用精确匹配 -->
+            <otherwise>
+              AND c.bus_type = #{busType}
+            </otherwise>
+          </choose>
+        </if>
+        ORDER BY r.id DESC
+    </select>
+
+    <!-- 统计未读数量 -->
+    <select id="countUnRead" resultType="java.lang.Long">
+        SELECT count(1)
+        FROM message_receive r
+        INNER JOIN message_content c ON r.message_id = c.id
+        WHERE r.receiver_id = #{receiverId}
+          AND r.receiver_type = #{receiverType}
+          AND (r.is_read = 0 OR r.is_read IS NULL)
+          AND r.is_deleted = 0
+        <if test="messageType != null">
+            AND c.type = #{messageType}
+        </if>
+        <if test="busType != null and busType != ''">
+          <choose>
+            <!-- 如果busType以'AUDIT'结尾，表示查询所有审核相关的（BOOK_AUDIT, CHAPTER_AUDIT） -->
+            <when test="busType == 'AUDIT'">
+              AND (c.bus_type = 'BOOK_AUDIT' OR c.bus_type = 'CHAPTER_AUDIT')
+            </when>
+            <!-- 否则使用精确匹配 -->
+            <otherwise>
+              AND c.bus_type = #{busType}
+            </otherwise>
+          </choose>
+        </if>
+    </select>
+
+    <!-- 批量标记已读 -->
+    <update id="updateBatchRead">
+        UPDATE message_receive
+        SET is_read = 1, read_time = NOW()
+        WHERE receiver_id = #{receiverId}
+          AND receiver_type = #{receiverType}
+          AND id IN
+          <foreach collection="ids" item="id" open="(" separator="," close=")">
+              #{id}
+          </foreach>
+    </update>
+
+    <!-- 批量删除 -->
+    <update id="updateBatchDelete">
+        UPDATE message_receive
+        SET is_deleted = 1
+        WHERE receiver_id = #{receiverId}
+          AND receiver_type = #{receiverType}
+          AND id IN
+          <foreach collection="ids" item="id" open="(" separator="," close=")">
+              #{id}
+          </foreach>
+    </update>
+
+    <!-- 全部标记已读 -->
+    <update id="updateAllRead">
+        UPDATE message_receive
+        SET is_read = 1, read_time = NOW()
+        WHERE receiver_id = #{receiverId}
+          AND receiver_type = #{receiverType}
+          AND is_deleted = 0
+          AND is_read = 0
+    </update>
+
+    <!-- 全部删除 (清空) -->
+    <update id="updateAllDelete">
+        UPDATE message_receive
+        SET is_deleted = 1
+        WHERE receiver_id = #{receiverId}
+          AND receiver_type = #{receiverType}
+          AND is_deleted = 0
+    </update>
+
+</mapper>
+
