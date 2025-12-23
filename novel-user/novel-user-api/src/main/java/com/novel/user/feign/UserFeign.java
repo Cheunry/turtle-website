@@ -28,6 +28,7 @@ public interface UserFeign {
     @PostMapping(ApiRouterConsts.API_INNER_USER_URL_PREFIX + "/sendMessage")
     RestResp<Void> sendMessage(@RequestBody MessageSendReqDto dto);
 
+
     @Component
     class UserFeignFallback implements UserFeign {
 
@@ -42,6 +43,8 @@ public interface UserFeign {
         public RestResp<Void> sendMessage(MessageSendReqDto dto) {
             return RestResp.fail(com.novel.common.constant.ErrorCodeEnum.SYSTEM_ERROR);
         }
+
+
     }
 
 }

@@ -41,6 +41,13 @@
                 <artifactId>novel-user-api</artifactId>
                 <version>${project.parent.version}</version>
             </dependency>
+
+            <dependency>
+                <groupId>com.novel</groupId>
+                <artifactId>novel-ai-api</artifactId>
+                <version>1.0.0-SNAPSHOT</version>
+            </dependency>
+
         </dependencies>
     </dependencyManagement>
 

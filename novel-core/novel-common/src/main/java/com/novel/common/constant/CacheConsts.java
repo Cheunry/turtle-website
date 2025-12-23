@@ -112,6 +112,31 @@ public class CacheConsts {
     public static final String AUTHOR_INFO_CACHE_NAME = "authorInfoCache";
 
     /**
+     * 作者积分 Redis Key 前缀
+     */
+    public static final String AUTHOR_POINTS_PREFIX = REDIS_CACHE_PREFIX + "author:points:";
+
+    /**
+     * 作者免费积分 Redis Key 模板: Cache::Novel::author:points:free:{authorId}
+     */
+    public static final String AUTHOR_FREE_POINTS_KEY = AUTHOR_POINTS_PREFIX + "free:%s";
+
+    /**
+     * 作者付费积分 Redis Key 模板: Cache::Novel::author:points:paid:{authorId}
+     */
+    public static final String AUTHOR_PAID_POINTS_KEY = AUTHOR_POINTS_PREFIX + "paid:%s";
+
+    /**
+     * 作者免费积分重置标记 Redis Key 模板: Cache::Novel::author:points:reset:{authorId}:{date}
+     */
+    public static final String AUTHOR_FREE_POINTS_RESET_KEY = AUTHOR_POINTS_PREFIX + "reset:%s:%s";
+
+    /**
+     * 作者积分消费幂等性控制 Redis Key 模板: Cache::Novel::author:points:deduct:idempotent:{authorId}:{consumeType}:{relatedId}:{timestamp}
+     */
+    public static final String AUTHOR_POINTS_DEDUCT_IDEMPOTENT_KEY = AUTHOR_POINTS_PREFIX + "deduct:idempotent:%s:%s:%s:%s";
+
+    /**
      * 缓存配置常量
      */
     public enum CacheEnum {

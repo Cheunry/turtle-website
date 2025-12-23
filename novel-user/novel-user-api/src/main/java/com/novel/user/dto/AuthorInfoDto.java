@@ -11,5 +11,8 @@ public class AuthorInfoDto {
     private String penName;
 
     private Integer status;
-}
 
+    private Integer freePoints;
+
+    private Integer paidPoints;
+}

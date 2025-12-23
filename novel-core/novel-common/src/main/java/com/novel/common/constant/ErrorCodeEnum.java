@@ -177,6 +177,11 @@ public enum ErrorCodeEnum {
     AUTHOR_DUPLICATE_REGISTRATION("A3002", "您已经是作家了，无需重复注册"),
 
     /**
+     * 作者积分不足
+     */
+    USER_POINTS_NOT_ENOUGH("A3006", "作者积分不足"),
+
+    /**
      * 书籍提交频率限制
      */
     AUTHOR_BOOK_SUBMIT_FREQUENCY_LIMIT("A3004", "提交频率过高，请稍后再试"),

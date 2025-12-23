@@ -1,7 +1,6 @@
 package com.novel.user.config;
 
 import com.novel.common.constant.ApiRouterConsts;
-import com.novel.config.interceptor.TokenParseInterceptor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;

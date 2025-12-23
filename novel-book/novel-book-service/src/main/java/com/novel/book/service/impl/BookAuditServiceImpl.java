@@ -79,6 +79,7 @@ public class BookAuditServiceImpl implements BookAuditService {
      */
     private static final Integer AUDIT_STATUS_REJECTED = 2;
 
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void auditBookInfo(BookInfo bookInfo) {

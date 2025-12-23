@@ -74,7 +74,7 @@ public class BookAuthorServiceImpl implements BookAuthorService {
         // 保存小说信息
         bookInfoMapper.insert(bookInfo);
 
-        // 立即触发AI审核（改为发送MQ异步审核）
+        // 立即触发AI审核（发送MQ异步审核）
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
@@ -172,8 +172,6 @@ public class BookAuthorServiceImpl implements BookAuthorService {
                     rocketMQTemplate.convertAndSend(AmqpConsts.BookAuditMq.TOPIC + ":" + AmqpConsts.BookAuditMq.TAG_AUDIT_BOOK, dto.getBookId());
                 }
             }
-
-            // 移除 sendBookChangeMsg 调用，审核通过后再发送
         }
 
         return RestResp.ok();
@@ -269,9 +267,6 @@ public class BookAuthorServiceImpl implements BookAuthorService {
                     .build();
             rocketMQTemplate.convertAndSend(AmqpConsts.BookChangeMq.TOPIC + ":" + AmqpConsts.BookChangeMq.TAG_CHAPTER_UPDATE, updateDto);
         }
-
-        // 移除 sendBookChangeMsg 调用，审核通过后再发送
-        
         return RestResp.ok();
 
     }

@@ -127,4 +127,9 @@ public class ApiRouterConsts {
     public static final String API_INNER_USER_URL_PREFIX =
         API_INNER_URL_PREFIX + USER_URL_PREFIX;
 
+    /**
+     * 作家微服务内部调用接口
+     */
+    public static final String API_INNER_AUTHOR_URL_PREFIX = API_INNER_URL_PREFIX + "/author";
+
 }

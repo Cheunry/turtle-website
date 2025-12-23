@@ -18,21 +18,30 @@
 
         <dependency>
             <groupId>com.novel</groupId>
-            <artifactId>novel-ai-api</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.novel</groupId>
             <artifactId>novel-common</artifactId>
-            <version>${project.version}</version>
         </dependency>
 
         <dependency>
             <groupId>com.novel</groupId>
             <artifactId>novel-config</artifactId>
-            <version>${project.version}</version>
         </dependency>
+
+        <dependency>
+            <groupId>com.novel</groupId>
+            <artifactId>novel-ai-api</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.novel</groupId>
+            <artifactId>novel-book-api</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.novel</groupId>
+            <artifactId>novel-user-api</artifactId>
+        </dependency>
+
+
 
         <dependency>
             <groupId>org.springframework.cloud</groupId>

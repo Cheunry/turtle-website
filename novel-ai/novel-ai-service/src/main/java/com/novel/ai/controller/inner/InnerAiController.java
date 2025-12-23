@@ -5,6 +5,7 @@ import com.novel.book.dto.req.BookCoverReqDto;
 import com.novel.book.dto.req.ChapterAuditReqDto;
 import com.novel.book.dto.resp.BookAuditRespDto;
 import com.novel.book.dto.resp.ChapterAuditRespDto;
+import com.novel.ai.service.ImageService;
 import com.novel.ai.service.TextService;
 import com.novel.common.constant.ApiRouterConsts;
 import com.novel.common.resp.RestResp;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class InnerAiController {
 
     private final TextService textService;
+    private final ImageService imageService;
 
     /**
      * 审核书籍内容
@@ -49,5 +51,23 @@ public class InnerAiController {
     @PostMapping("/generate/image/prompt")
     public RestResp<String> generateImagePrompt(@RequestBody BookCoverReqDto req) {
         return textService.getBookCoverPrompt(req);
+    }
+
+    /**
+     * 文本润色
+     */
+    @Operation(summary = "文本润色")
+    @PostMapping("/polish")
+    public RestResp<com.novel.ai.dto.resp.TextPolishRespDto> polishText(@RequestBody com.novel.ai.dto.req.TextPolishReqDto req) {
+        return textService.polishText(req);
+    }
+
+    /**
+     * 根据提示词生成图片
+     */
+    @Operation(summary = "根据提示词生成图片")
+    @PostMapping("/generate/image")
+    public RestResp<String> generateImage(@org.springframework.web.bind.annotation.RequestParam("prompt") String prompt) {
+        return imageService.generateImage(prompt);
     }
 }

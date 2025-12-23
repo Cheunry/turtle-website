@@ -64,4 +64,36 @@ public class AmqpConsts {
         public static final String CONSUMER_GROUP_AUDIT_CHAPTER = "group-audit-chapter";
 
     }
+
+    /**
+     * 作者积分消费 MQ
+     */
+    public static class AuthorPointsConsumeMq {
+
+        /**
+         * 作者积分消费 Topic
+         */
+        public static final String TOPIC = "topic-author-points-consume";
+
+        /**
+         * 扣除积分 Tag
+         */
+        public static final String TAG_DEDUCT = "deduct";
+
+        /**
+         * 回滚积分 Tag
+         */
+        public static final String TAG_ROLLBACK = "rollback";
+
+        /**
+         * 消费者组 - 持久化积分消费记录
+         */
+        public static final String CONSUMER_GROUP_PERSIST = "group-author-points-persist";
+
+        /**
+         * 消费者组 - 持久化积分回滚记录
+         */
+        public static final String CONSUMER_GROUP_ROLLBACK = "group-author-points-rollback";
+
+    }
 }

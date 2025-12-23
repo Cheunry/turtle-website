@@ -2,6 +2,7 @@ package com.novel.book.feign;
 
 import com.novel.common.constant.ErrorCodeEnum;
 import com.novel.common.resp.RestResp;
+import com.novel.user.dto.req.AuthorPointsConsumeReqDto;
 import com.novel.user.dto.req.MessageSendReqDto;
 import com.novel.user.dto.resp.UserInfoRespDto;
 import com.novel.user.feign.UserFeign;
@@ -38,4 +39,5 @@ public class UserFeignManager {
     public void sendMessage(MessageSendReqDto dto) {
         userFeign.sendMessage(dto);
     }
+
 }

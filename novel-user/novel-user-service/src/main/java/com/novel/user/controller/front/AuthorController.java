@@ -1,5 +1,7 @@
 package com.novel.user.controller.front;
 
+import com.novel.user.dto.AuthorInfoDto;
+import com.novel.user.dto.req.AuthorPointsConsumeReqDto;
 import com.novel.user.dto.req.AuthorRegisterReqDto;
 import com.novel.user.dto.req.MessagePageReqDto;
 import com.novel.user.dto.resp.MessageRespDto;
@@ -11,6 +13,7 @@ import com.novel.book.dto.resp.BookChapterRespDto;
 import com.novel.book.dto.resp.BookInfoRespDto;
 import com.novel.common.auth.UserHolder;
 import com.novel.common.constant.ApiRouterConsts;
+import com.novel.common.constant.ErrorCodeEnum;
 import com.novel.common.constant.SystemConfigConsts;
 import com.novel.common.req.PageReqDto;
 import com.novel.common.resp.PageRespDto;
@@ -22,21 +25,32 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.web.bind.annotation.*;
 import com.novel.book.dto.req.BookUptReqDto;
 import com.novel.book.dto.req.BookDelReqDto;
+import com.novel.ai.feign.AiFeign;
+import com.novel.book.dto.req.BookAuditReqDto;
+import com.novel.book.dto.req.ChapterAuditReqDto;
+import com.novel.book.dto.req.BookCoverReqDto;
+import com.novel.ai.dto.req.TextPolishReqDto;
+import com.novel.book.dto.resp.BookAuditRespDto;
+import com.novel.book.dto.resp.ChapterAuditRespDto;
+import com.novel.ai.dto.resp.TextPolishRespDto;
 
 @Tag(name = "AuthorController", description = "作者模块")
 @SecurityRequirement(name = SystemConfigConsts.HTTP_AUTH_HEADER_NAME)
 @RestController
 @RequiredArgsConstructor
+@Slf4j
 @RequestMapping(ApiRouterConsts.API_AUTHOR_URL_PREFIX)
 public class AuthorController {
 
     private final AuthorInfoService authorInfoService;
     private final BookFeignManager bookFeignManager;
-    private final MessageService messageService; // Add field
+    private final MessageService messageService;
+    private final AiFeign aiFeign;
 
     /**
      * 校验用户是否是作家
@@ -44,7 +58,7 @@ public class AuthorController {
      */
     @Operation(summary = "查询作家的状态")
     @GetMapping("status")
-    public RestResp<Integer> getStatus() {
+    public RestResp<AuthorInfoDto> getStatus() {
 
         return authorInfoService.getStatus(UserHolder.getUserId());
     }
@@ -236,6 +250,210 @@ public class AuthorController {
     @PostMapping("message/all_delete")
     public RestResp<Void> allDeleteAuthorMessages() {
         return messageService.allDeleteMessages(2);
+    }
+
+    /* ************************ AI 积分消耗相关接口 ************************* */
+
+    /**
+     * AI审核（先扣分后服务，服务失败自动回滚积分）
+     * 消耗：1点/次
+     * 
+     * 流程：
+     * 1. 先扣除积分（Redis原子操作 + 幂等性控制）
+     * 2. 调用AI审核服务
+     * 3. 如果AI服务失败，自动回滚积分
+     */
+    @Operation(summary = "AI审核（先扣分后服务）")
+    @PostMapping("ai/audit")
+    public RestResp<Object> audit(@RequestBody AuthorPointsConsumeReqDto dto) {
+        Long authorId = UserHolder.getAuthorId();
+        dto.setAuthorId(authorId);
+        dto.setConsumeType(0); // 0-AI审核
+        dto.setConsumePoints(1); // 1点/次
+        
+        // 1. 先扣除积分
+        RestResp<Void> deductResult = authorInfoService.deductPoints(dto);
+        if (!deductResult.isOk()) {
+            return RestResp.fail(ErrorCodeEnum.USER_POINTS_NOT_ENOUGH, deductResult.getMessage());
+        }
+        
+        // 2. 调用AI审核服务
+        try {
+            Object result;
+            // 判断是审核书籍还是审核章节
+            if (dto.getChapterNum() != null || (dto.getContent() != null && !dto.getContent().isEmpty())) {
+                // 审核章节
+                ChapterAuditReqDto chapterReq = ChapterAuditReqDto.builder()
+                        .bookId(dto.getRelatedId())
+                        .chapterNum(dto.getChapterNum())
+                        .chapterName(dto.getTitle())
+                        .content(dto.getContent())
+                        .build();
+                RestResp<ChapterAuditRespDto> aiResp = aiFeign.auditChapter(chapterReq);
+                if (!aiResp.isOk()) {
+                     throw new RuntimeException("AI章节审核失败: " + aiResp.getMessage());
+                }
+                result = aiResp.getData();
+            } else {
+                // 审核书籍
+                BookAuditReqDto bookReq = BookAuditReqDto.builder()
+                        .id(dto.getRelatedId())
+                        .bookName(dto.getBookName())
+                        .bookDesc(dto.getBookDesc())
+                        .build();
+                RestResp<BookAuditRespDto> aiResp = aiFeign.auditBook(bookReq);
+                 if (!aiResp.isOk()) {
+                     throw new RuntimeException("AI书籍审核失败: " + aiResp.getMessage());
+                }
+                result = aiResp.getData();
+            }
+
+            return RestResp.ok(result);
+            
+        } catch (Exception e) {
+            // 3. AI服务失败，回滚积分
+            log.error("AI审核服务调用失败，开始回滚积分，作者ID: {}, 错误: {}", authorId, e.getMessage(), e);
+            RestResp<Void> rollbackResult = authorInfoService.rollbackPoints(dto);
+            if (!rollbackResult.isOk()) {
+                log.error("积分回滚失败，作者ID: {}, 错误: {}", authorId, rollbackResult.getMessage());
+                return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR, "AI服务调用失败，积分回滚也失败，请联系管理员");
+            }
+            return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR, "AI审核服务调用失败，积分已自动退回");
+        }
+    }
+
+    /**
+     * AI润色（先扣分后服务，服务失败自动回滚积分）
+     * 消耗：10点/次
+     * 
+     * 流程：
+     * 1. 先扣除积分（Redis原子操作 + 幂等性控制）
+     * 2. 调用AI润色服务
+     * 3. 如果AI服务失败，自动回滚积分
+     */
+    @Operation(summary = "AI润色（先扣分后服务）")
+    @PostMapping("ai/polish")
+    public RestResp<Object> polish(@RequestBody AuthorPointsConsumeReqDto dto) {
+        Long authorId = UserHolder.getAuthorId();
+        dto.setAuthorId(authorId);
+        dto.setConsumeType(1); // 1-AI润色
+        dto.setConsumePoints(10); // 10点/次
+        
+        // 1. 先扣除积分
+        RestResp<Void> deductResult = authorInfoService.deductPoints(dto);
+        if (!deductResult.isOk()) {
+            return RestResp.fail(ErrorCodeEnum.USER_POINTS_NOT_ENOUGH, deductResult.getMessage());
+        }
+        
+        // 2. 调用AI润色服务
+        try {
+            TextPolishReqDto polishReq = new TextPolishReqDto();
+            polishReq.setSelectedText(dto.getContent());
+            polishReq.setStyle(dto.getStyle());
+            polishReq.setRequirement(dto.getRequirement());
+            
+            RestResp<TextPolishRespDto> aiResp = aiFeign.polishText(polishReq);
+            if (!aiResp.isOk()) {
+                throw new RuntimeException("AI润色失败: " + aiResp.getMessage());
+            }
+            
+            return RestResp.ok(aiResp.getData());
+            
+        } catch (Exception e) {
+            // 3. AI服务失败，回滚积分
+            log.error("AI润色服务调用失败，开始回滚积分，作者ID: {}, 错误: {}", authorId, e.getMessage(), e);
+            RestResp<Void> rollbackResult = authorInfoService.rollbackPoints(dto);
+            if (!rollbackResult.isOk()) {
+                log.error("积分回滚失败，作者ID: {}, 错误: {}", authorId, rollbackResult.getMessage());
+                return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR, "AI服务调用失败，积分回滚也失败，请联系管理员");
+            }
+            return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR, "AI润色服务调用失败，积分已自动退回");
+        }
+    }
+
+    /**
+     * AI封面提示词生成（不扣积分，仅生成提示词）
+     * 
+     * 注意：此接口不扣积分，仅用于生成封面提示词，用户可以在生成提示词后决定是否使用该提示词生成封面
+     */
+    @Operation(summary = "AI封面提示词生成（不扣积分）")
+    @PostMapping("ai/cover-prompt")
+    public RestResp<String> generateCoverPrompt(@RequestBody BookCoverReqDto reqDto) {
+        Long authorId = UserHolder.getAuthorId();
+        log.info("生成封面提示词请求，作者ID: {}, 小说ID: {}, 小说名: {}", authorId, reqDto.getId(), reqDto.getBookName());
+        try {
+            // 注意：此接口不扣积分，仅调用AI服务生成提示词
+            RestResp<String> promptResp = aiFeign.getBookCoverPrompt(reqDto);
+            if (!promptResp.isOk()) {
+                log.warn("生成封面提示词失败，作者ID: {}, 小说ID: {}, 错误: {}", authorId, reqDto.getId(), promptResp.getMessage());
+                return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR, "生成封面提示词失败: " + promptResp.getMessage());
+            }
+            log.info("生成封面提示词成功，作者ID: {}, 小说ID: {}, 提示词长度: {}", authorId, reqDto.getId(), 
+                    promptResp.getData() != null ? promptResp.getData().length() : 0);
+            return RestResp.ok(promptResp.getData());
+        } catch (Exception e) {
+            log.error("生成封面提示词异常，作者ID: {}, 小说ID: {}", authorId, reqDto.getId(), e);
+            return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR, "生成封面提示词失败，请稍后重试");
+        }
+    }
+
+    /**
+     * AI封面生成（先扣分后服务，服务失败自动回滚积分）
+     * 消耗：100点/次
+     * 
+     * 流程：
+     * 1. 先扣除积分（Redis原子操作 + 幂等性控制）
+     * 2. 调用AI封面生成服务
+     * 3. 如果AI服务失败，自动回滚积分
+     */
+    @Operation(summary = "AI封面生成（先扣分后服务）")
+    @PostMapping("ai/cover")
+    public RestResp<Object> generateCover(@RequestBody AuthorPointsConsumeReqDto dto) {
+        Long authorId = UserHolder.getAuthorId();
+        dto.setAuthorId(authorId);
+        dto.setConsumeType(2); // 2-AI封面
+        dto.setConsumePoints(100); // 100点/次
+        
+        // 1. 先扣除积分
+        RestResp<Void> deductResult = authorInfoService.deductPoints(dto);
+        if (!deductResult.isOk()) {
+            return RestResp.fail(ErrorCodeEnum.USER_POINTS_NOT_ENOUGH, deductResult.getMessage());
+        }
+        
+        // 2. 调用AI封面生成服务
+        try {
+            // 2.1 获取提示词
+            BookCoverReqDto coverReq = BookCoverReqDto.builder()
+                    .id(dto.getRelatedId())
+                    .bookName(dto.getBookName())
+                    .bookDesc(dto.getBookDesc())
+                    .categoryName(dto.getCategoryName())
+                    .build();
+            
+            RestResp<String> promptResp = aiFeign.getBookCoverPrompt(coverReq);
+            if (!promptResp.isOk()) {
+                throw new RuntimeException("获取封面提示词失败: " + promptResp.getMessage());
+            }
+            String prompt = promptResp.getData();
+            
+            // 2.2 生成图片
+            RestResp<String> imageResp = aiFeign.generateImage(prompt);
+            if (!imageResp.isOk()) {
+                throw new RuntimeException("图片生成失败: " + imageResp.getMessage());
+            }
+            
+            return RestResp.ok(imageResp.getData());
+            
+        } catch (Exception e) {
+            // 3. AI服务失败，回滚积分
+            log.error("AI封面生成服务调用失败，开始回滚积分，作者ID: {}, 错误: {}", authorId, e.getMessage(), e);
+            RestResp<Void> rollbackResult = authorInfoService.rollbackPoints(dto);
+            if (!rollbackResult.isOk()) {
+                log.error("积分回滚失败，作者ID: {}, 错误: {}", authorId, rollbackResult.getMessage());
+                return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR, "AI服务调用失败，积分回滚也失败，请联系管理员");
+            }
+            return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR, "AI封面生成服务调用失败，积分已自动退回");
+        }
     }
 
 }

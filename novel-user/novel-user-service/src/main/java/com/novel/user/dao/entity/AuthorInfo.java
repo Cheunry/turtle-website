@@ -3,7 +3,6 @@ package com.novel.user.dao.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -28,10 +27,6 @@ public class AuthorInfo {
      */
     private Long userId;
 
-    /**
-     * 邀请码
-     */
-    private String inviteCode;
 
     /**
      * 笔名
@@ -64,6 +59,21 @@ public class AuthorInfo {
     private Integer status;
 
     /**
+     * 免费积分点数
+     */
+    private Integer freePoints;
+
+    /**
+     * 付费积分点数
+     */
+    private Integer paidPoints;
+
+    /**
+     * 免费积分点数更新时间
+     */
+    private LocalDateTime freePointsUpdateTime;
+
+    /**
      * 创建时间
      */
     private LocalDateTime createTime;
@@ -72,5 +82,6 @@ public class AuthorInfo {
      * 更新时间
      */
     private LocalDateTime updateTime;
+
 }
 
