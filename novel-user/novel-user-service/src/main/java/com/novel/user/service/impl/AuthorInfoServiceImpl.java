@@ -93,6 +93,8 @@ public class AuthorInfoServiceImpl implements AuthorInfoService {
         Long authorId = authorInfoDto.getId();
         initPointsIfNeeded(authorId);
         
+        // 检查并重置免费积分（每日重置），确保查询时看到的是最新状态
+        resetFreePointsIfNeeded(authorId, LocalDate.now());
         
         int freePoints = getFreePoints(authorId);
         int paidPoints = getPaidPoints(authorId);
@@ -366,7 +368,16 @@ public class AuthorInfoServiceImpl implements AuthorInfoService {
         if (Boolean.TRUE.equals(isSet)) {
             // 今天第一次使用，重置免费积分为 500
             stringRedisTemplate.opsForValue().set(freeKey, "500");
-            log.debug("作者[{}]免费积分已重置为500", authorId);
+            
+            // 【新增】同步更新数据库，确保 Redis 丢失后数据依然正确
+            AuthorInfo update = new AuthorInfo();
+            update.setId(authorId);
+            update.setFreePoints(500);
+            // 这里只更新免费积分和时间，不影响付费积分
+            update.setFreePointsUpdateTime(LocalDateTime.now());
+            authorInfoMapper.updateById(update);
+            
+            log.debug("作者[{}]免费积分已重置为500 (Redis + DB)", authorId);
         }
     }
 
