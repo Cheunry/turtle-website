@@ -41,6 +41,7 @@ build/
 **/bootstrap-common.yml
 **/application.properties
 **/bootstrap.properties
+**/*.yaml
 
 
 # 忽略 logs 目录
