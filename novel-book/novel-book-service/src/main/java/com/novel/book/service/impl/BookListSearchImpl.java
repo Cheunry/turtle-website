@@ -12,18 +12,30 @@ import com.novel.book.service.BookListSearchService;
 import com.novel.common.constant.DatabaseConsts;
 import com.novel.common.resp.RestResp;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.novel.common.constant.CacheConsts;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.util.CollectionUtils;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.Set;
+import java.time.format.DateTimeFormatter;
+import java.time.LocalDateTime;
+
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class BookListSearchImpl implements BookListSearchService {
 
     private final BookInfoMapper bookInfoMapper;
     private final BookCategoryMapper bookCategoryMapper;
+    private final StringRedisTemplate stringRedisTemplate;
 
     /**
      * 获取最多访问的书籍列表
@@ -31,9 +43,72 @@ public class BookListSearchImpl implements BookListSearchService {
      */
     @Override
     public RestResp<List<BookRankRespDto>> listVisitRankBooks() {
-        QueryWrapper<BookInfo> bookInfoQueryWrapper = new QueryWrapper<>();
-        bookInfoQueryWrapper.orderByDesc(DatabaseConsts.BookTable.COLUMN_VISIT_COUNT);
-        return RestResp.ok(listRankBooks(bookInfoQueryWrapper));
+        // 1. 从 Redis ZSet 获取点击榜前 30 名 ID
+        Set<String> bookIdSet = stringRedisTemplate.opsForZSet().reverseRange(CacheConsts.BOOK_VISIT_RANK_ZSET, 0, 29);
+
+        // 2. 如果 Redis 中没有数据，降级为直接查询数据库
+        if (CollectionUtils.isEmpty(bookIdSet)) {
+            QueryWrapper<BookInfo> bookInfoQueryWrapper = new QueryWrapper<>();
+            bookInfoQueryWrapper.orderByDesc(DatabaseConsts.BookTable.COLUMN_VISIT_COUNT);
+            return RestResp.ok(listRankBooks(bookInfoQueryWrapper));
+        }
+
+        List<BookRankRespDto> resultList = new ArrayList<>();
+        for (String bookIdStr : bookIdSet) {
+            Long bookId = Long.valueOf(bookIdStr);
+            // 3. 尝试从 Redis Hash 获取书籍详情
+            Map<Object, Object> bookInfoMap = stringRedisTemplate.opsForHash().entries(CacheConsts.BOOK_INFO_HASH_PREFIX + bookId);
+
+            if (!CollectionUtils.isEmpty(bookInfoMap)) {
+                log.info(">>> 点击榜详情命中 Redis Hash 缓存，bookId={}", bookId);
+
+                // 3.1 缓存命中，组装 DTO
+                BookRankRespDto dto = new BookRankRespDto();
+                dto.setId(bookId);
+                dto.setBookName((String) bookInfoMap.get("bookName"));
+                dto.setAuthorName((String) bookInfoMap.get("authorName"));
+                dto.setPicUrl((String) bookInfoMap.get("picUrl"));
+                dto.setBookDesc((String) bookInfoMap.get("bookDesc"));
+                dto.setCategoryName((String) bookInfoMap.get("categoryName"));
+                dto.setLastChapterName((String) bookInfoMap.get("lastChapterName"));
+
+                String wordCountStr = (String) bookInfoMap.get("wordCount");
+                if (wordCountStr != null) dto.setWordCount(Integer.parseInt(wordCountStr));
+
+                String categoryIdStr = (String) bookInfoMap.get("categoryId");
+                if (categoryIdStr != null) dto.setCategoryId(Long.parseLong(categoryIdStr));
+
+                String updateTimeStr = (String) bookInfoMap.get("lastChapterUpdateTime");
+                if (updateTimeStr != null) {
+                    try {
+                        dto.setLastChapterUpdateTime(LocalDateTime.parse(updateTimeStr, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+                    } catch (Exception e) {
+                        // ignore parse error
+                    }
+                }
+                resultList.add(dto);
+            } else {
+                // 3.2 缓存未命中（说明该书不在 Top 50 预热范围内，或者缓存已失效），回源查询 DB
+                log.info(">>> 点击榜详情未命中缓存（或不在 Top 50），回源查询 DB，bookId={}", bookId);
+
+                BookInfo bookInfo = bookInfoMapper.selectById(bookId);
+                if (bookInfo != null) {
+                    BookRankRespDto dto = new BookRankRespDto();
+                    dto.setId(bookInfo.getId());
+                    dto.setCategoryId(bookInfo.getCategoryId());
+                    dto.setCategoryName(bookInfo.getCategoryName());
+                    dto.setBookName(bookInfo.getBookName());
+                    dto.setAuthorName(bookInfo.getAuthorName());
+                    dto.setPicUrl(bookInfo.getPicUrl());
+                    dto.setBookDesc(bookInfo.getBookDesc());
+                    dto.setLastChapterName(bookInfo.getLastChapterName());
+                    dto.setLastChapterUpdateTime(bookInfo.getLastChapterUpdateTime());
+                    dto.setWordCount(bookInfo.getWordCount());
+                    resultList.add(dto);
+                }
+            }
+        }
+        return RestResp.ok(resultList);
     }
 
     /**

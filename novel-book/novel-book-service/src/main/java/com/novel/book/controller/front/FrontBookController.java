@@ -22,6 +22,8 @@ import com.novel.book.dto.req.BookCommentPageReqDto;
 import org.springdoc.core.annotations.ParameterObject;
 
 
+import com.novel.book.job.BookRankCacheJob;
+
 @Tag(name = "FrontBookController", description = "前台门户-小说模块")
 @RestController
 @RequestMapping(ApiRouterConsts.API_FRONT_BOOK_URL_PREFIX)
@@ -32,6 +34,17 @@ public class FrontBookController {
     private final BookListSearchService bookListSearchService;
     private final BookReadService bookReadService;
     private final BookCommentService bookCommentService;
+    private final BookRankCacheJob bookRankCacheJob;
+
+    /**
+     * 手动触发小说点击榜缓存更新（测试用）
+     */
+    @Operation(summary = "手动触发小说点击榜缓存更新")
+    @GetMapping("visit_rank/refresh")
+    public RestResp<Void> refreshVisitRankCache() {
+        bookRankCacheJob.refreshVisitRankCache();
+        return RestResp.ok();
+    }
 
     /**
      * 小说分类列表查询接口

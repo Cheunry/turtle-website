@@ -137,6 +137,21 @@ public class CacheConsts {
     public static final String AUTHOR_POINTS_DEDUCT_IDEMPOTENT_KEY = AUTHOR_POINTS_PREFIX + "deduct:idempotent:%s:%s:%s:%s";
 
     /**
+     * 小说点击榜 ZSet 缓存 Key
+     */
+    public static final String BOOK_VISIT_RANK_ZSET = REDIS_CACHE_PREFIX + "visit_rank";
+
+    /**
+     * 小说信息 Hash 缓存 Key 前缀
+     */
+    public static final String BOOK_INFO_HASH_PREFIX = REDIS_CACHE_PREFIX + "book_info:";
+
+    /**
+     * 小说点击量缓冲 Hash Key (用于批量更新 DB)
+     */
+    public static final String BOOK_VISIT_COUNT_HASH = REDIS_CACHE_PREFIX + "book_visit_buffer";
+
+    /**
      * 缓存配置常量
      */
     public enum CacheEnum {

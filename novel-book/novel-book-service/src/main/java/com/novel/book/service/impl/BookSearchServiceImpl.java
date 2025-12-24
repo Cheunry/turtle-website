@@ -12,6 +12,7 @@ import com.novel.common.constant.DatabaseConsts;
 import com.novel.common.resp.RestResp;
 import com.novel.book.service.BookSearchService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -20,12 +21,22 @@ import java.util.stream.Collectors;
 import com.novel.common.constant.AmqpConsts;
 import org.apache.rocketmq.spring.core.RocketMQTemplate;
 
+import com.novel.common.constant.CacheConsts;
+import org.springframework.data.redis.core.StringRedisTemplate;
+
+import java.util.Map;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import org.springframework.util.CollectionUtils;
+
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class BookSearchServiceImpl implements BookSearchService {
 
     private final BookInfoMapper bookInfoMapper;
     private final BookChapterMapper bookChapterMapper;
+    private final StringRedisTemplate stringRedisTemplate;
     private final RocketMQTemplate rocketMQTemplate;
 
     /**
@@ -35,8 +46,47 @@ public class BookSearchServiceImpl implements BookSearchService {
      */
     @Override
     public RestResp<BookInfoRespDto> getBookById(Long bookId) {
+        // 1. 尝试从 Redis Hash 获取书籍详情 (Top 100 热门书)
+        Map<Object, Object> bookInfoMap = stringRedisTemplate.opsForHash().entries(CacheConsts.BOOK_INFO_HASH_PREFIX + bookId);
+        if (!CollectionUtils.isEmpty(bookInfoMap)) {
+            try {
+                // 检查关键字段是否存在 (防止缓存不完整)
+                if (bookInfoMap.containsKey("bookName") && bookInfoMap.containsKey("firstChapterNum")) {
+                    BookInfoRespDto dto = new BookInfoRespDto();
+                    dto.setId(bookId);
+                    dto.setBookName((String) bookInfoMap.get("bookName"));
+                    dto.setBookDesc((String) bookInfoMap.get("bookDesc"));
+                    dto.setBookStatus(Integer.parseInt((String) bookInfoMap.get("bookStatus")));
+                    dto.setAuthorId(Long.parseLong((String) bookInfoMap.get("authorId")));
+                    dto.setAuthorName((String) bookInfoMap.get("authorName"));
+                    dto.setCategoryName((String) bookInfoMap.get("categoryName"));
+                    dto.setPicUrl((String) bookInfoMap.get("picUrl"));
+                    dto.setLastChapterName((String) bookInfoMap.get("lastChapterName"));
+                    
+                    if (bookInfoMap.containsKey("categoryId")) dto.setCategoryId(Long.parseLong((String) bookInfoMap.get("categoryId")));
+                    if (bookInfoMap.containsKey("workDirection")) dto.setWorkDirection(Integer.parseInt((String) bookInfoMap.get("workDirection")));
+                    if (bookInfoMap.containsKey("commentCount")) dto.setCommentCount(Integer.parseInt((String) bookInfoMap.get("commentCount")));
+                    if (bookInfoMap.containsKey("firstChapterNum")) dto.setFirstChapterNum(Integer.parseInt((String) bookInfoMap.get("firstChapterNum")));
+                    if (bookInfoMap.containsKey("lastChapterNum")) dto.setLastChapterNum(Integer.parseInt((String) bookInfoMap.get("lastChapterNum")));
+                    if (bookInfoMap.containsKey("visitCount")) dto.setVisitCount(Long.parseLong((String) bookInfoMap.get("visitCount")));
+                    if (bookInfoMap.containsKey("wordCount")) dto.setWordCount(Integer.parseInt((String) bookInfoMap.get("wordCount")));
+                    
+                    String updateTimeStr = (String) bookInfoMap.get("updateTime");
+                    if (updateTimeStr != null) {
+                        dto.setUpdateTime(LocalDateTime.parse(updateTimeStr, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+                    }
+                    
+                    log.info(">>> 详情页命中 Redis Hash 缓存，bookId={}", bookId);
+                    return RestResp.ok(dto);
+                }
+            } catch (Exception e) {
+                log.error("解析 Redis Hash 详情失败，降级查 DB，bookId={}", bookId, e);
+            }
+        }
 
-        // 查询基础信息
+        log.info(">>> 详情页未命中缓存 (或缓存不完整)，回源查询 DB，bookId={}", bookId);
+
+        // 2. 查 DB (原有逻辑)
         BookInfo bookInfo = bookInfoMapper.selectById(bookId);
         
         // 检查书籍审核状态：只有审核通过的书籍才能被读者查看
@@ -134,9 +184,18 @@ public class BookSearchServiceImpl implements BookSearchService {
      */
     @Override
     public RestResp<Void> addVisitCount(Long bookId) {
-        bookInfoMapper.addVisitCount(bookId);
-        // 发送消息更新 ES
-        rocketMQTemplate.convertAndSend(AmqpConsts.BookChangeMq.TOPIC + ":" + AmqpConsts.BookChangeMq.TAG_UPDATE, bookId);
+        try {
+            // 1. 优先更新 Redis (高性能模式)
+            // 更新点击榜 ZSet (实时排名)
+            stringRedisTemplate.opsForZSet().incrementScore(CacheConsts.BOOK_VISIT_RANK_ZSET, String.valueOf(bookId), 1);
+            // 更新点击量计数器 Hash (用于定时批量刷库)
+            stringRedisTemplate.opsForHash().increment(CacheConsts.BOOK_VISIT_COUNT_HASH, String.valueOf(bookId), 1);
+        } catch (Exception e) {
+            log.error("Redis 异常，降级为直接写数据库，bookId={}", bookId, e);
+            // 2. Redis 挂了，降级：直接写库 + 发 MQ (保证数据不丢失)
+            bookInfoMapper.addVisitCount(bookId);
+            rocketMQTemplate.convertAndSend(AmqpConsts.BookChangeMq.TOPIC + ":" + AmqpConsts.BookChangeMq.TAG_UPDATE, bookId);
+        }
         return RestResp.ok();
     }
 

@@ -13,6 +13,7 @@ import com.xxl.job.core.handler.annotation.XxlJob;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -28,9 +29,11 @@ public class AllBookToEsTask {
 
     /**
      * 全量数据同步
+     * 每天凌晨2点执行
      */
     @SneakyThrows
     @XxlJob("saveToEsJobHandler")
+    @Scheduled(cron = "0 0 2 * * ?")
     public ReturnT<String> saveToEs() {
 
         log.info(">>> 开始执行全量同步任务");
