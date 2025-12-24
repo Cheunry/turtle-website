@@ -21,6 +21,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.spring.core.RocketMQTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.cloud.context.config.annotation.RefreshScope;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -31,8 +33,12 @@ import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 
 @Slf4j
 @Service
+@RefreshScope
 @RequiredArgsConstructor
 public class BookAuthorServiceImpl implements BookAuthorService {
+
+    @Value("${novel.audit.enable:true}")
+    private Boolean auditEnable;
 
     private final BookInfoMapper bookInfoMapper;
     private final BookChapterMapper bookChapterMapper;
@@ -66,7 +72,7 @@ public class BookAuthorServiceImpl implements BookAuthorService {
                 .bookDesc(dto.getBookDesc())
                 .score(0)
                 .isVip(dto.getIsVip())
-                .auditStatus(0) // 初始状态为待审核
+                .auditStatus(auditEnable ? 0 : 1) // 根据审核开关决定初始状态
                 .createTime(LocalDateTime.now())
                 .updateTime(LocalDateTime.now())
                 .build();
@@ -74,13 +80,15 @@ public class BookAuthorServiceImpl implements BookAuthorService {
         // 保存小说信息
         bookInfoMapper.insert(bookInfo);
 
-        // 立即触发AI审核（发送MQ异步审核）
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                rocketMQTemplate.convertAndSend(AmqpConsts.BookAuditMq.TOPIC + ":" + AmqpConsts.BookAuditMq.TAG_AUDIT_BOOK, bookInfo.getId());
-            }
-        });
+        // 如果开启审核，触发AI审核
+        if (auditEnable) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    rocketMQTemplate.convertAndSend(AmqpConsts.BookAuditMq.TOPIC + ":" + AmqpConsts.BookAuditMq.TAG_AUDIT_BOOK, bookInfo.getId());
+                }
+            });
+        }
 
         return RestResp.ok();
     }
@@ -145,8 +153,8 @@ public class BookAuthorServiceImpl implements BookAuthorService {
         }
 
         if (hasUpdate) {
-            // 如果小说名或简介有变更，重置审核状态为待审核
-            if (needAudit) {
+            // 如果小说名或简介有变更，且开启了审核，重置审核状态为待审核
+            if (needAudit && auditEnable) {
                 updateBook.setAuditStatus(0);
                 updateBook.setAuditReason(null);
             }
@@ -154,8 +162,8 @@ public class BookAuthorServiceImpl implements BookAuthorService {
             updateBook.setUpdateTime(LocalDateTime.now());
             bookInfoMapper.updateById(updateBook);
             
-            // 如果小说名或简介有变更，触发AI审核
-            if (needAudit) {
+            // 如果小说名或简介有变更，且开启了审核，触发AI审核
+            if (needAudit && auditEnable) {
                 // 改为发送MQ异步审核
                 if (TransactionSynchronizationManager.isSynchronizationActive()) {
                     TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
@@ -213,7 +221,7 @@ public class BookAuthorServiceImpl implements BookAuthorService {
         chapter.setContent(dto.getContent());
         chapter.setWordCount(dto.getContent().length());
         chapter.setIsVip(dto.getIsVip());
-        chapter.setAuditStatus(0); // 初始状态为待审核
+        chapter.setAuditStatus(auditEnable ? 0 : 1); // 根据审核开关决定初始状态
         chapter.setCreateTime(LocalDateTime.now());
         chapter.setUpdateTime(LocalDateTime.now());
 
@@ -231,8 +239,10 @@ public class BookAuthorServiceImpl implements BookAuthorService {
                 @Override
                 public void afterCommit() {
                     try {
-                        // 立即触发AI审核（改为发送MQ异步审核）
-                        rocketMQTemplate.convertAndSend(AmqpConsts.BookAuditMq.TOPIC + ":" + AmqpConsts.BookAuditMq.TAG_AUDIT_CHAPTER, chapterId);
+                        // 如果开启审核，触发AI审核
+                        if (auditEnable) {
+                            rocketMQTemplate.convertAndSend(AmqpConsts.BookAuditMq.TOPIC + ":" + AmqpConsts.BookAuditMq.TAG_AUDIT_CHAPTER, chapterId);
+                        }
 
                         // 发送书籍章节更新通知消息
                         BookChapterUpdateDto updateDto = BookChapterUpdateDto.builder()
@@ -252,8 +262,10 @@ public class BookAuthorServiceImpl implements BookAuthorService {
                 }
             });
         } else {
-            // 如果不在事务中（理论上不会，因为有 @Transactional），直接发送
-            rocketMQTemplate.convertAndSend(AmqpConsts.BookAuditMq.TOPIC + ":" + AmqpConsts.BookAuditMq.TAG_AUDIT_CHAPTER, chapterId);
+            // 如果开启审核，触发AI审核
+            if (auditEnable) {
+                rocketMQTemplate.convertAndSend(AmqpConsts.BookAuditMq.TOPIC + ":" + AmqpConsts.BookAuditMq.TAG_AUDIT_CHAPTER, chapterId);
+            }
             
             BookChapterUpdateDto updateDto = BookChapterUpdateDto.builder()
                     .bookId(bookInfo.getId())
@@ -482,29 +494,33 @@ public class BookAuthorServiceImpl implements BookAuthorService {
         chapter.setUpdateTime(LocalDateTime.now());
         chapter.setWordCount(dto.getContent().length()); // 确保字数被更新
         
-        // 如果章节内容有变更，重置审核状态为待审核
-        chapter.setAuditStatus(0);
-        chapter.setAuditReason(null);
+        // 如果章节内容有变更，且开启了审核，重置审核状态为待审核
+        if (auditEnable) {
+            chapter.setAuditStatus(0);
+            chapter.setAuditReason(null);
+        }
 
         bookChapterMapper.update(chapter, queryWrapper);
 
         // 更新书籍字数和最新章节信息
         updateBookInfo(chapter.getBookId(), chapter, false, oldWordCount);
 
-        // 如果章节内容有变更，触发AI审核
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    try {
-                        rocketMQTemplate.convertAndSend(AmqpConsts.BookAuditMq.TOPIC + ":" + AmqpConsts.BookAuditMq.TAG_AUDIT_CHAPTER, chapter.getId());
-                    } catch (Exception e) {
-                        log.error("发送章节更新审核MQ失败，chapterId: {}", chapter.getId(), e);
+        // 如果章节内容有变更，且开启了审核，触发AI审核
+        if (auditEnable) {
+            if (TransactionSynchronizationManager.isSynchronizationActive()) {
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        try {
+                            rocketMQTemplate.convertAndSend(AmqpConsts.BookAuditMq.TOPIC + ":" + AmqpConsts.BookAuditMq.TAG_AUDIT_CHAPTER, chapter.getId());
+                        } catch (Exception e) {
+                            log.error("发送章节更新审核MQ失败，chapterId: {}", chapter.getId(), e);
+                        }
                     }
-                }
-            });
-        } else {
-            rocketMQTemplate.convertAndSend(AmqpConsts.BookAuditMq.TOPIC + ":" + AmqpConsts.BookAuditMq.TAG_AUDIT_CHAPTER, chapter.getId());
+                });
+            } else {
+                rocketMQTemplate.convertAndSend(AmqpConsts.BookAuditMq.TOPIC + ":" + AmqpConsts.BookAuditMq.TAG_AUDIT_CHAPTER, chapter.getId());
+            }
         }
 
         // 移除 sendBookChangeMsg 调用，审核通过后再发送（如果需要的话）

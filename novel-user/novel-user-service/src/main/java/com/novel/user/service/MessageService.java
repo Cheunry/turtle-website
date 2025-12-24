@@ -12,7 +12,7 @@ import com.novel.user.dto.resp.MessageRespDto;
 public interface MessageService {
 
     /**
-     * 发送系统消息（单发）
+     * 发送系统消息
      * @param dto 发送消息请求DTO
      */
     void sendMessage(MessageSendReqDto dto);

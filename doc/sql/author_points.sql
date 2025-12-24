@@ -59,3 +59,14 @@ CREATE TABLE `author_points_recharge_log` (
   KEY `idx_rechargeTime` (`recharge_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='作者点数充值记录表';
 
+
+-- ----------------------------
+-- 补丁：author_points_consume_log 表添加 idempotent_key 字段
+-- ----------------------------
+
+ALTER TABLE `author_points_consume_log`
+    ADD COLUMN `idempotent_key` varchar(64) DEFAULT NULL COMMENT '幂等性Key（MQ消费去重）';
+
+-- 添加唯一索引
+ALTER TABLE `author_points_consume_log`
+    ADD UNIQUE INDEX `uk_idempotentKey` (`idempotent_key`);
