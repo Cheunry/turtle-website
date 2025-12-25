@@ -8,6 +8,9 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * SSE 通知服务实现类
@@ -31,6 +34,25 @@ public class SseNotificationServiceImpl implements SseNotificationService {
      */
     private final Map<Long, SseEmitter> authorConnections = new ConcurrentHashMap<>();
 
+    /**
+     * 心跳发送线程池（单线程即可）
+     */
+    private final ScheduledExecutorService heartbeatExecutor = Executors.newSingleThreadScheduledExecutor(r -> {
+        Thread t = new Thread(r, "sse-heartbeat");
+        t.setDaemon(true);
+        return t;
+    });
+
+    /**
+     * SSE 连接超时时间（30分钟）
+     */
+    private static final long SSE_TIMEOUT = 30 * 60 * 1000L;
+
+    /**
+     * 心跳间隔（25秒，小于超时时间）
+     */
+    private static final long HEARTBEAT_INTERVAL = 25 * 1000L;
+
     @Override
     public void addUserConnection(Long userId, SseEmitter emitter) {
         // 如果用户已有连接，先关闭旧连接
@@ -45,7 +67,6 @@ public class SseNotificationServiceImpl implements SseNotificationService {
 
         // 添加新连接
         userConnections.put(userId, emitter);
-        log.info("用户SSE连接已建立，userId: {}", userId);
 
         // 设置连接完成回调
         emitter.onCompletion(() -> {
@@ -85,7 +106,6 @@ public class SseNotificationServiceImpl implements SseNotificationService {
 
         // 添加新连接
         authorConnections.put(authorId, emitter);
-        log.info("作者SSE连接已建立，authorId: {}", authorId);
 
         // 设置连接完成回调
         emitter.onCompletion(() -> {
@@ -205,6 +225,69 @@ public class SseNotificationServiceImpl implements SseNotificationService {
                 authorConnections.size(),
                 userConnections.size() + authorConnections.size()
         );
+    }
+
+    @Override
+    public SseEmitter createUserConnection(Long userId) {
+        // 创建SSE连接，设置30分钟超时
+        SseEmitter emitter = new SseEmitter(SSE_TIMEOUT);
+        
+        // 添加到连接池
+        addUserConnection(userId, emitter);
+
+        // 发送初始连接成功消息
+        try {
+            emitter.send(SseEmitter.event()
+                    .name("connected")
+                    .data("{\"message\":\"SSE连接已建立\"}"));
+        } catch (Exception e) {
+            log.error("发送初始消息失败，userId: {}", userId, e);
+        }
+
+        // 启动心跳任务（每25秒发送一次心跳）
+        scheduleHeartbeat(userId, false);
+
+        log.info("用户SSE连接已建立，userId: {}", userId);
+        return emitter;
+    }
+
+    @Override
+    public SseEmitter createAuthorConnection(Long authorId) {
+        // 创建SSE连接，设置30分钟超时
+        SseEmitter emitter = new SseEmitter(SSE_TIMEOUT);
+        
+        // 添加到连接池
+        addAuthorConnection(authorId, emitter);
+
+        // 发送初始连接成功消息
+        try {
+            emitter.send(SseEmitter.event()
+                    .name("connected")
+                    .data("{\"message\":\"SSE连接已建立\"}"));
+        } catch (Exception e) {
+            log.error("发送初始消息失败，authorId: {}", authorId, e);
+        }
+
+        // 启动心跳任务（每25秒发送一次心跳）
+        scheduleHeartbeat(authorId, true);
+
+        log.info("作者SSE连接已建立，authorId: {}", authorId);
+        return emitter;
+    }
+
+    /**
+     * 调度心跳任务
+     * @param id 用户ID或作者ID
+     * @param isAuthor 是否为作者
+     */
+    private void scheduleHeartbeat(Long id, boolean isAuthor) {
+        heartbeatExecutor.scheduleWithFixedDelay(() -> {
+            try {
+                sendHeartbeat(id, isAuthor);
+            } catch (Exception e) {
+                log.warn("发送心跳失败，id: {}, isAuthor: {}", id, isAuthor, e);
+            }
+        }, HEARTBEAT_INTERVAL, HEARTBEAT_INTERVAL, TimeUnit.MILLISECONDS);
     }
 }
 

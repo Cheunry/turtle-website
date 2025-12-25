@@ -7,32 +7,25 @@ import com.novel.user.dao.entity.AuthorInfo;
 import com.novel.user.dao.entity.UserInfo;
 import com.novel.user.dao.mapper.AuthorInfoMapper;
 import com.novel.user.dao.mapper.UserInfoMapper;
-import com.novel.user.service.UserAuthorCacheService;
+import com.novel.user.service.CacheService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
-
-/**
- * 用户和作者信息缓存服务实现
- */
 @Slf4j
 @Service
-public class UserAuthorCacheServiceImpl implements UserAuthorCacheService {
+@RequiredArgsConstructor
+public class CacheServiceImpl implements CacheService {
 
-    private final UserInfoMapper userInfoMapper;
     private final AuthorInfoMapper authorInfoMapper;
+    private final UserInfoMapper userInfoMapper;
     // 使用Redis缓存管理器（type=2的缓存使用Redis）
+    @Qualifier("typedJsonCacheManager")
     private final CacheManager cacheManager;
 
-    public UserAuthorCacheServiceImpl(UserInfoMapper userInfoMapper,
-                                      AuthorInfoMapper authorInfoMapper,
-                                      @Qualifier("typedJsonCacheManager") CacheManager cacheManager) {
-        this.userInfoMapper = userInfoMapper;
-        this.authorInfoMapper = authorInfoMapper;
-        this.cacheManager = cacheManager;
-    }
+    // ========== 缓存相关方法 ==========
 
     @Override
     public UserInfo getUserInfo(Long userId) {
@@ -62,7 +55,7 @@ public class UserAuthorCacheServiceImpl implements UserAuthorCacheService {
     }
 
     @Override
-    public AuthorInfo getAuthorInfoByUserId(Long userId) {
+    public AuthorInfo getAuthorInfoByUserIdFromCache(Long userId) {
         if (userId == null) {
             return null;
         }
@@ -83,7 +76,7 @@ public class UserAuthorCacheServiceImpl implements UserAuthorCacheService {
                 .eq(DatabaseConsts.AuthorInfoTable.COLUMN_USER_ID, userId)
                 .last(DatabaseConsts.SqlEnum.LIMIT_1.getSql());
         AuthorInfo authorInfo = authorInfoMapper.selectOne(queryWrapper);
-        
+
         if (authorInfo != null && cache != null) {
             // 放入缓存（使用userId和authorId作为key）
             cache.put("userId:" + userId, authorInfo);
@@ -121,7 +114,7 @@ public class UserAuthorCacheServiceImpl implements UserAuthorCacheService {
     }
 
     @Override
-    public void evictAuthorInfoCache(Long authorId) {
+    public void evictAuthorInfoCacheByAuthorId(Long authorId) {
         if (authorId == null) {
             return;
         }
@@ -133,4 +126,3 @@ public class UserAuthorCacheServiceImpl implements UserAuthorCacheService {
         }
     }
 }
-

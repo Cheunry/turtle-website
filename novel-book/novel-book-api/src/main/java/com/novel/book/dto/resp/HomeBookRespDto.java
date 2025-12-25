@@ -1,4 +1,4 @@
-package com.novel.home.dto.resp;
+package com.novel.book.dto.resp;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -50,13 +50,3 @@ public class HomeBookRespDto {
 
 }
 
-/*
-    DTO 的存在意义：
-“对外提供与内部领域模型解耦、可随意裁剪、格式化且能向前兼容的稳定数据契约。”
-
-核心作用：
-1. 隔离内部表结构，避免把实体字段直接暴露成公开 API。
-2. 按需拼装/脱敏，节省带宽、防止敏感数据泄露。
-3. 支持聚合、计算字段、格式化值，降低调用方复杂度。
-4. 接口与领域可独立演化，实体怎么改，DTO 可保持兼容。
- */

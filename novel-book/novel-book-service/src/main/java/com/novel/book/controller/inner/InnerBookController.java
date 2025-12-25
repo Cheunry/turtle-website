@@ -4,8 +4,7 @@ import com.novel.book.dto.req.*;
 import com.novel.book.dto.resp.BookChapterRespDto;
 import com.novel.book.dto.resp.BookEsRespDto;
 import com.novel.book.dto.resp.BookInfoRespDto;
-import com.novel.book.service.BookCommentService;
-import com.novel.book.service.BookEsService;
+import com.novel.book.service.BookReadService;
 import com.novel.book.service.BookSearchService;
 import com.novel.book.service.BookAuthorService;
 import com.novel.common.constant.ApiRouterConsts;
@@ -28,8 +27,7 @@ public class InnerBookController {
 
     private final BookSearchService bookSearchService;
     private final BookAuthorService bookAuthorService;
-    private final BookEsService bookEsService;
-    private final BookCommentService bookCommentService;
+    private final BookReadService bookReadService;
 
     /**
      * 查询下一批保存到 ES 中的小说列表
@@ -38,7 +36,7 @@ public class InnerBookController {
     @PostMapping("listNextEsBooks")
     RestResp<List<BookEsRespDto>> listNextEsBooks(@Parameter(description = "已查询的最大小说ID") @RequestBody Long maxBookId) {
 
-        return bookEsService.listNextEsBooks(maxBookId);
+        return bookSearchService.listNextEsBooks(maxBookId);
     }
 
     /**
@@ -46,7 +44,7 @@ public class InnerBookController {
      */
     @GetMapping("/getEsBookById")
     public RestResp<BookEsRespDto> getEsBookById(@RequestParam("bookId") Long bookId) {
-        return bookEsService.getEsBookById(bookId);
+        return bookSearchService.getEsBookById(bookId);
     }
 
 
@@ -162,7 +160,7 @@ public class InnerBookController {
     @Operation(summary = "发表评论接口")
     @PostMapping("publishComment")
     public RestResp<Void> publishComment(@Valid @RequestBody BookCommentReqDto dto) {
-        return bookCommentService.saveComment(dto);
+        return bookReadService.saveComment(dto);
     }
 
     /**
@@ -171,7 +169,7 @@ public class InnerBookController {
     @Operation(summary = "修改评论接口")
     @PostMapping("updateComment")
     public RestResp<Void> updateComment(@Valid @RequestBody BookCommentReqDto dto) {
-        return bookCommentService.updateComment(dto);
+        return bookReadService.updateComment(dto);
     }
 
     /**
@@ -180,7 +178,7 @@ public class InnerBookController {
     @Operation(summary = "删除评论接口")
     @PostMapping("deleteComment")
     public RestResp<Void> deleteComment(@RequestBody BookCommentReqDto dto) {
-        return bookCommentService.deleteComment(dto);
+        return bookReadService.deleteComment(dto);
     }
 
 

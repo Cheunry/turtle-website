@@ -5,7 +5,7 @@ import com.novel.common.resp.RestResp;
 import com.novel.user.dto.req.MessageSendReqDto;
 import com.novel.user.service.MessageService;
 import com.novel.user.dto.resp.UserInfoRespDto;
-import com.novel.user.service.UserInfoService;
+import com.novel.user.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +22,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class InnerUserController {
 
-    private final UserInfoService userInfoService;
+    private final UserService userService;
     private final MessageService messageService;
 
     /**
@@ -31,7 +31,7 @@ public class InnerUserController {
     @Operation(summary = "批量查询用户信息")
     @PostMapping("listUserInfoByIds")
     RestResp<List<UserInfoRespDto>> listUserInfoByIds(@RequestBody List<Long> userIds) {
-        return userInfoService.listUserInfoByIds(userIds);
+        return userService.listUserInfoByIds(userIds);
     }
 
     /**

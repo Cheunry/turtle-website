@@ -1,4 +1,4 @@
-package com.novel.home.dao.entity;
+package com.novel.book.dao.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -42,6 +42,5 @@ public class HomeBook {
      */
     private LocalDateTime updateTime;
 
-
-
 }
+

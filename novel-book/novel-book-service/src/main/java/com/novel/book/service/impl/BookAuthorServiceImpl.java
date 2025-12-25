@@ -210,8 +210,11 @@ public class BookAuthorServiceImpl implements BookAuthorService {
 
 
     /**
-     * 作家新增书籍章节（极简版本：只做权限校验和发送MQ，立即返回）
-     * 所有数据库操作都移到ChapterSubmitListener消费者中异步处理
+     * 作家新增书籍章节（同步版本，保留供内部调用）
+     * 
+     * 注意：前端新增章节的请求已改为异步MQ处理（见 AuthorController.publishBookChapter）
+     * 此方法保留用于内部服务同步调用场景
+     * 
      * @param dto 新增章节Dto
      * @return void
      */
@@ -431,8 +434,11 @@ public class BookAuthorServiceImpl implements BookAuthorService {
     }
 
     /**
-     * 作家更新书籍章节（极简版本：只做权限校验和发送MQ，立即返回）
-     * 所有数据库操作都移到ChapterSubmitListener消费者中异步处理
+     * 作家更新书籍章节（同步版本，保留供内部调用）
+     * 
+     * 注意：前端更新章节的请求已改为异步MQ处理（见 AuthorController.updateBookChapter）
+     * 此方法保留用于内部服务同步调用场景
+     * 
      * @param dto 更新dto
      * @return void
      */

@@ -3,8 +3,6 @@ package com.novel.book.controller.front;
 
 import com.novel.book.dto.resp.*;
 import com.novel.book.dto.req.BookVisitReqDto;
-import com.novel.book.service.BookCommentService;
-import com.novel.book.service.BookListSearchService;
 import com.novel.book.service.BookReadService;
 import com.novel.book.service.BookSearchService;
 import com.novel.common.constant.ApiRouterConsts;
@@ -31,9 +29,7 @@ import com.novel.book.job.BookRankCacheJob;
 public class FrontBookController {
 
     private final BookSearchService bookSearchService;
-    private final BookListSearchService bookListSearchService;
     private final BookReadService bookReadService;
-    private final BookCommentService bookCommentService;
     private final BookRankCacheJob bookRankCacheJob;
 
     /**
@@ -53,7 +49,7 @@ public class FrontBookController {
     @GetMapping("category/list")
     public RestResp<List<BookCategoryRespDto>> listCategory(
             @Parameter(description = "作品方向", required = true) Integer workDirection) {
-        return bookListSearchService.listCategory(workDirection);
+        return bookSearchService.listCategory(workDirection);
     }
 
     /**
@@ -62,7 +58,7 @@ public class FrontBookController {
     @Operation(summary = "小说点击榜查询接口")
     @GetMapping("visit_rank")
     public RestResp<List<BookRankRespDto>> listVisitRankBooks() {
-        return bookListSearchService.listVisitRankBooks();
+        return bookSearchService.listVisitRankBooks();
     }
 
     /**
@@ -71,7 +67,7 @@ public class FrontBookController {
     @Operation(summary = "小说新书榜查询接口")
     @GetMapping("newest_rank")
     public RestResp<List<BookRankRespDto>> listNewestRankBooks() {
-        return bookListSearchService.listNewestRankBooks();
+        return bookSearchService.listNewestRankBooks();
     }
 
     /**
@@ -80,7 +76,7 @@ public class FrontBookController {
     @Operation(summary = "小说更新榜查询接口")
     @GetMapping("update_rank")
     public RestResp<List<BookRankRespDto>> listUpdateRankBooks() {
-        return bookListSearchService.listUpdateRankBooks();
+        return bookSearchService.listUpdateRankBooks();
     }
 
     /**
@@ -90,7 +86,7 @@ public class FrontBookController {
     @GetMapping("rec_list")
     public RestResp<List<BookInfoRespDto>> listRecBooks(
             @Parameter(description = "小说ID") @RequestParam("bookId") Long bookId) {
-        return bookListSearchService.listRecBooks(bookId);
+        return bookSearchService.listRecBooks(bookId);
     }
 
     /**
@@ -192,8 +188,18 @@ public class FrontBookController {
     @GetMapping("comment/list_page")
     public RestResp<PageRespDto<BookCommentRespDto.CommentInfo>> listCommentByPage(
             @ParameterObject BookCommentPageReqDto dto) {
-        return bookCommentService.listCommentByPage(dto);
+        return bookReadService.listCommentByPage(dto);
     }
+
+    /**
+     * 首页小说展示查询接口
+     */
+    @Operation(summary = "首页小说展示查询接口")
+    @GetMapping("home/books")
+    public RestResp<List<HomeBookRespDto>> listHomeBooks(){
+        return bookSearchService.listHomeBook();
+    }
+
 
     /**
      * 小说信息查询接口（放在最后，因为路径最宽泛）

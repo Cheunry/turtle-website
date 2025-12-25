@@ -7,12 +7,32 @@ import com.novel.user.dto.AuthorInfoDto;
 import com.novel.user.dto.mq.AuthorPointsConsumeMqDto;
 import com.novel.user.dto.req.AuthorPointsConsumeReqDto;
 import com.novel.user.dto.req.AuthorRegisterReqDto;
-import com.novel.user.service.AuthorInfoService;
-import com.novel.user.service.UserAuthorCacheService;
+import com.novel.user.service.AuthorService;
+import com.novel.user.service.CacheService;
+import com.novel.user.service.MessageService;
+import com.novel.user.feign.BookFeignManager;
+import com.novel.user.dto.req.MessagePageReqDto;
+import com.novel.user.dto.resp.MessageRespDto;
+import com.novel.book.dto.req.*;
+import com.novel.book.dto.resp.BookChapterRespDto;
+import com.novel.book.dto.resp.BookInfoRespDto;
+import com.novel.book.dto.mq.BookAddMqDto;
+import com.novel.book.dto.mq.BookUpdateMqDto;
+import com.novel.book.dto.mq.ChapterSubmitMqDto;
+import com.novel.ai.feign.AiFeign;
+import com.novel.book.dto.req.BookAuditReqDto;
+import com.novel.book.dto.req.ChapterAuditReqDto;
+import com.novel.book.dto.req.BookCoverReqDto;
+import com.novel.ai.dto.req.TextPolishReqDto;
+import com.novel.book.dto.resp.BookAuditRespDto;
+import com.novel.book.dto.resp.ChapterAuditRespDto;
+import com.novel.ai.dto.resp.TextPolishRespDto;
 import com.novel.common.constant.AmqpConsts;
 import com.novel.common.constant.CacheConsts;
 import com.novel.common.constant.DatabaseConsts;
 import com.novel.common.constant.ErrorCodeEnum;
+import com.novel.common.req.PageReqDto;
+import com.novel.common.resp.PageRespDto;
 import com.novel.common.resp.RestResp;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,12 +49,15 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class AuthorInfoServiceImpl implements AuthorInfoService {
+public class AuthorServiceImpl implements AuthorService {
 
     private final AuthorInfoMapper authorInfoMapper;
     private final StringRedisTemplate stringRedisTemplate;
     private final RocketMQTemplate rocketMQTemplate;
-    private final UserAuthorCacheService userAuthorCacheService;
+    private final BookFeignManager bookFeignManager;
+    private final MessageService messageService;
+    private final AiFeign aiFeign;
+    private final CacheService cacheService;
 
     /**
      * 作家注册
@@ -75,8 +98,8 @@ public class AuthorInfoServiceImpl implements AuthorInfoService {
         log.debug("作者[{}]注册成功，Redis 积分已初始化", authorId);
 
         // 清除作者信息缓存（新注册时，确保下次查询获取最新数据）
-        userAuthorCacheService.evictAuthorInfoCacheByUserId(dto.getUserId());
-        userAuthorCacheService.evictAuthorInfoCache(authorId);
+        cacheService.evictAuthorInfoCacheByUserId(dto.getUserId());
+        cacheService.evictAuthorInfoCacheByAuthorId(authorId);
 
         return RestResp.ok();
     }
@@ -439,6 +462,7 @@ public class AuthorInfoServiceImpl implements AuthorInfoService {
      * @param userId 用户ID
      * @return 作家基础信息DTO
      */
+    @Override
     public AuthorInfoDto getAuthorInfoByUserId(Long userId) {
         QueryWrapper<AuthorInfo> queryWrapper = new QueryWrapper<>();
         queryWrapper
@@ -456,5 +480,380 @@ public class AuthorInfoServiceImpl implements AuthorInfoService {
                 .paidPoints(authorInfo.getPaidPoints())
                 .build();
     }
+
+    @Override
+    public RestResp<Void> publishBook(Long authorId, String penName, BookAddReqDto dto, Boolean auditEnable) {
+        // 构建MQ消息
+        BookAddMqDto mqDto = BookAddMqDto.builder()
+                .authorId(authorId)
+                .penName(penName)
+                .workDirection(dto.getWorkDirection())
+                .categoryId(dto.getCategoryId())
+                .categoryName(dto.getCategoryName())
+                .picUrl(dto.getPicUrl())
+                .bookName(dto.getBookName())
+                .bookDesc(dto.getBookDesc())
+                .isVip(dto.getIsVip())
+                .bookStatus(dto.getBookStatus())
+                .auditEnable(auditEnable)
+                .build();
+        
+        // 发送MQ消息
+        try {
+            String destination = AmqpConsts.BookAddMq.TOPIC + ":" + AmqpConsts.BookAddMq.TAG_ADD;
+            rocketMQTemplate.convertAndSend(destination, mqDto);
+            log.debug("书籍新增请求已发送到MQ，bookName: {}, authorId: {}", dto.getBookName(), authorId);
+        } catch (Exception e) {
+            log.error("发送书籍新增MQ消息失败，bookName: {}, authorId: {}", dto.getBookName(), authorId, e);
+            return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR, "提交失败，请稍后重试");
+        }
+        
+        return RestResp.ok();
+    }
+
+    @Override
+    public RestResp<Void> updateBook(Long authorId, Long bookId, BookUptReqDto dto, Boolean auditEnable) {
+        // 构建MQ消息
+        BookUpdateMqDto mqDto = BookUpdateMqDto.builder()
+                .bookId(bookId)
+                .authorId(authorId)
+                .picUrl(dto.getPicUrl())
+                .bookName(dto.getBookName())
+                .bookDesc(dto.getBookDesc())
+                .categoryId(dto.getCategoryId())
+                .categoryName(dto.getCategoryName())
+                .workDirection(dto.getWorkDirection())
+                .isVip(dto.getIsVip())
+                .bookStatus(dto.getBookStatus())
+                .auditEnable(auditEnable)
+                .build();
+        
+        // 发送MQ消息
+        try {
+            String destination = AmqpConsts.BookUpdateMq.TOPIC + ":" + AmqpConsts.BookUpdateMq.TAG_UPDATE;
+            rocketMQTemplate.convertAndSend(destination, mqDto);
+            log.debug("书籍更新请求已发送到MQ，bookId: {}, authorId: {}", bookId, authorId);
+        } catch (Exception e) {
+            log.error("发送书籍更新MQ消息失败，bookId: {}, authorId: {}", bookId, authorId, e);
+            return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR, "提交失败，请稍后重试");
+        }
+        
+        return RestResp.ok();
+    }
+
+    @Override
+    public RestResp<Void> deleteBook(Long bookId) {
+        BookDelReqDto dto = new BookDelReqDto();
+        dto.setBookId(bookId);
+        return bookFeignManager.deleteBook(dto);
+    }
+
+    @Override
+    public RestResp<Void> publishBookChapter(Long authorId, Long bookId, ChapterAddReqDto dto, Boolean auditEnable) {
+        dto.setAuthorId(authorId);
+        dto.setBookId(bookId);
+        
+        // 构建章节提交MQ消息
+        ChapterSubmitMqDto submitDto = ChapterSubmitMqDto.builder()
+                .bookId(bookId)
+                .authorId(authorId)
+                .chapterNum(dto.getChapterNum())
+                .chapterName(dto.getChapterName())
+                .content(dto.getContent())
+                .isVip(dto.getIsVip())
+                .operationType("CREATE")
+                .auditEnable(auditEnable)
+                .build();
+        
+        // 发送MQ消息
+        try {
+            String destination = AmqpConsts.ChapterSubmitMq.TOPIC + ":" + AmqpConsts.ChapterSubmitMq.TAG_SUBMIT;
+            rocketMQTemplate.convertAndSend(destination, submitDto);
+            log.debug("章节新增请求已发送到MQ，bookId: {}, chapterNum: {}", bookId, dto.getChapterNum());
+        } catch (Exception e) {
+            log.error("发送章节新增MQ消息失败，bookId: {}, chapterNum: {}", bookId, dto.getChapterNum(), e);
+            return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR, "提交失败，请稍后重试");
+        }
+        
+        return RestResp.ok();
+    }
+
+    @Override
+    public RestResp<Void> updateBookChapter(Long authorId, Long bookId, Integer chapterNum, ChapterUptReqDto dto, Boolean auditEnable) {
+        dto.setBookId(bookId);
+        dto.setOldChapterNum(chapterNum);
+        dto.setAuthorId(authorId);
+        
+        // 构建章节提交MQ消息
+        ChapterSubmitMqDto submitDto = ChapterSubmitMqDto.builder()
+                .bookId(bookId)
+                .authorId(authorId)
+                .oldChapterNum(chapterNum)
+                .chapterNum(dto.getChapterNum())
+                .chapterName(dto.getChapterName())
+                .content(dto.getContent())
+                .isVip(dto.getIsVip())
+                .operationType("UPDATE")
+                .auditEnable(auditEnable)
+                .build();
+        
+        // 发送MQ消息
+        try {
+            String destination = AmqpConsts.ChapterSubmitMq.TOPIC + ":" + AmqpConsts.ChapterSubmitMq.TAG_SUBMIT;
+            rocketMQTemplate.convertAndSend(destination, submitDto);
+            log.debug("章节更新请求已发送到MQ，bookId: {}, chapterNum: {}", bookId, chapterNum);
+        } catch (Exception e) {
+            log.error("发送章节更新MQ消息失败，bookId: {}, chapterNum: {}", bookId, chapterNum, e);
+            return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR, "提交失败，请稍后重试");
+        }
+        
+        return RestResp.ok();
+    }
+
+    @Override
+    public RestResp<Void> deleteBookChapter(Long bookId, Integer chapterNum) {
+        ChapterDelReqDto dto = new ChapterDelReqDto();
+        dto.setBookId(bookId);
+        dto.setChapterNum(chapterNum);
+        return bookFeignManager.deleteBookChapter(dto);
+    }
+
+    @Override
+    public RestResp<PageRespDto<BookInfoRespDto>> listBooks(Long authorId, BookPageReqDto dto) {
+        dto.setAuthorId(authorId);
+        return bookFeignManager.listPublishBooks(dto);
+    }
+
+    @Override
+    public RestResp<PageRespDto<BookChapterRespDto>> listBookChapters(Long authorId, Long bookId, PageReqDto dto) {
+        ChapterPageReqDto chapterPageReqDto = new ChapterPageReqDto();
+        chapterPageReqDto.setBookId(bookId);
+        chapterPageReqDto.setPageNum(dto.getPageNum());
+        chapterPageReqDto.setPageSize(dto.getPageSize());
+        chapterPageReqDto.setAuthorId(authorId);
+        return bookFeignManager.listPublishBookChapters(chapterPageReqDto);
+    }
+
+    @Override
+    public RestResp<BookChapterRespDto> getBookChapter(Long bookId, Integer chapterNum) {
+        return bookFeignManager.getBookChapter(bookId, chapterNum);
+    }
+
+    @Override
+    public RestResp<BookInfoRespDto> getBookById(Long bookId) {
+        return bookFeignManager.getBookByIdForAuthor(bookId);
+    }
+
+    @Override
+    public RestResp<PageRespDto<MessageRespDto>> listAuthorMessages(MessagePageReqDto pageReqDto) {
+        // 明确指定只查询作者消息（receiver_type=1），避免与普通用户消息混淆
+        pageReqDto.setReceiverType(DatabaseConsts.MessageReceiveTable.RECEIVER_TYPE_AUTHOR);
+        // 如果未指定消息类型，默认只查作家相关的消息（类型2:作家助手/审核）
+        if (pageReqDto.getMessageType() == null) {
+            pageReqDto.setMessageType(DatabaseConsts.MessageContentTable.MESSAGE_TYPE_AUTHOR_ASSISTANT);
+        }
+        return messageService.listMessages(pageReqDto);
+    }
+
+    @Override
+    public RestResp<Long> getAuthorUnReadCount() {
+        // 调用专门的方法统计作者消息（receiver_type=1）
+        MessageServiceImpl messageServiceImpl = (MessageServiceImpl) messageService;
+        return messageServiceImpl.getUnReadCountByReceiverType(DatabaseConsts.MessageContentTable.MESSAGE_TYPE_AUTHOR_ASSISTANT, DatabaseConsts.MessageReceiveTable.RECEIVER_TYPE_AUTHOR);
+    }
+
+    @Override
+    public RestResp<Void> readAuthorMessage(Long id) {
+        return messageService.readMessage(id);
+    }
+
+    @Override
+    public RestResp<Void> deleteAuthorMessage(Long id) {
+        return messageService.deleteMessage(id);
+    }
+
+    @Override
+    public RestResp<Void> batchReadAuthorMessages(java.util.List<Long> ids) {
+        return messageService.batchReadMessages(2, ids);
+    }
+
+    @Override
+    public RestResp<Void> batchDeleteAuthorMessages(java.util.List<Long> ids) {
+        return messageService.batchDeleteMessages(2, ids);
+    }
+
+    @Override
+    public RestResp<Void> allReadAuthorMessages() {
+        return messageService.allReadMessages(2);
+    }
+
+    @Override
+    public RestResp<Void> allDeleteAuthorMessages() {
+        return messageService.allDeleteMessages(2);
+    }
+
+    @Override
+    public RestResp<Object> audit(Long authorId, AuthorPointsConsumeReqDto dto) {
+        dto.setAuthorId(authorId);
+        dto.setConsumeType(0); // 0-AI审核
+        dto.setConsumePoints(1); // 1点/次
+        
+        // 1. 先扣除积分
+        RestResp<Void> deductResult = deductPoints(dto);
+        if (!deductResult.isOk()) {
+            return RestResp.fail(ErrorCodeEnum.USER_POINTS_NOT_ENOUGH, deductResult.getMessage());
+        }
+        
+        // 2. 调用AI审核服务
+        try {
+            Object result;
+            // 判断是审核书籍还是审核章节
+            if (dto.getChapterNum() != null || (dto.getContent() != null && !dto.getContent().isEmpty())) {
+                // 审核章节
+                ChapterAuditReqDto chapterReq = ChapterAuditReqDto.builder()
+                        .bookId(dto.getRelatedId())
+                        .chapterNum(dto.getChapterNum())
+                        .chapterName(dto.getTitle())
+                        .content(dto.getContent())
+                        .build();
+                RestResp<ChapterAuditRespDto> aiResp = aiFeign.auditChapter(chapterReq);
+                if (!aiResp.isOk()) {
+                     throw new RuntimeException("AI章节审核失败: " + aiResp.getMessage());
+                }
+                result = aiResp.getData();
+            } else {
+                // 审核书籍
+                BookAuditReqDto bookReq = BookAuditReqDto.builder()
+                        .id(dto.getRelatedId())
+                        .bookName(dto.getBookName())
+                        .bookDesc(dto.getBookDesc())
+                        .build();
+                RestResp<BookAuditRespDto> aiResp = aiFeign.auditBook(bookReq);
+                 if (!aiResp.isOk()) {
+                     throw new RuntimeException("AI书籍审核失败: " + aiResp.getMessage());
+                }
+                result = aiResp.getData();
+            }
+
+            return RestResp.ok(result);
+            
+        } catch (Exception e) {
+            // 3. AI服务失败，回滚积分
+            log.error("AI审核服务调用失败，开始回滚积分，作者ID: {}, 错误: {}", authorId, e.getMessage(), e);
+            RestResp<Void> rollbackResult = rollbackPoints(dto);
+            if (!rollbackResult.isOk()) {
+                log.error("积分回滚失败，作者ID: {}, 错误: {}", authorId, rollbackResult.getMessage());
+                return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR, "AI服务调用失败，积分回滚也失败，请联系管理员");
+            }
+            return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR, "AI审核服务调用失败，积分已自动退回");
+        }
+    }
+
+    @Override
+    public RestResp<Object> polish(Long authorId, AuthorPointsConsumeReqDto dto) {
+        dto.setAuthorId(authorId);
+        dto.setConsumeType(1); // 1-AI润色
+        dto.setConsumePoints(10); // 10点/次
+        
+        // 1. 先扣除积分
+        RestResp<Void> deductResult = deductPoints(dto);
+        if (!deductResult.isOk()) {
+            return RestResp.fail(ErrorCodeEnum.USER_POINTS_NOT_ENOUGH, deductResult.getMessage());
+        }
+        
+        // 2. 调用AI润色服务
+        try {
+            TextPolishReqDto polishReq = new TextPolishReqDto();
+            polishReq.setSelectedText(dto.getContent());
+            polishReq.setStyle(dto.getStyle());
+            polishReq.setRequirement(dto.getRequirement());
+            
+            RestResp<TextPolishRespDto> aiResp = aiFeign.polishText(polishReq);
+            if (!aiResp.isOk()) {
+                throw new RuntimeException("AI润色失败: " + aiResp.getMessage());
+            }
+            
+            return RestResp.ok(aiResp.getData());
+            
+        } catch (Exception e) {
+            // 3. AI服务失败，回滚积分
+            log.error("AI润色服务调用失败，开始回滚积分，作者ID: {}, 错误: {}", authorId, e.getMessage(), e);
+            RestResp<Void> rollbackResult = rollbackPoints(dto);
+            if (!rollbackResult.isOk()) {
+                log.error("积分回滚失败，作者ID: {}, 错误: {}", authorId, rollbackResult.getMessage());
+                return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR, "AI服务调用失败，积分回滚也失败，请联系管理员");
+            }
+            return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR, "AI润色服务调用失败，积分已自动退回");
+        }
+    }
+
+    @Override
+    public RestResp<String> generateCoverPrompt(Long authorId, BookCoverReqDto reqDto) {
+        log.info("生成封面提示词请求，作者ID: {}, 小说ID: {}, 小说名: {}", authorId, reqDto.getId(), reqDto.getBookName());
+        try {
+            // 注意：此接口不扣积分，仅调用AI服务生成提示词
+            RestResp<String> promptResp = aiFeign.getBookCoverPrompt(reqDto);
+            if (!promptResp.isOk()) {
+                log.warn("生成封面提示词失败，作者ID: {}, 小说ID: {}, 错误: {}", authorId, reqDto.getId(), promptResp.getMessage());
+                return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR, "生成封面提示词失败: " + promptResp.getMessage());
+            }
+            log.info("生成封面提示词成功，作者ID: {}, 小说ID: {}, 提示词长度: {}", authorId, reqDto.getId(), 
+                    promptResp.getData() != null ? promptResp.getData().length() : 0);
+            return RestResp.ok(promptResp.getData());
+        } catch (Exception e) {
+            log.error("生成封面提示词异常，作者ID: {}, 小说ID: {}", authorId, reqDto.getId(), e);
+            return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR, "生成封面提示词失败，请稍后重试");
+        }
+    }
+
+    @Override
+    public RestResp<Object> generateCover(Long authorId, AuthorPointsConsumeReqDto dto) {
+        dto.setAuthorId(authorId);
+        dto.setConsumeType(2); // 2-AI封面
+        dto.setConsumePoints(100); // 100点/次
+        
+        // 1. 先扣除积分
+        RestResp<Void> deductResult = deductPoints(dto);
+        if (!deductResult.isOk()) {
+            return RestResp.fail(ErrorCodeEnum.USER_POINTS_NOT_ENOUGH, deductResult.getMessage());
+        }
+        
+        // 2. 调用AI封面生成服务
+        try {
+            // 2.1 获取提示词
+            BookCoverReqDto coverReq = BookCoverReqDto.builder()
+                    .id(dto.getRelatedId())
+                    .bookName(dto.getBookName())
+                    .bookDesc(dto.getBookDesc())
+                    .categoryName(dto.getCategoryName())
+                    .build();
+            
+            RestResp<String> promptResp = aiFeign.getBookCoverPrompt(coverReq);
+            if (!promptResp.isOk()) {
+                throw new RuntimeException("获取封面提示词失败: " + promptResp.getMessage());
+            }
+            String prompt = promptResp.getData();
+            
+            // 2.2 生成图片
+            RestResp<String> imageResp = aiFeign.generateImage(prompt);
+            if (!imageResp.isOk()) {
+                throw new RuntimeException("图片生成失败: " + imageResp.getMessage());
+            }
+            
+            return RestResp.ok(imageResp.getData());
+            
+        } catch (Exception e) {
+            // 3. AI服务失败，回滚积分
+            log.error("AI封面生成服务调用失败，开始回滚积分，作者ID: {}, 错误: {}", authorId, e.getMessage(), e);
+            RestResp<Void> rollbackResult = rollbackPoints(dto);
+            if (!rollbackResult.isOk()) {
+                log.error("积分回滚失败，作者ID: {}, 错误: {}", authorId, rollbackResult.getMessage());
+                return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR, "AI服务调用失败，积分回滚也失败，请联系管理员");
+            }
+            return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR, "AI封面生成服务调用失败，积分已自动退回");
+        }
+    }
+
+
 
 }

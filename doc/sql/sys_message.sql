@@ -36,7 +36,7 @@ CREATE TABLE `message_receive` (
    `message_id` BIGINT UNSIGNED NOT NULL COMMENT '关联内容表ID',
 
    `receiver_id` BIGINT UNSIGNED NOT NULL COMMENT '接收者ID (对应UserID或AuthorID)',
-   `receiver_type` TINYINT NOT NULL DEFAULT 1 COMMENT '接收者身份类型 (1:普通用户/UserID, 2:作者/AuthorID)',
+   `receiver_type` TINYINT NOT NULL DEFAULT 1 COMMENT '接收者身份类型 (0:普通用户/UserID, 1:作者/AuthorID)',
 
    `is_read` TINYINT NOT NULL DEFAULT 0 COMMENT '阅读状态 (0:未读, 1:已读)',
    `read_time` DATETIME DEFAULT NULL COMMENT '阅读时间',

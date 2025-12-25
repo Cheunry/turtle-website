@@ -34,7 +34,7 @@ public interface MessageService {
     /**
      * 获取指定接收者类型的未读消息数量
      * @param messageType 消息类型，null则查全部
-     * @param receiverType 接收者类型 (1:普通用户, 2:作者)
+     * @param receiverType 接收者类型 (0:普通用户, 1:作者)
      * @return 未读数量
      */
     RestResp<Long> getUnReadCountByReceiverType(Integer messageType, Integer receiverType);

@@ -3,6 +3,7 @@ package com.novel.user.controller.front;
 import com.novel.book.dto.req.BookCommentReqDto;
 import com.novel.common.auth.UserHolder;
 import com.novel.common.constant.ApiRouterConsts;
+import com.novel.common.constant.DatabaseConsts;
 import com.novel.common.constant.SystemConfigConsts;
 import com.novel.common.resp.PageRespDto;
 import com.novel.common.resp.RestResp;
@@ -13,8 +14,7 @@ import com.novel.user.dto.req.UserRegisterReqDto;
 import com.novel.user.dto.resp.*;
 import com.novel.user.feign.BookFeignManager;
 import com.novel.user.service.MessageService;
-import com.novel.user.service.UserBookshelfService;
-import com.novel.user.service.UserInfoService;
+import com.novel.user.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -38,8 +38,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class UserController {
 
-    private final UserInfoService userInfoService;
-    private final UserBookshelfService userBookshelfService;
+    private final UserService userService;
     private final MessageService messageService;
     private final BookFeignManager bookFeignManager;
 
@@ -48,27 +47,27 @@ public class UserController {
     @Operation(summary = "用户注册接口")
     @PostMapping("register")
     public RestResp<UserRegisterRespDto> register(@Valid @RequestBody UserRegisterReqDto dto) {
-        return userInfoService.register(dto);
+        return userService.register(dto);
     }
 
     @Operation(summary = "用户登录接口")
     @PostMapping("login")
     public RestResp<UserLoginRespDto> login(@Valid @RequestBody UserLoginReqDto dto) {
         log.debug("用户登录请求: {}", dto);
-        return userInfoService.login(dto);
+        return userService.login(dto);
     }
 
     @Operation(summary = "用户信息查询接口")
     @GetMapping
     public RestResp<UserInfoRespDto> getUserInfo() {
-        return userInfoService.getUserInfo(UserHolder.getUserId());
+        return userService.getUserInfo(UserHolder.getUserId());
     }
 
     @Operation(summary = "用户信息修改接口")
     @PutMapping
     public RestResp<Void> updateUserInfo(@Valid @RequestBody UserInfoUptReqDto dto) {
         dto.setUserId(UserHolder.getUserId());
-        return userInfoService.updateUserInfo(dto);
+        return userService.updateUserInfo(dto);
     }
 
     /* ***********************反馈相关接口************************* */
@@ -76,13 +75,13 @@ public class UserController {
     @Operation(summary = "用户反馈提交接口")
     @PostMapping("feedback")
     public RestResp<Void> submitFeedback(@RequestBody String content) {
-        return userInfoService.saveFeedback(UserHolder.getUserId(), content);
+        return userService.saveFeedback(UserHolder.getUserId(), content);
     }
 
     @Operation(summary = "用户反馈删除接口")
     @DeleteMapping("feedback/{id}")
     public RestResp<Void> deleteFeedback(@Parameter(description = "反馈ID") @PathVariable Long id) {
-        return userInfoService.deleteFeedback(UserHolder.getUserId(), id);
+        return userService.deleteFeedback(UserHolder.getUserId(), id);
     }
 
     /* ************************书架相关接口************************* */
@@ -90,32 +89,32 @@ public class UserController {
     @Operation(summary = "查询书架状态接口")
     @GetMapping("bookshelf_status")
     public RestResp<Integer> getBookshelfStatus(@Parameter(description = "小说ID") @RequestParam String bookId) {
-        return userBookshelfService.getBookshelfStatus(UserHolder.getUserId(), bookId);
+        return userService.getBookshelfStatus(UserHolder.getUserId(), bookId);
     }
 
     @Operation(summary = "加入书架接口")
     @PostMapping("bookshelf")
     public RestResp<Void> addToBookshelf(@Parameter(description = "小说ID") @RequestParam("bookId") Long bookId) {
-        return userBookshelfService.addToBookshelf(UserHolder.getUserId(), bookId);
+        return userService.addToBookshelf(UserHolder.getUserId(), bookId);
     }
 
     @Operation(summary = "查询书架列表接口")
     @GetMapping("bookshelf")
     public RestResp<List<UserBookshelfRespDto>> listBookshelf() {
-        return userBookshelfService.listBookshelf(UserHolder.getUserId());
+        return userService.listBookshelf(UserHolder.getUserId());
     }
 
     @Operation(summary = "更新书架阅读进度接口")
     @PutMapping("bookshelf/process")
     public RestResp<Void> updateBookshelfProcess(@Parameter(description = "小说ID") @RequestParam("bookId") Long bookId,
                                                  @Parameter(description = "章节号") @RequestParam("chapterNum") Integer chapterNum) {
-        return userBookshelfService.updatePreChapterId(UserHolder.getUserId(), bookId, chapterNum);
+        return userService.updatePreChapterId(UserHolder.getUserId(), bookId, chapterNum);
     }
 
     @Operation(summary = "删除书架中的书籍")
     @DeleteMapping("bookshelf")
     public RestResp<Void> deleteBookshelf(@Parameter(description = "小说ID") @RequestParam("bookId") Long bookId) {
-        return userBookshelfService.deleteBookshelf(UserHolder.getUserId(), bookId);
+        return userService.deleteBookshelf(UserHolder.getUserId(), bookId);
     }
 
     /* ************************评论相关接口************************* */
@@ -156,8 +155,8 @@ public class UserController {
     public RestResp<PageRespDto<MessageRespDto>> listUserMessages(
             @ParameterObject MessagePageReqDto pageReqDto
     ) {
-        // 明确指定只查询普通用户消息（receiver_type=1），避免同时是作者的用户看到作者消息
-        pageReqDto.setReceiverType(1);
+        // 明确指定只查询普通用户消息，避免同时是作者的用户看到作者消息
+        pageReqDto.setReceiverType(DatabaseConsts.MessageReceiveTable.RECEIVER_TYPE_USER);
         return messageService.listMessages(pageReqDto);
     }
 
@@ -184,24 +183,24 @@ public class UserController {
     @Operation(summary = "批量标记用户消息为已读")
     @PutMapping("message/batch_read")
     public RestResp<Void> batchReadUserMessages(@RequestBody List<Long> ids) {
-        return messageService.batchReadMessages(1, ids);
+        return messageService.batchReadMessages(DatabaseConsts.MessageReceiveTable.RECEIVER_TYPE_USER, ids);
     }
 
     @Operation(summary = "批量删除用户消息")
     @PostMapping("message/batch_delete")
     public RestResp<Void> batchDeleteUserMessages(@RequestBody List<Long> ids) {
-        return messageService.batchDeleteMessages(1, ids);
+        return messageService.batchDeleteMessages(DatabaseConsts.MessageReceiveTable.RECEIVER_TYPE_USER, ids);
     }
 
     @Operation(summary = "全部标记用户消息为已读")
     @PutMapping("message/all_read")
     public RestResp<Void> allReadUserMessages() {
-        return messageService.allReadMessages(1);
+        return messageService.allReadMessages(DatabaseConsts.MessageReceiveTable.RECEIVER_TYPE_USER);
     }
 
     @Operation(summary = "全部删除用户消息")
     @PostMapping("message/all_delete")
     public RestResp<Void> allDeleteUserMessages() {
-        return messageService.allDeleteMessages(1);
+        return messageService.allDeleteMessages(DatabaseConsts.MessageReceiveTable.RECEIVER_TYPE_USER);
     }
 }

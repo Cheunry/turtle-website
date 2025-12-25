@@ -60,6 +60,20 @@ public interface SseNotificationService {
     void sendHeartbeat(Long userId, boolean isAuthor);
 
     /**
+     * 创建用户SSE连接（包含初始化逻辑和心跳调度）
+     * @param userId 用户ID
+     * @return SSE连接对象
+     */
+    SseEmitter createUserConnection(Long userId);
+
+    /**
+     * 创建作者SSE连接（包含初始化逻辑和心跳调度）
+     * @param authorId 作者ID
+     * @return SSE连接对象
+     */
+    SseEmitter createAuthorConnection(Long authorId);
+
+    /**
      * 获取当前连接数（用于监控）
      * @return 连接统计信息
      */

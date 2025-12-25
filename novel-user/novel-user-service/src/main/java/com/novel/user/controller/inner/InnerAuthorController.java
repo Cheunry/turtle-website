@@ -3,7 +3,7 @@ package com.novel.user.controller.inner;
 import com.novel.common.constant.ApiRouterConsts;
 import com.novel.common.resp.RestResp;
 import com.novel.user.dto.req.AuthorPointsConsumeReqDto;
-import com.novel.user.service.AuthorInfoService;
+import com.novel.user.service.AuthorService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class InnerAuthorController {
 
-    private final AuthorInfoService authorInfoService;
+    private final AuthorService authorService;
 
     /**
      * 扣除作者积分
@@ -29,7 +29,7 @@ public class InnerAuthorController {
     @Operation(summary = "扣除作者积分")
     @PostMapping("points/deduct")
     public RestResp<Void> deductPoints(@RequestBody AuthorPointsConsumeReqDto dto) {
-        return authorInfoService.deductPoints(dto);
+        return authorService.deductPoints(dto);
     }
 }
 

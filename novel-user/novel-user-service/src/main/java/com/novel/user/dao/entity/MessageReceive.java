@@ -31,7 +31,7 @@ public class MessageReceive {
     private Long receiverId;
 
     /**
-     * 接收者身份类型 (1:普通用户/UserID, 2:作者/AuthorID)
+     * 接收者身份类型 (0:普通用户/UserID, 1:作者/AuthorID)
      */
     private Integer receiverType;
 

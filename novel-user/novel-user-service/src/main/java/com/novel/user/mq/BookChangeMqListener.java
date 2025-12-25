@@ -3,6 +3,7 @@ package com.novel.user.mq;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.novel.book.dto.mq.BookChapterUpdateDto;
 import com.novel.common.constant.AmqpConsts;
+import com.novel.common.constant.DatabaseConsts;
 import com.novel.user.dao.entity.MessageContent;
 import com.novel.user.dao.entity.MessageReceive;
 import com.novel.user.dao.entity.UserBookshelf;
@@ -51,12 +52,12 @@ public class BookChangeMqListener implements RocketMQListener<BookChapterUpdateD
         MessageContent content = new MessageContent();
         content.setTitle("书籍更新提醒");
         content.setContent(String.format("您订阅的小说《%s》更新了新章节：%s，快去看看吧！", dto.getBookName(), dto.getChapterName()));
-        content.setType(1); // 1: 订阅更新/作品更新
+        content.setType(DatabaseConsts.MessageContentTable.MESSAGE_TYPE_SUBSCRIBE_UPDATE); // 订阅更新/作品更新
         // 前端路由地址
         content.setLink("/book/" + dto.getBookId() + "/" + dto.getChapterNum()); 
         content.setBusId(dto.getBookId());
         content.setBusType("book");
-        content.setSenderType(0); // 系统发送
+        content.setSenderType(DatabaseConsts.MessageContentTable.SENDER_TYPE_SYSTEM); // 系统发送
         content.setCreateTime(LocalDateTime.now());
         content.setUpdateTime(LocalDateTime.now());
         
@@ -68,7 +69,7 @@ public class BookChangeMqListener implements RocketMQListener<BookChapterUpdateD
             MessageReceive receive = new MessageReceive();
             receive.setMessageId(content.getId());
             receive.setReceiverId(sub.getUserId());
-            receive.setReceiverType(1); // 普通用户
+            receive.setReceiverType(DatabaseConsts.MessageReceiveTable.RECEIVER_TYPE_USER); // 普通用户
             receive.setIsRead(0);
             receive.setIsDeleted(0);
             messageReceiveMapper.insert(receive);

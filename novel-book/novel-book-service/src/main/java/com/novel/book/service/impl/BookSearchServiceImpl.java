@@ -1,21 +1,26 @@
 package com.novel.book.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.novel.book.dao.entity.BookCategory;
 import com.novel.book.dao.entity.BookChapter;
 import com.novel.book.dao.entity.BookInfo;
+import com.novel.book.dao.entity.HomeBook;
+import com.novel.book.dao.mapper.BookCategoryMapper;
 import com.novel.book.dao.mapper.BookChapterMapper;
 import com.novel.book.dao.mapper.BookInfoMapper;
-import com.novel.book.dto.resp.BookChapterAboutRespDto;
-import com.novel.book.dto.resp.BookChapterRespDto;
-import com.novel.book.dto.resp.BookInfoRespDto;
+import com.novel.book.dao.mapper.HomeBookMapper;
+import com.novel.book.dto.resp.*;
 import com.novel.common.constant.DatabaseConsts;
 import com.novel.common.resp.RestResp;
 import com.novel.book.service.BookSearchService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
-import java.util.List;
+import java.time.ZoneOffset;
+import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import com.novel.common.constant.AmqpConsts;
@@ -24,10 +29,8 @@ import org.apache.rocketmq.spring.core.RocketMQTemplate;
 import com.novel.common.constant.CacheConsts;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
-import java.util.Map;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import org.springframework.util.CollectionUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -36,8 +39,11 @@ public class BookSearchServiceImpl implements BookSearchService {
 
     private final BookInfoMapper bookInfoMapper;
     private final BookChapterMapper bookChapterMapper;
+    private final HomeBookMapper homeBookMapper;
     private final StringRedisTemplate stringRedisTemplate;
     private final RocketMQTemplate rocketMQTemplate;
+
+    private final BookCategoryMapper bookCategoryMapper;
 
     /**
      * 查询书籍信息
@@ -206,10 +212,6 @@ public class BookSearchServiceImpl implements BookSearchService {
      */
     @Override
     public RestResp<BookChapterAboutRespDto> getLastChapterAbout(Long bookId) {
-        // 查询小说信息
-//        BookInfoRespDto bookInfo = bookInfoCacheManager.getBookInfo(bookId);
-
-
         // 查询最新章节信息（只查询审核通过的章节，auditStatus=1）
         QueryWrapper<BookChapter> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq(DatabaseConsts.BookChapterTable.COLUMN_BOOK_ID, bookId)
@@ -252,6 +254,332 @@ public class BookSearchServiceImpl implements BookSearchService {
                 .chapterTotal(chapterTotal)
                 .contentSummary(content != null ? content.substring(0, Math.min(content.length(), 30)) : "暂无内容")
                 .build());
+    }
+
+    /**
+     * 查询首页小说展示列表
+     * @return 首页小说展示列表的rest响应结果
+     */
+    @Override
+    public RestResp<List<HomeBookRespDto>> listHomeBook() {
+        // 从首页小说展示表中查询出需要展示的小说
+        QueryWrapper<HomeBook> queryWrapper = new QueryWrapper<>();
+        queryWrapper.orderByDesc(DatabaseConsts.CommonColumnEnum.SORT.getName());
+        List<HomeBook> homeBooks = homeBookMapper.selectList(queryWrapper);
+
+        // 获取首页小说展示列表书籍的id
+        if(!CollectionUtils.isEmpty(homeBooks)) {
+            List<Long> bookIds = homeBooks.stream()
+                    .map(HomeBook::getBookId)
+                    .toList();
+
+            // 根据小说ID列表查询相关的小说信息列表
+            QueryWrapper<BookInfo> bookQueryWrapper = new QueryWrapper<>();
+            bookQueryWrapper.in(DatabaseConsts.CommonColumnEnum.ID.getName(), bookIds)
+                    .eq("audit_status", 1); // 只返回审核通过的书籍
+            List<BookInfo> bookInfos = bookInfoMapper.selectList(bookQueryWrapper);
+
+            // 组装 HomeBookRespDto 列表数据并返回（只显示审核通过的书籍，auditStatus=1）
+            if(!CollectionUtils.isEmpty(bookInfos)) {
+                Map<Long, BookInfo> bookInfoMap = bookInfos.stream()
+                        .collect(Collectors.toMap(BookInfo::getId, Function.identity()));
+                return RestResp.ok(homeBooks.stream()
+                        .filter(v -> bookInfoMap.containsKey(v.getBookId())) // 只保留审核通过的书籍
+                        .map(v -> {
+                            BookInfo bookInfo = bookInfoMap.get(v.getBookId());
+                            HomeBookRespDto homeBookRespDto = new HomeBookRespDto();
+                            homeBookRespDto.setType(v.getType());
+                            homeBookRespDto.setBookId(v.getBookId());
+                            homeBookRespDto.setBookName(bookInfo.getBookName());
+                            homeBookRespDto.setPicUrl(bookInfo.getPicUrl());
+                            homeBookRespDto.setAuthorName(bookInfo.getAuthorName());
+                            homeBookRespDto.setBookDesc(bookInfo.getBookDesc());
+                            return homeBookRespDto;
+                        }).toList());
+            }
+        }
+        return RestResp.ok(Collections.emptyList());
+    }
+
+
+    /**
+     * 查询下一批保存到 ES 中的小说列表
+     * @param maxBookId 已查询的最大小说ID
+     * @return 小说列表
+     */
+    @Override
+    public RestResp<List<BookEsRespDto>> listNextEsBooks(Long maxBookId) {
+
+        // 如果 maxBookId 为 null 或者小于等于 0，则从第一条记录开始拉取
+        if (maxBookId == null || maxBookId <= 0) {
+            maxBookId = 0L; // 确保第一次查询时，ID大于0的记录都能被查到
+        }
+
+        QueryWrapper<BookInfo> queryWrapper = new QueryWrapper<>();
+        queryWrapper.clear();
+        /*
+        queryWrapper.怎么查询呢？
+            按 ID 升序排列
+            查询 ID 大于 maxBookId 的记录（实现“下一批”）
+            确保小说 字数大于 0（wordCount > 0）
+            限制查询数量（例如 30 条）
+         */
+        queryWrapper.orderByAsc(DatabaseConsts.CommonColumnEnum.ID.getName())
+                .gt(DatabaseConsts.CommonColumnEnum.ID.getName(), maxBookId)
+                .gt(DatabaseConsts.BookTable.COLUMN_WORD_COUNT,0)
+                .eq("audit_status", 1) // 只索引审核通过的书籍
+                .last(DatabaseConsts.SqlEnum.LIMIT_30.getSql());
+
+        return RestResp.ok(
+                bookInfoMapper.selectList(queryWrapper).stream()
+                        .map(this::convertToBookEsRespDto)
+                        .toList()
+        );
+
+    }
+
+    /**
+     * 根据 ID 获取 ES 书籍数据
+     * @param bookId 书籍ID
+     * @return Elasticsearch 存储小说 DTO
+     */
+    @Override
+    public RestResp<BookEsRespDto> getEsBookById(Long bookId) {
+
+        BookInfo bookInfo = bookInfoMapper.selectById(bookId);
+        // 只有审核通过的书籍才能被索引到ES
+        if (bookInfo == null || bookInfo.getAuditStatus() == null || bookInfo.getAuditStatus() != 1) {
+            return RestResp.ok(null);
+        }
+
+        return RestResp.ok(convertToBookEsRespDto(bookInfo));
+    }
+
+
+    /**
+     * 获取最多访问的书籍列表
+     * @return 最多访问的书籍列表
+     */
+    @Override
+    public RestResp<List<BookRankRespDto>> listVisitRankBooks() {
+        // 1. 从 Redis ZSet 获取点击榜前 30 名 ID
+        Set<String> bookIdSet = stringRedisTemplate.opsForZSet().reverseRange(CacheConsts.BOOK_VISIT_RANK_ZSET, 0, 29);
+
+        // 2. 如果 Redis 中没有数据，降级为直接查询数据库
+        if (CollectionUtils.isEmpty(bookIdSet)) {
+            QueryWrapper<BookInfo> bookInfoQueryWrapper = new QueryWrapper<>();
+            bookInfoQueryWrapper.orderByDesc(DatabaseConsts.BookTable.COLUMN_VISIT_COUNT);
+            return RestResp.ok(listRankBooks(bookInfoQueryWrapper));
+        }
+
+        List<BookRankRespDto> resultList = new ArrayList<>();
+        for (String bookIdStr : bookIdSet) {
+            Long bookId = Long.valueOf(bookIdStr);
+            // 3. 尝试从 Redis Hash 获取书籍详情
+            Map<Object, Object> bookInfoMap = stringRedisTemplate.opsForHash().entries(CacheConsts.BOOK_INFO_HASH_PREFIX + bookId);
+
+            if (!CollectionUtils.isEmpty(bookInfoMap)) {
+                log.info(">>> 点击榜详情命中 Redis Hash 缓存，bookId={}", bookId);
+                // 3.1 缓存命中，组装 DTO
+                BookRankRespDto dto = convertMapToBookRankRespDto(bookId, bookInfoMap);
+                if (dto != null) {
+                    resultList.add(dto);
+                }
+            } else {
+                // 3.2 缓存未命中（说明该书不在 Top 50 预热范围内，或者缓存已失效），回源查询 DB
+                log.info(">>> 点击榜详情未命中缓存（或不在 Top 50），回源查询 DB，bookId={}", bookId);
+                BookInfo bookInfo = bookInfoMapper.selectById(bookId);
+                if (bookInfo != null) {
+                    resultList.add(convertToBookRankRespDto(bookInfo));
+                }
+            }
+        }
+        return RestResp.ok(resultList);
+    }
+
+    /**
+     * 获取最近发布的书籍列表
+     * @return 最近发布的书籍列表
+     */
+    @Override
+    public RestResp<List<BookRankRespDto>> listNewestRankBooks() {
+
+        QueryWrapper<BookInfo> bookInfoQueryWrapper = new QueryWrapper<>();
+        bookInfoQueryWrapper
+                .gt(DatabaseConsts.BookTable.COLUMN_WORD_COUNT, 0)
+                .orderByDesc(DatabaseConsts.CommonColumnEnum.CREATE_TIME.getName());
+        return RestResp.ok(listRankBooks(bookInfoQueryWrapper));
+    }
+
+    /**
+     * 获取最近更新的书籍列表
+     * @return 最近更新的书籍列表
+     */
+    @Override
+    public RestResp<List<BookRankRespDto>> listUpdateRankBooks() {
+        QueryWrapper<BookInfo> bookInfoQueryWrapper = new QueryWrapper<>();
+        bookInfoQueryWrapper
+                .gt(DatabaseConsts.BookTable.COLUMN_WORD_COUNT, 0)
+                .orderByDesc(DatabaseConsts.CommonColumnEnum.UPDATE_TIME.getName());
+        return RestResp.ok(listRankBooks(bookInfoQueryWrapper));
+    }
+
+
+    /**
+     * 获取根据书籍方向获取这个方向的书籍类型列表
+     * @param workDirection 作品方向;0-男频 1-女频
+     * @return 书籍类型信息列表
+     */
+    @Override
+    public RestResp<List<BookCategoryRespDto>> listCategory(Integer workDirection) {
+        QueryWrapper<BookCategory> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq(DatabaseConsts.BookCategoryTable.COLUMN_WORK_DIRECTION, workDirection);
+        List<BookCategoryRespDto> categoryList = bookCategoryMapper.selectList(queryWrapper).stream().map(v->
+                BookCategoryRespDto.builder()
+                        .id(v.getId())
+                        .name(v.getName())
+                        .build()
+        ).toList();
+        return RestResp.ok(categoryList);
+    }
+
+    /**
+     * 推荐同类书籍列表
+     * @param bookId 小说ID
+     * @return 同列书籍列表
+     */
+    @Override
+    public RestResp<List<BookInfoRespDto>> listRecBooks(Long bookId) {
+
+        BookInfo bookInfo = bookInfoMapper.selectById(bookId);
+        if (bookInfo == null) {
+            return RestResp.ok(Collections.emptyList());
+        }
+        // 查询同类推荐（访问量最高的4本，只查询审核通过的书籍）
+        QueryWrapper<BookInfo> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("category_id", bookInfo.getCategoryId())
+                .eq("audit_status", 1) // 只查询审核通过的书籍
+                .ne("id", bookId)
+                .orderByDesc("visit_count")
+                .last("limit 4");
+        List<BookInfo> bookInfos = bookInfoMapper.selectList(queryWrapper);
+        List<BookInfoRespDto> result = bookInfos.stream().map(b -> BookInfoRespDto.builder()
+                .id(b.getId())
+                .bookName(b.getBookName())
+                .picUrl(b.getPicUrl())
+                .bookDesc(b.getBookDesc())
+                .authorName(b.getAuthorName())
+                .build()).collect(Collectors.toList());
+        return RestResp.ok(result);
+    }
+
+
+
+    /**
+     * 书籍榜单列表
+     * @param bookInfoQueryWrapper 数据库获取的书籍榜单列表
+     * @return 排行榜列表
+     */
+    private List<BookRankRespDto> listRankBooks(QueryWrapper<BookInfo> bookInfoQueryWrapper) {
+        bookInfoQueryWrapper
+                .gt(DatabaseConsts.BookTable.COLUMN_WORD_COUNT, 0)
+                .eq("audit_status", 1) // 只查询审核通过的书籍
+                .last(DatabaseConsts.SqlEnum.LIMIT_30.getSql());
+        return bookInfoMapper.selectList(bookInfoQueryWrapper).stream()
+                .map(this::convertToBookRankRespDto)
+                .toList();
+    }
+
+    /**
+     * 将 BookInfo 转换为 BookRankRespDto
+     * @param bookInfo 书籍信息实体
+     * @return 排行榜 DTO
+     */
+    private BookRankRespDto convertToBookRankRespDto(BookInfo bookInfo) {
+        BookRankRespDto dto = new BookRankRespDto();
+        dto.setId(bookInfo.getId());
+        dto.setCategoryId(bookInfo.getCategoryId());
+        dto.setCategoryName(bookInfo.getCategoryName());
+        dto.setBookName(bookInfo.getBookName());
+        dto.setAuthorName(bookInfo.getAuthorName());
+        dto.setPicUrl(bookInfo.getPicUrl());
+        dto.setBookDesc(bookInfo.getBookDesc());
+        dto.setLastChapterName(bookInfo.getLastChapterName());
+        dto.setLastChapterUpdateTime(bookInfo.getLastChapterUpdateTime());
+        dto.setWordCount(bookInfo.getWordCount());
+        return dto;
+    }
+
+    /**
+     * 将 Redis Hash Map 转换为 BookRankRespDto
+     * @param bookId 书籍ID
+     * @param bookInfoMap Redis Hash Map
+     * @return 排行榜 DTO，如果转换失败返回 null
+     */
+    private BookRankRespDto convertMapToBookRankRespDto(Long bookId, Map<Object, Object> bookInfoMap) {
+        try {
+            BookRankRespDto dto = new BookRankRespDto();
+            dto.setId(bookId);
+            dto.setBookName((String) bookInfoMap.get("bookName"));
+            dto.setAuthorName((String) bookInfoMap.get("authorName"));
+            dto.setPicUrl((String) bookInfoMap.get("picUrl"));
+            dto.setBookDesc((String) bookInfoMap.get("bookDesc"));
+            dto.setCategoryName((String) bookInfoMap.get("categoryName"));
+            dto.setLastChapterName((String) bookInfoMap.get("lastChapterName"));
+
+            String wordCountStr = (String) bookInfoMap.get("wordCount");
+            if (wordCountStr != null) {
+                dto.setWordCount(Integer.parseInt(wordCountStr));
+            }
+
+            String categoryIdStr = (String) bookInfoMap.get("categoryId");
+            if (categoryIdStr != null) {
+                dto.setCategoryId(Long.parseLong(categoryIdStr));
+            }
+
+            String updateTimeStr = (String) bookInfoMap.get("lastChapterUpdateTime");
+            if (updateTimeStr != null) {
+                try {
+                    dto.setLastChapterUpdateTime(LocalDateTime.parse(updateTimeStr, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+                } catch (Exception e) {
+                    log.warn("解析更新时间失败，bookId={}, updateTimeStr={}", bookId, updateTimeStr);
+                }
+            }
+            return dto;
+        } catch (Exception e) {
+            log.error("转换 Redis Hash Map 为 BookRankRespDto 失败，bookId={}", bookId, e);
+            return null;
+        }
+    }
+
+    /**
+     * 将 BookInfo 转换为 BookEsRespDto
+     * @param bookInfo 书籍信息实体
+     * @return ES 书籍 DTO
+     */
+    private BookEsRespDto convertToBookEsRespDto(BookInfo bookInfo) {
+        return BookEsRespDto.builder()
+                .id(bookInfo.getId())
+                .workDirection(bookInfo.getWorkDirection())
+                .categoryId(bookInfo.getCategoryId())
+                .categoryName(bookInfo.getCategoryName())
+                .bookName(bookInfo.getBookName())
+                .picUrl(bookInfo.getPicUrl())
+                .authorName(bookInfo.getAuthorName())
+                .bookDesc(bookInfo.getBookDesc())
+                .score(bookInfo.getScore())
+                .bookStatus(bookInfo.getBookStatus())
+                .visitCount(bookInfo.getVisitCount())
+                .wordCount(bookInfo.getWordCount())
+                .commentCount(bookInfo.getCommentCount())
+                .lastChapterName(bookInfo.getLastChapterName())
+                // 将数据库中的时间转换为一个标准的 Unix 时间戳（毫秒数），这是一个 Long 类型。
+                // 增加判空处理，防止 NPE
+                .lastChapterUpdateTime(bookInfo.getLastChapterUpdateTime() != null
+                        ? bookInfo.getLastChapterUpdateTime().toInstant(ZoneOffset.ofHours(8)).toEpochMilli()
+                        : 0L)
+                .isVip(bookInfo.getIsVip())
+                .build();
     }
 
 }

@@ -18,7 +18,7 @@ import org.springframework.stereotype.Component;
     selectorExpression = AmqpConsts.BookAuditMq.TAG_AUDIT_CHAPTER,
     consumerGroup = AmqpConsts.BookAuditMq.CONSUMER_GROUP_AUDIT_CHAPTER
 )
-public class BookChapterAuditListener implements RocketMQListener<Long> {
+public class ChapterAuditListener implements RocketMQListener<Long> {
 
     private final BookAuditService bookAuditService;
     private final BookChapterMapper bookChapterMapper;

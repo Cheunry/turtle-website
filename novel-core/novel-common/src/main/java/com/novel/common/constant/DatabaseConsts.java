@@ -136,22 +136,64 @@ public class DatabaseConsts {
     }
 
     /**
-     * 新闻内容表
+     * 消息接收表
      */
-    public static class NewsContentTable {
+    public static class MessageReceiveTable {
 
-        private NewsContentTable() {
+        private MessageReceiveTable() {
             throw new IllegalStateException(SystemConfigConsts.CONST_INSTANCE_EXCEPTION_MSG);
         }
 
-        // 修改为 id，因为 news_info 表的主键通常是 id，除非你确实有 news_id 这个列
-        // 假设表结构是 news_info(id, title, ...)，查询时应该是 where id = ?
-        // 原来的常量可能是为了做连接查询用的。
-        // 根据 NewsServiceImpl.getNews 方法：newsInfoMapper.selectById(id) 用的是 id
-        // queryWrapper.eq(DatabaseConsts.NewsContentTable.COLUMN_NEWS_ID, id)
-        // 这行代码看起来像是为了兼容以前的逻辑，或者 news_info 表里真的有一个 news_id 列（这很奇怪，通常主键是 id）。
-        // 假设这里指的是主键 ID。
-        public static final String COLUMN_NEWS_ID = "id";
+        /**
+         * 接收者身份类型：普通用户/UserID
+         */
+        public static final Integer RECEIVER_TYPE_USER = 0;
+
+        /**
+         * 接收者身份类型：作者/AuthorID
+         */
+        public static final Integer RECEIVER_TYPE_AUTHOR = 1;
+
+    }
+
+    /**
+     * 消息内容表
+     */
+    public static class MessageContentTable {
+
+        private MessageContentTable() {
+            throw new IllegalStateException(SystemConfigConsts.CONST_INSTANCE_EXCEPTION_MSG);
+        }
+
+        /**
+         * 消息类型：系统公告/全员
+         */
+        public static final Integer MESSAGE_TYPE_SYSTEM_ANNOUNCEMENT = 0;
+
+        /**
+         * 消息类型：订阅更新/追更
+         */
+        public static final Integer MESSAGE_TYPE_SUBSCRIBE_UPDATE = 1;
+
+        /**
+         * 消息类型：作家助手/审核
+         */
+        public static final Integer MESSAGE_TYPE_AUTHOR_ASSISTANT = 2;
+
+        /**
+         * 消息类型：私信
+         */
+        public static final Integer MESSAGE_TYPE_PRIVATE_MESSAGE = 3;
+
+        /**
+         * 发送者类型：系统
+         */
+        public static final Integer SENDER_TYPE_SYSTEM = 0;
+
+        /**
+         * 发送者类型：用户
+         */
+        public static final Integer SENDER_TYPE_USER = 1;
 
     }
 

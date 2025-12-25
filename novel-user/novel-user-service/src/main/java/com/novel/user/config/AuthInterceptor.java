@@ -7,8 +7,7 @@ import com.novel.common.constant.SystemConfigConsts;
 import com.novel.config.exception.BusinessException;
 import com.novel.user.dao.entity.AuthorInfo;
 import com.novel.user.dao.entity.UserInfo;
-import com.novel.user.service.UserAuthorCacheService;
-
+import com.novel.user.service.CacheService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -29,7 +28,7 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class AuthInterceptor implements HandlerInterceptor {
 
-    private final UserAuthorCacheService userAuthorCacheService;
+    private final CacheService cacheService;
 
     /**
      * handle 执行前调用
@@ -53,7 +52,7 @@ public class AuthInterceptor implements HandlerInterceptor {
         }
 
         // 从缓存获取用户信息（优先使用缓存，减少数据库查询）
-        UserInfo userInfo = userAuthorCacheService.getUserInfo(userId);
+        UserInfo userInfo = cacheService.getUserInfo(userId);
 
         if (Objects.isNull(userInfo)) {
             // 用户不存在
@@ -64,7 +63,7 @@ public class AuthInterceptor implements HandlerInterceptor {
         UserHolder.setUserId(userId);
 
         // 从缓存获取作者信息（优先使用缓存，减少数据库查询）
-        AuthorInfo authorInfo = userAuthorCacheService.getAuthorInfoByUserId(userId);
+        AuthorInfo authorInfo = cacheService.getAuthorInfoByUserIdFromCache(userId);
         if (Objects.nonNull(authorInfo)) {
             UserHolder.setAuthorId(authorInfo.getId());
             // 存储作者笔名，避免后续重复查询

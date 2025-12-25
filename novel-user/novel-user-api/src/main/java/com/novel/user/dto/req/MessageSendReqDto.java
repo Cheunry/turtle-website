@@ -1,10 +1,13 @@
 package com.novel.user.dto.req;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
 
 /**
  * 发送消息请求 DTO
@@ -41,5 +44,9 @@ public class MessageSendReqDto {
 
     @Schema(description = "扩展数据")
     private String extension;
+
+    @Schema(description = "消息过期时间 (NULL表示永不过期)")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime expireTime;
 }
 

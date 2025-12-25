@@ -1,6 +1,5 @@
 package com.novel.book.service;
 
-import com.novel.book.dao.entity.BookChapter;
 import com.novel.book.dto.req.*;
 import com.novel.book.dto.resp.BookChapterRespDto;
 import com.novel.book.dto.resp.BookInfoRespDto;

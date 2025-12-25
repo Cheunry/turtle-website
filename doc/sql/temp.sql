@@ -89,3 +89,27 @@ set audit_status = 1 where create_time < '2023-05-01';
 -- 删除旧表
 DROP TABLE IF EXISTS `message_content`;
 DROP TABLE IF EXISTS `message_receive`;
+
+drop table if exists home_friend_link ;
+
+
+-- 检查该用户是否有消息记录
+SELECT COUNT(*) FROM turtle_website.message_receive
+WHERE receiver_id =
+  AND receiver_type = 0
+  AND is_deleted = 0;
+
+-- 检查消息内容和接收关系的关联
+SELECT r.id, c.title, c.type, c.bus_type
+FROM turtle_website.message_receive r
+         INNER JOIN turtle_website.message_content c ON r.message_id = c.id
+WHERE r.receiver_id = 2
+  AND r.receiver_type != 0
+  AND r.is_deleted = 0
+  AND c.type != 0
+  AND (c.expire_time IS NULL OR c.expire_time > NOW());
+
+SELECT COUNT(1)
+FROM turtle_website.message_content c
+WHERE c.type = 0
+  AND (c.expire_time IS NULL OR c.expire_time < NOW());

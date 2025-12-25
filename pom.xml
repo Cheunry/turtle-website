@@ -7,7 +7,6 @@
         <module>novel-gateway</module>
         <module>novel-user</module>
         <module>novel-resource</module>
-        <module>novel-home</module>
         <module>novel-book</module>
         <module>novel-search</module>
         <module>novel-ai</module>

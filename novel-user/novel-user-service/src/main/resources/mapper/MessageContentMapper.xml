@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.novel.user.dao.mapper.MessageContentMapper">
+
+    <!-- 结果映射：MessageRespDto -->
+    <resultMap id="MessageRespDtoMap" type="com.novel.user.dto.resp.MessageRespDto">
+        <id column="id" property="id" />
+        <result column="title" property="title" />
+        <result column="content" property="content" />
+        <result column="type" property="type" />
+        <result column="link" property="link" />
+        <result column="extension" property="extension" />
+        <result column="bus_type" property="busType" />
+        <result column="is_read" property="isRead" />
+        <result column="create_time" property="createTime" />
+    </resultMap>
+
+    <!-- 查询系统公告消息列表（拉取模式，不需要 message_receive） -->
+    <select id="selectSystemMessageList" resultMap="MessageRespDtoMap">
+        SELECT
+            c.id,
+            c.title,
+            c.content,
+            c.type,
+            c.link,
+            c.extension,
+            c.bus_type,
+            0 as is_read,
+            c.create_time
+        FROM turtle_website.message_content c
+        WHERE c.type = #{messageType}
+          AND (c.expire_time IS NULL OR c.expire_time &gt; NOW())
+        ORDER BY c.create_time DESC
+    </select>
+
+    <!-- 统计系统公告数量（未过期的） -->
+    <select id="countSystemMessages" resultType="java.lang.Long">
+        SELECT COUNT(1)
+        FROM turtle_website.message_content c
+        WHERE c.type = #{messageType}
+          AND (c.expire_time IS NULL OR c.expire_time &gt; NOW())
+    </select>
+
+    <!-- 查询全部消息（包括系统公告和其他消息，使用 UNION 合并） -->
+    <select id="selectAllMessagesList" resultMap="MessageRespDtoMap">
+        SELECT * FROM (
+            (
+                -- 系统公告（拉取模式）
+                SELECT
+                    c.id,
+                    c.title,
+                    c.content,
+                    c.type,
+                    c.link,
+                    c.extension,
+                    c.bus_type,
+                    0 as is_read,
+                    c.create_time
+                FROM turtle_website.message_content c
+                WHERE c.type = 0
+                  AND (c.expire_time IS NULL OR c.expire_time &gt; NOW())
+                <if test="busType != null and busType != ''">
+                  AND c.bus_type = #{busType}
+                </if>
+            )
+            UNION ALL
+            (
+                -- 其他消息（推送模式）
+                SELECT
+                    r.id,
+                    c.title,
+                    c.content,
+                    c.type,
+                    c.link,
+                    c.extension,
+                    c.bus_type,
+                    r.is_read,
+                    c.create_time
+                FROM turtle_website.message_receive r
+                INNER JOIN turtle_website.message_content c ON r.message_id = c.id
+                WHERE r.receiver_id = #{receiverId}
+                  AND r.receiver_type = #{receiverType}
+                  AND r.is_deleted = 0
+                  AND c.type != 0
+                  AND (c.expire_time IS NULL OR c.expire_time &gt; NOW())
+                <if test="busType != null and busType != ''">
+                  <choose>
+                    <when test="busType == 'AUDIT'">
+                      AND (c.bus_type = 'BOOK_AUDIT' OR c.bus_type = 'CHAPTER_AUDIT')
+                    </when>
+                    <otherwise>
+                      AND c.bus_type = #{busType}
+                    </otherwise>
+                  </choose>
+                </if>
+            )
+        ) AS combined_messages
+        ORDER BY create_time DESC
+    </select>
+
+</mapper>
+

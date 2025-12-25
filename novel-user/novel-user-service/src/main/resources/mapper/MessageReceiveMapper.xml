@@ -32,6 +32,8 @@
         WHERE r.receiver_id = #{receiverId}
           AND r.receiver_type = #{receiverType}
           AND r.is_deleted = 0
+          AND c.type != 0
+          AND (c.expire_time IS NULL OR c.expire_time &gt; NOW())
         <if test="messageType != null">
           AND c.type = #{messageType}
         </if>
@@ -59,6 +61,8 @@
           AND r.receiver_type = #{receiverType}
           AND (r.is_read = 0 OR r.is_read IS NULL)
           AND r.is_deleted = 0
+          AND c.type != 0
+          AND (c.expire_time IS NULL OR c.expire_time &gt; NOW())
         <if test="messageType != null">
             AND c.type = #{messageType}
         </if>
@@ -102,7 +106,7 @@
 
     <!-- 全部标记已读 -->
     <update id="updateAllRead">
-        UPDATE message_receive
+        UPDATE turtle_website.message_receive
         SET is_read = 1, read_time = NOW()
         WHERE receiver_id = #{receiverId}
           AND receiver_type = #{receiverType}
@@ -112,7 +116,7 @@
 
     <!-- 全部删除 (清空) -->
     <update id="updateAllDelete">
-        UPDATE message_receive
+        UPDATE turtle_website.message_receive
         SET is_deleted = 1
         WHERE receiver_id = #{receiverId}
           AND receiver_type = #{receiverType}

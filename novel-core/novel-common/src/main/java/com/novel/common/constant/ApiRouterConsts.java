@@ -43,11 +43,6 @@ public class ApiRouterConsts {
     public static final String HOME_URL_PREFIX = "/home";
 
     /**
-     * 首页模块请求路径前缀
-     */
-    public static final String NEWS_URL_PREFIX = "/news";
-
-    /**
      * 小说模块请求路径前缀
      */
     public static final String BOOK_URL_PREFIX = "/book";
@@ -88,10 +83,6 @@ public class ApiRouterConsts {
      */
     public static final String API_FRONT_HOME_URL_PREFIX = API_FRONT_URL_PREFIX + HOME_URL_PREFIX;
 
-    /**
-     * 前台门户新闻相关API请求路径前缀
-     */
-    public static final String API_FRONT_NEWS_URL_PREFIX = API_FRONT_URL_PREFIX + NEWS_URL_PREFIX;
 
     /**
      * 前台门户小说相关API请求路径前缀

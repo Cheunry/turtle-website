@@ -1,6 +1,7 @@
 package com.novel.book.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.novel.book.dao.entity.BookChapter;
 import com.novel.book.dao.entity.BookInfo;
 import com.novel.book.dao.entity.ContentAudit;
@@ -31,7 +32,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 
 /**
  * 书籍审核服务实现类（包含AI审核和人工审核）
@@ -53,11 +53,6 @@ public class BookAuditServiceImpl implements BookAuditService {
      * AI审核置信度阈值，低于此值需要人工审核
      */
     private static final BigDecimal CONFIDENCE_THRESHOLD = new BigDecimal("0.8");
-
-    /**
-     * 判断是否为新增小说的阈值（秒）：如果createTime和updateTime相差小于此值，认为是新增
-     */
-    private static final long NEW_BOOK_TIME_THRESHOLD = 60;
 
     /**
      * 数据来源：小说基本信息表
@@ -966,15 +961,20 @@ public class BookAuditServiceImpl implements BookAuditService {
     private void updateChapterDirectly(Long chapterId, Integer auditStatus, String rejectReason) {
         log.info("updateChapterDirectly 开始执行，chapterId: {}, auditStatus: {}, rejectReason: {}", 
                 chapterId, auditStatus, rejectReason);
-        BookChapter updateChapter = new BookChapter();
-        updateChapter.setId(chapterId);
-        updateChapter.setAuditStatus(auditStatus);
-        updateChapter.setAuditReason(rejectReason);
-        updateChapter.setUpdateTime(LocalDateTime.now());
-        int updateCount = bookChapterMapper.updateById(updateChapter);
+        
+        // 使用 UpdateWrapper 确保正确更新，包括 null 值
+        UpdateWrapper<BookChapter> updateWrapper = new UpdateWrapper<>();
+        updateWrapper.eq("id", chapterId)
+                .set("audit_status", auditStatus)
+                .set("audit_reason", rejectReason)  // 明确设置，包括 null
+                .set("update_time", LocalDateTime.now());
+        
+        int updateCount = bookChapterMapper.update(null, updateWrapper);
         log.info("updateChapterDirectly 执行完成，chapterId: {}, 更新行数: {}", chapterId, updateCount);
         if (updateCount == 0) {
             log.warn("警告：章节ID {} 更新行数为0，可能章节不存在或已被删除", chapterId);
+        } else {
+            log.info("章节ID {} 审核状态已更新为: {}", chapterId, auditStatus);
         }
     }
 
@@ -1069,26 +1069,6 @@ public class BookAuditServiceImpl implements BookAuditService {
     }
 
     /**
-     * 保存到审核表（保留此方法，可能其他地方会用到）
-     */
-    private void saveToAuditTable(BookInfo bookInfo, BookAuditReqDto auditReq,
-                                  BookAuditRespDto aiResult, Integer auditStatus) {
-        String contentText = auditReq.getBookName() + " " + auditReq.getBookDesc();
-
-        ContentAudit contentAudit = ContentAudit.builder()
-                .dataSource(DATA_SOURCE_BOOK_INFO)
-                .dataSourceId(bookInfo.getId())
-                .contentText(contentText)
-                .aiConfidence(aiResult.getAiConfidence())
-                .auditStatus(auditStatus)
-                .auditReason(aiResult.getAuditReason())
-                .createTime(LocalDateTime.now())
-                .build();
-
-        contentAuditMapper.insert(contentAudit);
-    }
-
-    /**
      * 根据审核结果更新书籍表
      */
     private void updateBookFromAudit(Long bookId, Integer auditStatus, String auditReason) {
@@ -1133,20 +1113,6 @@ public class BookAuditServiceImpl implements BookAuditService {
 
         updateChapter.setUpdateTime(LocalDateTime.now());
         bookChapterMapper.updateById(updateChapter);
-    }
-
-    /**
-     * 判断是否为新增小说
-     * 通过比较createTime和updateTime来判断
-     */
-    private boolean isNewBook(BookInfo bookInfo) {
-        if (bookInfo.getCreateTime() == null || bookInfo.getUpdateTime() == null) {
-            return false;
-        }
-        
-        // 如果createTime和updateTime相差小于阈值，认为是新增
-        long seconds = ChronoUnit.SECONDS.between(bookInfo.getCreateTime(), bookInfo.getUpdateTime());
-        return seconds <= NEW_BOOK_TIME_THRESHOLD;
     }
 
     /**
@@ -1247,7 +1213,7 @@ public class BookAuditServiceImpl implements BookAuditService {
             // 构建消息发送DTO
             MessageSendReqDto messageDto = MessageSendReqDto.builder()
                     .receiverId(bookInfo.getAuthorId())
-                    .receiverType(2) // 2表示作者
+                    .receiverType(DatabaseConsts.MessageReceiveTable.RECEIVER_TYPE_AUTHOR) // 1表示作者
                     .title(title)
                     .content(content)
                     .type(2) // 2表示作家助手/审核消息
