@@ -18,6 +18,11 @@ public class UserHolder {
      */
     private static final ThreadLocal<Long> authorIdTL = new ThreadLocal<>();
 
+    /**
+     * 当前线程作者笔名（用于避免重复查询）
+     */
+    private static final ThreadLocal<String> authorPenNameTL = new ThreadLocal<>();
+
     public static void setUserId(Long userId) {
         userIdTL.set(userId);
     }
@@ -34,9 +39,24 @@ public class UserHolder {
         return authorIdTL.get();
     }
 
+    /**
+     * 设置作者笔名
+     */
+    public static void setAuthorPenName(String penName) {
+        authorPenNameTL.set(penName);
+    }
+
+    /**
+     * 获取作者笔名
+     */
+    public static String getAuthorPenName() {
+        return authorPenNameTL.get();
+    }
+
     public static void clear() {
         userIdTL.remove();
         authorIdTL.remove();
+        authorPenNameTL.remove();
     }
 
 }

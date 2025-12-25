@@ -38,19 +38,31 @@ import com.novel.ai.dto.req.TextPolishReqDto;
 import com.novel.book.dto.resp.BookAuditRespDto;
 import com.novel.book.dto.resp.ChapterAuditRespDto;
 import com.novel.ai.dto.resp.TextPolishRespDto;
+import com.novel.book.dto.mq.BookUpdateMqDto;
+import com.novel.book.dto.mq.BookAddMqDto;
+import com.novel.book.dto.mq.ChapterSubmitMqDto;
+import com.novel.common.constant.AmqpConsts;
+import org.apache.rocketmq.spring.core.RocketMQTemplate;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cloud.context.config.annotation.RefreshScope;
 
 @Tag(name = "AuthorController", description = "作者模块")
 @SecurityRequirement(name = SystemConfigConsts.HTTP_AUTH_HEADER_NAME)
 @RestController
 @RequiredArgsConstructor
 @Slf4j
+@RefreshScope
 @RequestMapping(ApiRouterConsts.API_AUTHOR_URL_PREFIX)
 public class AuthorController {
+
+    @Value("${novel.audit.enable:true}")
+    private Boolean auditEnable;
 
     private final AuthorInfoService authorInfoService;
     private final BookFeignManager bookFeignManager;
     private final MessageService messageService;
     private final AiFeign aiFeign;
+    private final RocketMQTemplate rocketMQTemplate;
 
     /**
      * 校验用户是否是作家
@@ -75,17 +87,57 @@ public class AuthorController {
     }
 
     /**
-     * 发布书籍接口
+     * 发布书籍接口（异步化版本：发送MQ后立即返回）
+     * 所有数据库操作都在 BookAddListener 消费者中异步处理
      */
     @Operation(summary = "发布书籍接口")
     @PostMapping("book")
     public RestResp<Void> publishBook(@Valid @RequestBody BookAddReqDto dto) {
-
-        return bookFeignManager.publishBook(dto);
+        
+        Long authorId = UserHolder.getAuthorId();
+        if (authorId == null) {
+            return RestResp.fail(ErrorCodeEnum.USER_UN_AUTH);
+        }
+        
+        // 从 UserHolder 获取作者笔名（AuthInterceptor 已查询并存储，避免重复查询）
+        String penName = UserHolder.getAuthorPenName();
+        if (penName == null) {
+            // 如果 UserHolder 中没有笔名，说明用户不是作者，返回错误
+            return RestResp.fail(ErrorCodeEnum.USER_UN_AUTH);
+        }
+        
+        // 构建MQ消息
+        BookAddMqDto mqDto = BookAddMqDto.builder()
+                .authorId(authorId)
+                .penName(penName)
+                .workDirection(dto.getWorkDirection())
+                .categoryId(dto.getCategoryId())
+                .categoryName(dto.getCategoryName())
+                .picUrl(dto.getPicUrl())
+                .bookName(dto.getBookName())
+                .bookDesc(dto.getBookDesc())
+                .isVip(dto.getIsVip())
+                .bookStatus(dto.getBookStatus())
+                .auditEnable(auditEnable)
+                .build();
+        
+        // 发送MQ消息
+        try {
+            String destination = AmqpConsts.BookAddMq.TOPIC + ":" + AmqpConsts.BookAddMq.TAG_ADD;
+            rocketMQTemplate.convertAndSend(destination, mqDto);
+            log.debug("书籍新增请求已发送到MQ，bookName: {}, authorId: {}", dto.getBookName(), authorId);
+        } catch (Exception e) {
+            log.error("发送书籍新增MQ消息失败，bookName: {}, authorId: {}", dto.getBookName(), authorId, e);
+            return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR, "提交失败，请稍后重试");
+        }
+        
+        // 立即返回，网关线程快速释放
+        return RestResp.ok();
     }
 
     /**
-     * 更新书籍接口
+     * 更新书籍接口（异步化版本：发送MQ后立即返回）
+     * 所有数据库操作都在 BookUpdateListener 消费者中异步处理
      */
     @Operation(summary = "更新书籍接口")
     @PutMapping("book/{bookId}")
@@ -93,9 +145,38 @@ public class AuthorController {
             @Parameter(description = "小说ID") @PathVariable("bookId") Long bookId,
             @Valid @RequestBody BookUptReqDto dto) {
         
-        dto.setBookId(bookId);
-        dto.setAuthorId(UserHolder.getAuthorId());
-        return bookFeignManager.updateBook(dto);
+        Long authorId = UserHolder.getAuthorId();
+        if (authorId == null) {
+            return RestResp.fail(ErrorCodeEnum.USER_UN_AUTH);
+        }
+        
+        // 构建MQ消息
+        BookUpdateMqDto mqDto = BookUpdateMqDto.builder()
+                .bookId(bookId)
+                .authorId(authorId)
+                .picUrl(dto.getPicUrl())
+                .bookName(dto.getBookName())
+                .bookDesc(dto.getBookDesc())
+                .categoryId(dto.getCategoryId())
+                .categoryName(dto.getCategoryName())
+                .workDirection(dto.getWorkDirection())
+                .isVip(dto.getIsVip())
+                .bookStatus(dto.getBookStatus())
+                .auditEnable(auditEnable)
+                .build();
+        
+        // 发送MQ消息
+        try {
+            String destination = AmqpConsts.BookUpdateMq.TOPIC + ":" + AmqpConsts.BookUpdateMq.TAG_UPDATE;
+            rocketMQTemplate.convertAndSend(destination, mqDto);
+            log.debug("书籍更新请求已发送到MQ，bookId: {}, authorId: {}", bookId, authorId);
+        } catch (Exception e) {
+            log.error("发送书籍更新MQ消息失败，bookId: {}, authorId: {}", bookId, authorId, e);
+            return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR, "提交失败，请稍后重试");
+        }
+        
+        // 立即返回，网关线程快速释放
+        return RestResp.ok();
     }
 
     /**
@@ -111,16 +192,47 @@ public class AuthorController {
     }
 
     /**
-     * 小说章节发布接口
+     * 小说章节发布接口（异步化版本：发送MQ后立即返回）
+     * 所有数据库操作都在 ChapterSubmitListener 消费者中异步处理
      */
     @Operation(summary = "小说章节发布接口")
     @PostMapping("book/chapter/{bookId}")
     public RestResp<Void> publishBookChapter(
             @Parameter(description = "小说ID") @PathVariable("bookId") Long bookId,
             @Valid @RequestBody ChapterAddReqDto dto) {
-        dto.setAuthorId(UserHolder.getAuthorId());
+        
+        Long authorId = UserHolder.getAuthorId();
+        if (authorId == null) {
+            return RestResp.fail(ErrorCodeEnum.USER_UN_AUTH);
+        }
+        
+        dto.setAuthorId(authorId);
         dto.setBookId(bookId);
-        return bookFeignManager.publishBookChapter(dto);
+        
+        // 构建章节提交MQ消息
+        ChapterSubmitMqDto submitDto = ChapterSubmitMqDto.builder()
+                .bookId(bookId)
+                .authorId(authorId)
+                .chapterNum(dto.getChapterNum())
+                .chapterName(dto.getChapterName())
+                .content(dto.getContent())
+                .isVip(dto.getIsVip())
+                .operationType("CREATE")
+                .auditEnable(auditEnable)
+                .build();
+        
+        // 发送MQ消息
+        try {
+            String destination = AmqpConsts.ChapterSubmitMq.TOPIC + ":" + AmqpConsts.ChapterSubmitMq.TAG_SUBMIT;
+            rocketMQTemplate.convertAndSend(destination, submitDto);
+            log.debug("章节新增请求已发送到MQ，bookId: {}, chapterNum: {}", bookId, dto.getChapterNum());
+        } catch (Exception e) {
+            log.error("发送章节新增MQ消息失败，bookId: {}, chapterNum: {}", bookId, dto.getChapterNum(), e);
+            return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR, "提交失败，请稍后重试");
+        }
+        
+        // 立即返回，网关线程快速释放
+        return RestResp.ok();
     }
 
     /**
@@ -164,7 +276,18 @@ public class AuthorController {
     }
 
     /**
-     * 更新章节接口
+     * 获取书籍详情接口（用于编辑，不过滤审核状态）
+     */
+    @Operation(summary = "获取书籍详情（用于编辑）")
+    @GetMapping("book/{bookId}")
+    public RestResp<BookInfoRespDto> getBookById(
+            @Parameter(description = "小说ID") @PathVariable("bookId") Long bookId) {
+        return bookFeignManager.getBookByIdForAuthor(bookId);
+    }
+
+    /**
+     * 更新章节接口（异步化版本：发送MQ后立即返回）
+     * 所有数据库操作都在 ChapterSubmitListener 消费者中异步处理
      */
     @Operation(summary = "保存对更新章节的修改")
     @PutMapping("book/chapter_update/{bookId}/{chapterNum}")
@@ -172,9 +295,41 @@ public class AuthorController {
             @Parameter(description = "小说ID") @PathVariable("bookId") Long bookId,
             @Parameter(description = "章节号") @PathVariable("chapterNum") Integer chapterNum,
             @Valid @RequestBody ChapterUptReqDto dto) {
+        
+        Long authorId = UserHolder.getAuthorId();
+        if (authorId == null) {
+            return RestResp.fail(ErrorCodeEnum.USER_UN_AUTH);
+        }
+        
         dto.setBookId(bookId);
         dto.setOldChapterNum(chapterNum);
-        return bookFeignManager.updateBookChapter(dto);
+        dto.setAuthorId(authorId);
+        
+        // 构建章节提交MQ消息
+        ChapterSubmitMqDto submitDto = ChapterSubmitMqDto.builder()
+                .bookId(bookId)
+                .authorId(authorId)
+                .oldChapterNum(chapterNum)
+                .chapterNum(dto.getChapterNum())
+                .chapterName(dto.getChapterName())
+                .content(dto.getContent())
+                .isVip(dto.getIsVip())
+                .operationType("UPDATE")
+                .auditEnable(auditEnable)
+                .build();
+        
+        // 发送MQ消息
+        try {
+            String destination = AmqpConsts.ChapterSubmitMq.TOPIC + ":" + AmqpConsts.ChapterSubmitMq.TAG_SUBMIT;
+            rocketMQTemplate.convertAndSend(destination, submitDto);
+            log.debug("章节更新请求已发送到MQ，bookId: {}, chapterNum: {}", bookId, chapterNum);
+        } catch (Exception e) {
+            log.error("发送章节更新MQ消息失败，bookId: {}, chapterNum: {}", bookId, chapterNum, e);
+            return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR, "提交失败，请稍后重试");
+        }
+        
+        // 立即返回，网关线程快速释放
+        return RestResp.ok();
     }
 
     /**

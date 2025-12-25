@@ -2,6 +2,8 @@ package com.novel.book.service;
 
 import com.novel.book.dao.entity.BookChapter;
 import com.novel.book.dao.entity.BookInfo;
+import com.novel.book.dto.mq.BookAuditResultMqDto;
+import com.novel.book.dto.mq.ChapterAuditResultMqDto;
 import com.novel.common.resp.RestResp;
 
 /**
@@ -16,10 +18,22 @@ public interface BookAuditService {
     void auditBookInfo(BookInfo bookInfo);
 
     /**
-     * AI审核章节内容
+     * AI审核章节内容（同步方式，已废弃，保留用于兼容）
      * @param bookChapter 章节信息
      */
     void auditChapter(BookChapter bookChapter);
+
+    /**
+     * 处理章节审核结果（MQ异步回调方式）
+     * @param resultDto 审核结果DTO
+     */
+    void processChapterAuditResult(ChapterAuditResultMqDto resultDto);
+
+    /**
+     * 处理书籍审核结果（MQ异步回调方式）
+     * @param resultDto 审核结果DTO
+     */
+    void processBookAuditResult(BookAuditResultMqDto resultDto);
 
     /**
      * 人工审核

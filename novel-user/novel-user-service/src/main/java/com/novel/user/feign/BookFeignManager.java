@@ -138,6 +138,14 @@ public class BookFeignManager {
     }
 
     /**
+     * 获取书籍详情（用于编辑，不过滤审核状态）
+     */
+    public RestResp<BookInfoRespDto> getBookByIdForAuthor(Long bookId) {
+        Long authorId = UserHolder.getAuthorId();
+        return bookFeign.getBookByIdForAuthor(bookId, authorId);
+    }
+
+    /**
      * 查询作家信息
      */
     public AuthorInfoDto getAuthorInfoByUserId(Long userId) {

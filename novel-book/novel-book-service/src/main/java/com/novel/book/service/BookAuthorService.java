@@ -72,4 +72,12 @@ public interface BookAuthorService {
      */
     RestResp<Void> deleteBook(BookDelReqDto dto);
 
+    /**
+     * 作家获取书籍详情（用于编辑，不过滤审核状态）
+     * @param bookId 书籍ID
+     * @param authorId 作者ID（用于权限校验）
+     * @return 书籍详情
+     */
+    RestResp<BookInfoRespDto> getBookByIdForAuthor(Long bookId, Long authorId);
+
 }

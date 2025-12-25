@@ -60,6 +60,7 @@
         <mchange-commons-java.version>0.2.20</mchange-commons-java.version>
         <checker-qual.version>3.49.0</checker-qual.version>
         <swagger-annotations-jakarta.version>2.2.30</swagger-annotations-jakarta.version>
+        <apm-toolkit-trace.version>9.2.0</apm-toolkit-trace.version>
 
 
 <!--        <shardingsphere-jdbc.version>5.5.2</shardingsphere-jdbc.version>-->
@@ -235,6 +236,13 @@
                 <version>${spring-ai-alibaba.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+
+            <!-- SkyWalking 工具包，用于自定义 Span 监控 -->
+            <dependency>
+                <groupId>org.apache.skywalking</groupId>
+                <artifactId>apm-toolkit-trace</artifactId>
+                <version>${apm-toolkit-trace.version}</version>
             </dependency>
 
 

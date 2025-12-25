@@ -23,6 +23,8 @@ public class AiConfig {
     public ImageModel imageModel(DashScopeImageModel dashScopeImageModel) {
         return dashScopeImageModel;
     }
+
+    // RocketMQTemplate 由 rocketmq-spring-boot-starter 自动配置，无需手动配置
 }
 /*
         阿里云百炼平台模型使用说明

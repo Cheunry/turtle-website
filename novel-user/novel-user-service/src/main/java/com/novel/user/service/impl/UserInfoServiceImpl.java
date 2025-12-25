@@ -20,6 +20,7 @@ import com.novel.user.dto.resp.UserInfoRespDto;
 import com.novel.user.dto.resp.UserLoginRespDto;
 import com.novel.user.dto.resp.UserRegisterRespDto;
 import com.novel.user.service.UserInfoService;
+import com.novel.user.service.UserAuthorCacheService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -43,15 +44,18 @@ public class UserInfoServiceImpl implements UserInfoService {
     private final UserFeedbackMapper userFeedbackMapper;
     private final RedisTemplate<String, Object> redisTemplate;
     private final StringRedisTemplate stringRedisTemplate;
+    private final UserAuthorCacheService userAuthorCacheService;
 
     public UserInfoServiceImpl(UserInfoMapper userInfoMapper,
                                UserFeedbackMapper userFeedbackMapper,
                                @Qualifier("turtleRedisTemplate") RedisTemplate<String, Object> redisTemplate,
-                               StringRedisTemplate stringRedisTemplate) {
+                               StringRedisTemplate stringRedisTemplate,
+                               UserAuthorCacheService userAuthorCacheService) {
         this.userInfoMapper = userInfoMapper;
         this.userFeedbackMapper = userFeedbackMapper;
         this.redisTemplate = redisTemplate;
         this.stringRedisTemplate = stringRedisTemplate;
+        this.userAuthorCacheService = userAuthorCacheService;
     }
 
     @Override
@@ -182,6 +186,9 @@ public class UserInfoServiceImpl implements UserInfoService {
         updateWrapper.set(UserInfo::getUpdateTime, LocalDateTime.now());
 
         userInfoMapper.update(null, updateWrapper);
+
+        // 清除用户信息缓存，确保下次查询获取最新数据
+        userAuthorCacheService.evictUserInfoCache(dto.getUserId());
 
         return RestResp.ok();
     }

@@ -87,6 +87,12 @@ public interface BookFeign {
     RestResp<Void> deleteBookChapter(@RequestBody ChapterDelReqDto dto);
 
     /**
+     * 获取书籍详情（用于编辑，不过滤审核状态）
+     */
+    @GetMapping(ApiRouterConsts.API_INNER_BOOK_URL_PREFIX + "/getBookByIdForAuthor")
+    RestResp<BookInfoRespDto> getBookByIdForAuthor(@RequestParam("bookId") Long bookId, @RequestParam("authorId") Long authorId);
+
+    /**
      * 查询下一批保存到 ES 中的小说列表
      */
     @PostMapping(ApiRouterConsts.API_INNER_BOOK_URL_PREFIX + "/listNextEsBooks")
@@ -177,6 +183,11 @@ public interface BookFeign {
 
         @Override
         public RestResp<Void> deleteBookChapter(ChapterDelReqDto dto) {
+            return RestResp.fail(ErrorCodeEnum.THIRD_SERVICE_ERROR);
+        }
+
+        @Override
+        public RestResp<BookInfoRespDto> getBookByIdForAuthor(Long bookId, Long authorId) {
             return RestResp.fail(ErrorCodeEnum.THIRD_SERVICE_ERROR);
         }
 

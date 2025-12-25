@@ -8,6 +8,7 @@ import com.novel.user.dto.mq.AuthorPointsConsumeMqDto;
 import com.novel.user.dto.req.AuthorPointsConsumeReqDto;
 import com.novel.user.dto.req.AuthorRegisterReqDto;
 import com.novel.user.service.AuthorInfoService;
+import com.novel.user.service.UserAuthorCacheService;
 import com.novel.common.constant.AmqpConsts;
 import com.novel.common.constant.CacheConsts;
 import com.novel.common.constant.DatabaseConsts;
@@ -33,6 +34,7 @@ public class AuthorInfoServiceImpl implements AuthorInfoService {
     private final AuthorInfoMapper authorInfoMapper;
     private final StringRedisTemplate stringRedisTemplate;
     private final RocketMQTemplate rocketMQTemplate;
+    private final UserAuthorCacheService userAuthorCacheService;
 
     /**
      * 作家注册
@@ -71,6 +73,10 @@ public class AuthorInfoServiceImpl implements AuthorInfoService {
         stringRedisTemplate.opsForValue().set(getFreePointsKey(authorId), "500");
         stringRedisTemplate.opsForValue().set(getPaidPointsKey(authorId), "0");
         log.debug("作者[{}]注册成功，Redis 积分已初始化", authorId);
+
+        // 清除作者信息缓存（新注册时，确保下次查询获取最新数据）
+        userAuthorCacheService.evictAuthorInfoCacheByUserId(dto.getUserId());
+        userAuthorCacheService.evictAuthorInfoCache(authorId);
 
         return RestResp.ok();
     }

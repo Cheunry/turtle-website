@@ -147,6 +147,14 @@ public class InnerBookController {
         return bookAuthorService.updateBookChapter(dto);
     }
 
+    @Operation(summary = "获取书籍详情（用于编辑，不过滤审核状态）")
+    @GetMapping("getBookByIdForAuthor")
+    public RestResp<BookInfoRespDto> getBookByIdForAuthor(
+            @Parameter(description = "书籍ID") @RequestParam("bookId") Long bookId,
+            @Parameter(description = "作者ID") @RequestParam("authorId") Long authorId) {
+        return bookAuthorService.getBookByIdForAuthor(bookId, authorId);
+    }
+
 
     /**
      * 发表评论接口

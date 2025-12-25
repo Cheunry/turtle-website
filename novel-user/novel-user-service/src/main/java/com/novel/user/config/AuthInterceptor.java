@@ -2,15 +2,12 @@ package com.novel.user.config;
 
 import com.novel.common.auth.JwtUtils;
 import com.novel.common.auth.UserHolder;
-import com.novel.common.constant.DatabaseConsts;
 import com.novel.common.constant.ErrorCodeEnum;
 import com.novel.common.constant.SystemConfigConsts;
 import com.novel.config.exception.BusinessException;
 import com.novel.user.dao.entity.AuthorInfo;
 import com.novel.user.dao.entity.UserInfo;
-import com.novel.user.dao.mapper.AuthorInfoMapper;
-import com.novel.user.dao.mapper.UserInfoMapper;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.novel.user.service.UserAuthorCacheService;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -25,14 +22,14 @@ import java.util.Objects;
  * 认证授权拦截器：
  * 为了注入其它的 Spring beans，
  * 需要通过 @Component 注解将该拦截器注册到 Spring 上下文
+ * 
+ * 优化：使用缓存服务减少数据库查询，提升性能
  */
 @Component
 @RequiredArgsConstructor
 public class AuthInterceptor implements HandlerInterceptor {
 
-    private final UserInfoMapper userInfoMapper;
-
-    private final AuthorInfoMapper authorInfoMapper;
+    private final UserAuthorCacheService userAuthorCacheService;
 
     /**
      * handle 执行前调用
@@ -55,9 +52,8 @@ public class AuthInterceptor implements HandlerInterceptor {
             throw new BusinessException(ErrorCodeEnum.USER_LOGIN_EXPIRED);
         }
 
-//        UserInfoDto userInfoDto = userCacheManager.getUserAndPutToCache(userId);
-
-        UserInfo userInfo = userInfoMapper.selectById(userId);
+        // 从缓存获取用户信息（优先使用缓存，减少数据库查询）
+        UserInfo userInfo = userAuthorCacheService.getUserInfo(userId);
 
         if (Objects.isNull(userInfo)) {
             // 用户不存在
@@ -67,14 +63,12 @@ public class AuthInterceptor implements HandlerInterceptor {
         // 设置 userId 到当前线程
         UserHolder.setUserId(userId);
 
-        // 查询并设置 AuthorId (如果存在)
-        QueryWrapper<AuthorInfo> queryWrapper = new QueryWrapper<>();
-        queryWrapper
-                .eq(DatabaseConsts.AuthorInfoTable.COLUMN_USER_ID, userId)
-                .last(DatabaseConsts.SqlEnum.LIMIT_1.getSql());
-        AuthorInfo authorInfo = authorInfoMapper.selectOne(queryWrapper);
+        // 从缓存获取作者信息（优先使用缓存，减少数据库查询）
+        AuthorInfo authorInfo = userAuthorCacheService.getAuthorInfoByUserId(userId);
         if (Objects.nonNull(authorInfo)) {
             UserHolder.setAuthorId(authorInfo.getId());
+            // 存储作者笔名，避免后续重复查询
+            UserHolder.setAuthorPenName(authorInfo.getPenName());
         }
 
         return HandlerInterceptor.super.preHandle(request, response, handler);

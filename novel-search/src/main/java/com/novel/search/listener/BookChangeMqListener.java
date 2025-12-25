@@ -1,6 +1,7 @@
 package com.novel.search.listener;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.elasticsearch._types.ElasticsearchException;
 import com.novel.book.dto.resp.BookEsRespDto;
 import com.novel.book.feign.BookFeign;
 import com.novel.common.constant.AmqpConsts;
@@ -78,6 +79,7 @@ public class BookChangeMqListener implements RocketMQListener<Long> {
     
     /**
      * 从 ES 删除数据（辅助方法）
+     * 如果文档不存在（404），则忽略，不抛出异常
      */
     private void deleteFromEs(Long bookId) {
         try {
@@ -86,10 +88,20 @@ public class BookChangeMqListener implements RocketMQListener<Long> {
                 .id(bookId.toString())
             );
             log.info(">>> [MQ] 从 ES 删除书籍成功。bookId={}", bookId);
+        } catch (ElasticsearchException e) {
+            // 如果是404错误（文档不存在），这是正常的，不需要重试
+            if (e.status() == 404) {
+                log.debug(">>> [MQ] ES 中不存在该书籍，无需删除。bookId={}", bookId);
+                return;
+            }
+            // 其他ES错误，记录日志但不抛出异常，避免MQ重试
+            log.warn(">>> [MQ] 从 ES 删除书籍失败（非404错误）。bookId={}, status={}", bookId, e.status(), e);
         } catch (IOException e) {
-            log.error(">>> [MQ] 从 ES 删除书籍失败。bookId={}", bookId, e);
-            // 【优化】抛出异常，让 MQ 重试，确保数据一致性
-            throw new RuntimeException("ES删除失败", e);
+            // IO异常，记录日志但不抛出异常，避免MQ重试
+            log.warn(">>> [MQ] 从 ES 删除书籍时发生IO异常。bookId={}", bookId, e);
+        } catch (Exception e) {
+            // 其他异常，记录日志但不抛出异常，避免MQ重试
+            log.warn(">>> [MQ] 从 ES 删除书籍时发生未知异常。bookId={}", bookId, e);
         }
     }
 }

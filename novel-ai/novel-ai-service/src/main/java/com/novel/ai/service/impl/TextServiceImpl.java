@@ -12,6 +12,8 @@ import com.novel.common.resp.RestResp;
 import com.novel.common.constant.ErrorCodeEnum;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.skywalking.apm.toolkit.trace.ActiveSpan;
+import org.apache.skywalking.apm.toolkit.trace.Trace;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.retry.NonTransientAiException;
 import org.springframework.stereotype.Service;
@@ -40,10 +42,25 @@ public class TextServiceImpl implements TextService {
      * @return 书籍审核结果
      */
     @Override
+    @Trace(operationName = "AI审核书籍")
     public RestResp<BookAuditRespDto> auditBook(BookAuditReqDto reqDto) {
+        // 设置 SkyWalking 监控标签
+        ActiveSpan.tag("ai.model", "qwen3-max");
+        ActiveSpan.tag("ai.operation", "audit_book");
+        if (reqDto != null && reqDto.getId() != null) {
+            ActiveSpan.tag("bookId", String.valueOf(reqDto.getId()));
+        }
+        if (reqDto != null && reqDto.getBookName() != null) {
+            ActiveSpan.tag("bookName", reqDto.getBookName().length() > 50 ? 
+                reqDto.getBookName().substring(0, 50) : reqDto.getBookName());
+        }
+        
+        long startTime = System.currentTimeMillis();
+        
         try {
             // 构建审核提示词
             String prompt = buildAuditPrompt(reqDto.getBookName(), reqDto.getBookDesc());
+            ActiveSpan.tag("prompt.length", String.valueOf(prompt.length()));
 
             // 调用AI模型进行审核
             String aiResponse = chatClient.prompt()
@@ -51,19 +68,40 @@ public class TextServiceImpl implements TextService {
                     .call()
                     .content();
 
-            log.info("AI审核响应，书籍ID: {}, 响应: {}", reqDto.getId(), aiResponse);
+            long duration = System.currentTimeMillis() - startTime;
+            ActiveSpan.tag("ai.duration.ms", String.valueOf(duration));
+            ActiveSpan.tag("ai.response.length", String.valueOf(aiResponse != null ? aiResponse.length() : 0));
+            ActiveSpan.tag("ai.status", "success");
+
+            log.info("AI审核响应，书籍ID: {}, 耗时: {}ms, 响应: {}", reqDto.getId(), duration, aiResponse);
 
             // 解析AI响应
             BookAuditRespDto result = parseAuditResponse(aiResponse, reqDto.getId());
+            
+            if (result != null && result.getAuditStatus() != null) {
+                ActiveSpan.tag("audit.status", String.valueOf(result.getAuditStatus()));
+            }
 
             return RestResp.ok(result);
 
         } catch (Exception e) {
-            log.error("AI审核异常，书籍ID: {}", reqDto.getId(), e);
+            long duration = System.currentTimeMillis() - startTime;
+            ActiveSpan.tag("ai.duration.ms", String.valueOf(duration));
+            ActiveSpan.tag("ai.status", "error");
+            ActiveSpan.tag("ai.error.type", e.getClass().getSimpleName());
+            String errorMsg = e.getMessage();
+            if (errorMsg != null && errorMsg.length() > 200) {
+                errorMsg = errorMsg.substring(0, 200);
+            }
+            ActiveSpan.tag("ai.error.message", errorMsg != null ? errorMsg : "unknown");
+            ActiveSpan.error(e);
+            
+            log.error("AI审核异常，书籍ID: {}, 耗时: {}ms", reqDto.getId(), duration, e);
             
             // 检查是否是内容安全检查失败（AI模型检测到不当内容）
             if (isContentInspectionFailed(e)) {
                 // AI模型检测到不当内容，直接返回审核不通过
+                ActiveSpan.tag("ai.error.category", "content_inspection_failed");
                 log.warn("AI模型检测到不当内容，书籍ID: {}, 直接标记为审核不通过", reqDto.getId());
                 BookAuditRespDto result = BookAuditRespDto.builder()
                         .id(reqDto.getId())
@@ -91,11 +129,30 @@ public class TextServiceImpl implements TextService {
      * @return 章节审核结果
      */
     @Override
+    @Trace(operationName = "AI审核章节")
     public RestResp<ChapterAuditRespDto> auditChapter(ChapterAuditReqDto reqDto) {
+        // 设置 SkyWalking 监控标签
+        ActiveSpan.tag("ai.model", "qwen3-max");
+        ActiveSpan.tag("ai.operation", "audit_chapter");
+        if (reqDto != null) {
+            if (reqDto.getBookId() != null) {
+                ActiveSpan.tag("bookId", String.valueOf(reqDto.getBookId()));
+            }
+            if (reqDto.getChapterNum() != null) {
+                ActiveSpan.tag("chapterNum", String.valueOf(reqDto.getChapterNum()));
+            }
+            if (reqDto.getContent() != null) {
+                ActiveSpan.tag("content.length", String.valueOf(reqDto.getContent().length()));
+            }
+        }
+        
+        long startTime = System.currentTimeMillis();
         try {
             String content = reqDto.getContent();
             if (content == null || content.trim().isEmpty()) {
                 // 内容为空时返回待审核
+                ActiveSpan.tag("ai.status", "skipped");
+                ActiveSpan.tag("skip.reason", "content_empty");
                 ChapterAuditRespDto result = ChapterAuditRespDto.builder()
                         .bookId(reqDto.getBookId())
                         .chapterNum(reqDto.getChapterNum())
@@ -109,6 +166,7 @@ public class TextServiceImpl implements TextService {
             // 如果内容超过MAX_CONTENT_LENGTH字，进行分段审核
             if (content.length() > MAX_CONTENT_LENGTH) {
                 List<String> segments = splitContent(content, MAX_CONTENT_LENGTH);
+                ActiveSpan.tag("segments.count", String.valueOf(segments.size()));
                 log.info("章节内容较长，分为 {} 段进行审核，章节 bookId: {}, chapterNum: {}", 
                         segments.size(), reqDto.getBookId(), reqDto.getChapterNum());
 
@@ -119,23 +177,31 @@ public class TextServiceImpl implements TextService {
                     String prompt = buildChapterAuditPrompt(reqDto.getChapterName(), segment, i + 1, segments.size());
 
                     try {
+                        long segmentStartTime = System.currentTimeMillis();
                         String aiResponse = chatClient.prompt()
                                 .user(prompt)
                                 .call()
                                 .content();
+                        long segmentDuration = System.currentTimeMillis() - segmentStartTime;
+                        ActiveSpan.tag("segment." + (i + 1) + ".duration.ms", String.valueOf(segmentDuration));
 
-                        log.info("AI审核响应，章节 bookId: {}, chapterNum: {}, 第 {}/{} 段, 响应: {}", 
-                                reqDto.getBookId(), reqDto.getChapterNum(), i + 1, segments.size(), aiResponse);
+                        log.info("AI审核响应，章节 bookId: {}, chapterNum: {}, 第 {}/{} 段, 耗时: {}ms, 响应: {}", 
+                                reqDto.getBookId(), reqDto.getChapterNum(), i + 1, segments.size(), segmentDuration, aiResponse);
 
                         ChapterAuditRespDto segmentResult = parseChapterAuditResponse(
                                 aiResponse, reqDto.getBookId(), reqDto.getChapterNum());
                         segmentResults.add(segmentResult);
                     } catch (Exception segmentException) {
+                        ActiveSpan.tag("segment." + (i + 1) + ".status", "error");
+                        ActiveSpan.tag("segment." + (i + 1) + ".error.type", segmentException.getClass().getSimpleName());
+                        ActiveSpan.error(segmentException);
+                        
                         log.error("AI审核异常，章节 bookId: {}, chapterNum: {}, 第 {}/{} 段", 
                                 reqDto.getBookId(), reqDto.getChapterNum(), i + 1, segments.size(), segmentException);
                         
                         // 检查是否是内容安全检查失败
                         if (isContentInspectionFailed(segmentException)) {
+                            ActiveSpan.tag("segment." + (i + 1) + ".error.category", "content_inspection_failed");
                             // 如果任何一段检测到不当内容，直接返回审核不通过
                             log.warn("第 {}/{} 段检测到不当内容，章节 bookId: {}, chapterNum: {}, 直接标记为审核不通过", 
                                     i + 1, segments.size(), reqDto.getBookId(), reqDto.getChapterNum());
@@ -163,29 +229,56 @@ public class TextServiceImpl implements TextService {
 
                 // 合并分段审核结果
                 ChapterAuditRespDto result = mergeSegmentAuditResults(segmentResults, reqDto.getBookId(), reqDto.getChapterNum());
+                long totalDuration = System.currentTimeMillis() - startTime;
+                ActiveSpan.tag("ai.duration.ms", String.valueOf(totalDuration));
+                ActiveSpan.tag("ai.status", "success");
+                if (result != null && result.getAuditStatus() != null) {
+                    ActiveSpan.tag("audit.status", String.valueOf(result.getAuditStatus()));
+                }
                 return RestResp.ok(result);
             } else {
                 // 内容较短，直接审核
                 String prompt = buildChapterAuditPrompt(reqDto.getChapterName(), content, 1, 1);
+                ActiveSpan.tag("prompt.length", String.valueOf(prompt.length()));
 
                 String aiResponse = chatClient.prompt()
                         .user(prompt)
                         .call()
                         .content();
 
-                log.info("AI审核响应，章节 bookId: {}, chapterNum: {}, 响应: {}", 
-                        reqDto.getBookId(), reqDto.getChapterNum(), aiResponse);
+                long duration = System.currentTimeMillis() - startTime;
+                ActiveSpan.tag("ai.duration.ms", String.valueOf(duration));
+                ActiveSpan.tag("ai.response.length", String.valueOf(aiResponse != null ? aiResponse.length() : 0));
+                ActiveSpan.tag("ai.status", "success");
+
+                log.info("AI审核响应，章节 bookId: {}, chapterNum: {}, 耗时: {}ms, 响应: {}", 
+                        reqDto.getBookId(), reqDto.getChapterNum(), duration, aiResponse);
 
                 ChapterAuditRespDto result = parseChapterAuditResponse(aiResponse, reqDto.getBookId(), reqDto.getChapterNum());
+                if (result != null && result.getAuditStatus() != null) {
+                    ActiveSpan.tag("audit.status", String.valueOf(result.getAuditStatus()));
+                }
                 return RestResp.ok(result);
             }
 
         } catch (Exception e) {
-            log.error("AI审核异常，章节 bookId: {}, chapterNum: {}", 
-                    reqDto.getBookId(), reqDto.getChapterNum(), e);
+            long duration = System.currentTimeMillis() - startTime;
+            ActiveSpan.tag("ai.duration.ms", String.valueOf(duration));
+            ActiveSpan.tag("ai.status", "error");
+            ActiveSpan.tag("ai.error.type", e.getClass().getSimpleName());
+            String errorMsg = e.getMessage();
+            if (errorMsg != null && errorMsg.length() > 200) {
+                errorMsg = errorMsg.substring(0, 200);
+            }
+            ActiveSpan.tag("ai.error.message", errorMsg != null ? errorMsg : "unknown");
+            ActiveSpan.error(e);
+            
+            log.error("AI审核异常，章节 bookId: {}, chapterNum: {}, 耗时: {}ms", 
+                    reqDto.getBookId(), reqDto.getChapterNum(), duration, e);
             
             // 检查是否是内容安全检查失败（AI模型检测到不当内容）
             if (isContentInspectionFailed(e)) {
+                ActiveSpan.tag("ai.error.category", "content_inspection_failed");
                 // AI模型检测到不当内容，直接返回审核不通过
                 log.warn("AI模型检测到不当内容，章节 bookId: {}, chapterNum: {}, 直接标记为审核不通过", 
                         reqDto.getBookId(), reqDto.getChapterNum());
@@ -669,15 +762,29 @@ public class TextServiceImpl implements TextService {
     }
 
     /**
-     * 润色文本
+     * 润色文本（带 SkyWalking 监控）
      * @param reqDto 润色请求参数
      * @return 润色结果
      */
     @Override
+    @Trace(operationName = "AI润色文本")
     public RestResp<TextPolishRespDto> polishText(TextPolishReqDto reqDto) {
+        // 设置 SkyWalking 监控标签
+        ActiveSpan.tag("ai.model", "qwen3-max");
+        ActiveSpan.tag("ai.operation", "polish_text");
+        if (reqDto != null && reqDto.getSelectedText() != null) {
+            ActiveSpan.tag("text.length", String.valueOf(reqDto.getSelectedText().length()));
+        }
+        if (reqDto != null && reqDto.getStyle() != null) {
+            ActiveSpan.tag("polish.style", reqDto.getStyle());
+        }
+        
+        long startTime = System.currentTimeMillis();
+        
         try {
             // 构建润色提示词
             String prompt = buildPolishPrompt(reqDto);
+            ActiveSpan.tag("prompt.length", String.valueOf(prompt.length()));
 
             // 调用AI模型
             String aiResponse = chatClient.prompt()
@@ -685,15 +792,30 @@ public class TextServiceImpl implements TextService {
                     .call()
                     .content();
 
-            log.info("AI润色响应: {}", aiResponse);
+            long duration = System.currentTimeMillis() - startTime;
+            ActiveSpan.tag("ai.duration.ms", String.valueOf(duration));
+            ActiveSpan.tag("ai.response.length", String.valueOf(aiResponse != null ? aiResponse.length() : 0));
+            ActiveSpan.tag("ai.status", "success");
+
+            log.info("AI润色响应，耗时: {}ms, 响应: {}", duration, aiResponse);
 
             // 解析响应
             TextPolishRespDto result = parsePolishResponse(aiResponse);
             return RestResp.ok(result);
 
-
         } catch (Exception e) {
-            log.error("AI润色异常", e);
+            long duration = System.currentTimeMillis() - startTime;
+            ActiveSpan.tag("ai.duration.ms", String.valueOf(duration));
+            ActiveSpan.tag("ai.status", "error");
+            ActiveSpan.tag("ai.error.type", e.getClass().getSimpleName());
+            String errorMsg = e.getMessage();
+            if (errorMsg != null && errorMsg.length() > 200) {
+                errorMsg = errorMsg.substring(0, 200);
+            }
+            ActiveSpan.tag("ai.error.message", errorMsg != null ? errorMsg : "unknown");
+            ActiveSpan.error(e);
+            
+            log.error("AI润色异常，耗时: {}ms", duration, e);
             // 如果出错，返回空或错误信息
             return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR, "AI润色服务暂时不可用，请稍后再试");
         }
@@ -753,23 +875,42 @@ public class TextServiceImpl implements TextService {
     }
 
     /**
-     * 获取小说封面生成提示词
+     * 获取小说封面生成提示词（带 SkyWalking 监控）
      */
     @Override
+    @Trace(operationName = "AI生成封面提示词")
     public RestResp<String> getBookCoverPrompt(BookCoverReqDto reqDto) {
+        // 设置 SkyWalking 监控标签
+        ActiveSpan.tag("ai.model", "qwen3-max");
+        ActiveSpan.tag("ai.operation", "generate_cover_prompt");
+        if (reqDto != null && reqDto.getId() != null) {
+            ActiveSpan.tag("bookId", String.valueOf(reqDto.getId()));
+        }
+        if (reqDto != null && reqDto.getBookName() != null) {
+            ActiveSpan.tag("bookName", reqDto.getBookName().length() > 50 ? 
+                reqDto.getBookName().substring(0, 50) : reqDto.getBookName());
+        }
+        
+        long startTime = System.currentTimeMillis();
+        
         try {
             // 1. 基础校验
             if (reqDto == null || reqDto.getBookName() == null) {
+                ActiveSpan.tag("ai.status", "validation_failed");
+                ActiveSpan.tag("validation.error", "bookName_is_null");
                 return RestResp.fail(ErrorCodeEnum.USER_REQUEST_PARAM_ERROR);
             }
             
             // 简介少于 MIN_BOOK_DESC_LENGTH 字，依据不足不予生成
             if (reqDto.getBookDesc() == null || reqDto.getBookDesc().trim().length() < MIN_BOOK_DESC_LENGTH) {
-                 return RestResp.fail(ErrorCodeEnum.USER_REQUEST_PARAM_ERROR, "小说简介过短（需大于30字），无法生成精准封面");
+                ActiveSpan.tag("ai.status", "validation_failed");
+                ActiveSpan.tag("validation.error", "bookDesc_too_short");
+                return RestResp.fail(ErrorCodeEnum.USER_REQUEST_PARAM_ERROR, "小说简介过短（需大于30字），无法生成精准封面");
             }
 
             // 2. 构建提示词
             String prompt = buildImagePromptPrompt(reqDto);
+            ActiveSpan.tag("prompt.length", String.valueOf(prompt.length()));
 
             // 3. 调用AI模型
             String aiResponse = chatClient.prompt()
@@ -777,7 +918,12 @@ public class TextServiceImpl implements TextService {
                     .call()
                     .content();
 
-            log.info("生成封面提示词响应，小说ID: {}, 响应: {}", reqDto.getId(), aiResponse);
+            long duration = System.currentTimeMillis() - startTime;
+            ActiveSpan.tag("ai.duration.ms", String.valueOf(duration));
+            ActiveSpan.tag("ai.response.length", String.valueOf(aiResponse != null ? aiResponse.length() : 0));
+            ActiveSpan.tag("ai.status", "success");
+
+            log.info("生成封面提示词响应，小说ID: {}, 耗时: {}ms, 响应: {}", reqDto.getId(), duration, aiResponse);
             
             // 4. 拼接后缀
             String finalPrompt = aiResponse + "，高品质插画，书籍装帧风格，黄金比例构图，极致细节，最高解析度，(无文字，无水印：1.5)";
@@ -785,7 +931,18 @@ public class TextServiceImpl implements TextService {
             return RestResp.ok(finalPrompt);
 
         } catch (Exception e) {
-            log.error("生成封面提示词异常，小说ID: {}", reqDto.getId(), e);
+            long duration = System.currentTimeMillis() - startTime;
+            ActiveSpan.tag("ai.duration.ms", String.valueOf(duration));
+            ActiveSpan.tag("ai.status", "error");
+            ActiveSpan.tag("ai.error.type", e.getClass().getSimpleName());
+            String errorMsg = e.getMessage();
+            if (errorMsg != null && errorMsg.length() > 200) {
+                errorMsg = errorMsg.substring(0, 200);
+            }
+            ActiveSpan.tag("ai.error.message", errorMsg != null ? errorMsg : "unknown");
+            ActiveSpan.error(e);
+            
+            log.error("生成封面提示词异常，小说ID: {}, 耗时: {}ms", reqDto.getId(), duration, e);
             return RestResp.fail(ErrorCodeEnum.AI_COVER_TEXT_SERVICE_ERROR, "生成封面提示词服务暂时不可用");
         }
     }
