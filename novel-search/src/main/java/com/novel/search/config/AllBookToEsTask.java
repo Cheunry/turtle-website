@@ -31,9 +31,9 @@ public class AllBookToEsTask {
      * 全量数据同步
      * 每天凌晨2点执行
      */
-    @SneakyThrows
-    @XxlJob("saveToEsJobHandler")
-    @Scheduled(cron = "0 0 2 * * ?")
+//    @SneakyThrows
+//    @XxlJob("saveToEsJobHandler")
+//    @Scheduled(cron = "0 0 2 * * ?")
     public ReturnT<String> saveToEs() {
 
         log.info(">>> 开始执行全量同步任务");
@@ -63,7 +63,7 @@ public class AllBookToEsTask {
                 }
 
                 BulkResponse result = elasticsearchClient.bulk(br.build());
-                
+
                 // 打印写入结果
                 log.info(">>> ES 写入完成，耗时: {}ms, 是否有错误: {}", result.took(), result.errors());
 

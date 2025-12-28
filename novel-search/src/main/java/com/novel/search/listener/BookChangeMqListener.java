@@ -15,6 +15,12 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * 书籍变更 MQ 监听器
  * 用于实时同步 ES 数据
@@ -26,54 +32,76 @@ import java.io.IOException;
     topic = AmqpConsts.BookChangeMq.TOPIC, 
     consumerGroup = AmqpConsts.BookChangeMq.CONSUMER_GROUP_ES
 )
-public class BookChangeMqListener implements RocketMQListener<Long> {
+public class BookChangeMqListener implements RocketMQListener<String> {
 
     private final ElasticsearchClient elasticsearchClient;
     private final BookFeign bookFeign;
+    private final ObjectMapper objectMapper;
 
     @Override
-    public void onMessage(Long bookId) {
-        log.info(">>> [MQ] 收到书籍变更消息，bookId={}", bookId);
-        
-        if (bookId == null) {
+    public void onMessage(String message) {
+        if (message == null || message.isEmpty()) {
+            return;
+        }
+        log.info(">>> [MQ] 收到书籍变更消息，message={}", message);
+
+        List<Long> bookIds = new ArrayList<>();
+        try {
+            // 尝试解析为 List<Long>
+            if (message.startsWith("[")) {
+                bookIds = objectMapper.readValue(message, new TypeReference<List<Long>>() {});
+            } else {
+                // 尝试解析为单个 Long
+                bookIds.add(Long.valueOf(message));
+            }
+        } catch (JsonProcessingException | NumberFormatException e) {
+            log.error(">>> [MQ] 消息格式错误，无法解析: {}", message, e);
+            // 格式错误不需要重试，直接返回
             return;
         }
 
-        try {
-            // 1. 调用 Feign 获取最新书籍数据
-            // 这里调用的是我们刚刚添加的接口
-            RestResp<BookEsRespDto> resp = bookFeign.getEsBookById(bookId);
-            
-            if (!resp.isOk()) {
-                log.error(">>> [MQ] 调用 Feign 获取书籍数据失败，bookId={}，Code={}，Msg={}", 
-                          bookId, resp.getCode(), resp.getMessage());
-                // 如果是服务调用失败，抛出异常让 MQ 重试
-                throw new RuntimeException("Feign调用失败: " + resp.getMessage());
+        if (bookIds.isEmpty()) {
+            return;
+        }
+
+        for (Long bookId : bookIds) {
+            try {
+                // 1. 调用 Feign 获取最新书籍数据
+                // 这里调用的是我们刚刚添加的接口
+                RestResp<BookEsRespDto> resp = bookFeign.getEsBookById(bookId);
+                
+                if (!resp.isOk()) {
+                    log.error(">>> [MQ] 调用 Feign 获取书籍数据失败，bookId={}，Code={}，Msg={}", 
+                            bookId, resp.getCode(), resp.getMessage());
+                    // 如果是服务调用失败，抛出异常让 MQ 重试
+                    throw new RuntimeException("Feign调用失败: " + resp.getMessage());
+                }
+
+                BookEsRespDto book = resp.getData();
+                if (book == null) {
+                    // 如果查不到数据，可能是书籍被删除了？
+                    // 根据业务逻辑，这里可能需要从 ES 删除，或者直接忽略
+                    log.warn(">>> [MQ] 查无此书，bookId={}", bookId);
+                    // 尝试从 ES 删除（防止是删除操作触发的更新）
+                    deleteFromEs(bookId);
+                    continue;
+                }
+
+                // 2. 更新 ES
+                elasticsearchClient.index(idx -> idx
+                        .index(EsConsts.BookIndex.INDEX_NAME)
+                        .id(book.getId().toString())
+                        .document(book)
+                );
+                
+                log.info(">>> [MQ] ES 索引更新成功。bookId={}", bookId);
+
+            } catch (Exception e) {
+                log.error(">>> [MQ] ES 索引更新失败。bookId={}", bookId, e);
+                // 抛出异常，RocketMQ 会根据重试策略进行重试
+                // 注意：在批量消费中，抛出异常会导致整批消息重试，这可能是个副作用
+                throw new RuntimeException("ES同步失败", e);
             }
-
-            BookEsRespDto book = resp.getData();
-            if (book == null) {
-                // 如果查不到数据，可能是书籍被删除了？
-                // 根据业务逻辑，这里可能需要从 ES 删除，或者直接忽略
-                log.warn(">>> [MQ] 查无此书，bookId={}", bookId);
-                // 尝试从 ES 删除（防止是删除操作触发的更新）
-                deleteFromEs(bookId);
-                return;
-            }
-
-            // 2. 更新 ES
-            elasticsearchClient.index(idx -> idx
-                    .index(EsConsts.BookIndex.INDEX_NAME)
-                    .id(book.getId().toString())
-                    .document(book)
-            );
-            
-            log.info(">>> [MQ] ES 索引更新成功。bookId={}", bookId);
-
-        } catch (Exception e) {
-            log.error(">>> [MQ] ES 索引更新失败。bookId={}", bookId, e);
-            // 抛出异常，RocketMQ 会根据重试策略进行重试
-            throw new RuntimeException("ES同步失败", e);
         }
     }
     

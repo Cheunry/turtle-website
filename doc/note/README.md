@@ -4,3 +4,15 @@
 
 由于小说数据太大，我将添加小说数据的sql语句保存在了本地。
 小说数据本地路径：/Users/cheunry/Project/Java/novel_data/sql/novel_data.sql
+
+新建用户代码
+SHOW DATABASES;
+SHOW GRANTS FOR 'novel'@'%';
+GRANT ALL PRIVILEGES ON turtle_website.* TO 'novel'@'%';
+FLUSH PRIVILEGES;
+
+-- 收回用户对 novel_website 数据库的所有权限
+REVOKE ALL PRIVILEGES ON novel_website.* FROM 'novel'@'%';
+
+-- 刷新权限使更改生效
+FLUSH PRIVILEGES;

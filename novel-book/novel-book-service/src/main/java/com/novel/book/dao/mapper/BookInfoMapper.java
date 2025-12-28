@@ -5,6 +5,8 @@ import com.novel.book.dao.entity.BookInfo;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.util.List;
+
 
 @Mapper
 public interface BookInfoMapper extends BaseMapper<BookInfo> {
@@ -16,4 +18,6 @@ public interface BookInfoMapper extends BaseMapper<BookInfo> {
      * @param bookId 小说ID
      */
     void addVisitCount(@Param("bookId") Long bookId);
+
+    void batchUpdateVisitCount(@Param("list") List<BookInfo> list);
 }

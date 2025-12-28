@@ -113,3 +113,14 @@ SELECT COUNT(1)
 FROM turtle_website.message_content c
 WHERE c.type = 0
   AND (c.expire_time IS NULL OR c.expire_time < NOW());
+
+drop table if exists user_read_history;
+
+drop table if exists sys_log ;
+drop table if exists sys_menu;
+
+drop table if exists sys_role ;
+drop table if exists sys_role_menu;
+drop table if exists sys_user;
+drop table if exists sys_user_role;
+

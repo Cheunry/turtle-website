@@ -42,4 +42,16 @@
         where id = #{bookId}
     </update>
 
+    <update id="batchUpdateVisitCount">
+        update book_info
+        set visit_count = visit_count +
+        <foreach collection="list" item="item" open="case id" close="end" separator=" ">
+            when #{item.id} then #{item.visitCount}
+        </foreach>
+        where id in
+        <foreach collection="list" item="item" open="(" separator="," close=")">
+            #{item.id}
+        </foreach>
+    </update>
+
 </mapper>

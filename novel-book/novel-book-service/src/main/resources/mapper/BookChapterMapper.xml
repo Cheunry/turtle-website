@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.novel.book.dao.mapper.BookChapterMapper">
+
+    <select id="selectFirstChapterNums" resultType="map">
+        SELECT
+        book_id as bookId,
+        MIN(chapter_num) as firstChapterNum
+        FROM book_chapter
+        WHERE audit_status = 1
+        AND book_id IN
+        <foreach collection="bookIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        GROUP BY book_id
+    </select>
+
+</mapper>
