@@ -18,6 +18,8 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.retry.NonTransientAiException;
 import org.springframework.stereotype.Service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
@@ -31,10 +33,13 @@ import java.util.regex.Pattern;
 public class TextServiceImpl implements TextService {
 
     private final ChatClient chatClient;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     private static final int MAX_CONTENT_LENGTH = 5000;
     private static final int MAX_AUDIT_REASON_LENGTH = 500; // 数据库字段限制
     private static final int MIN_BOOK_DESC_LENGTH = 30; // 最小小说简介长度
+    private static final int MAX_POLISH_TEXT_LENGTH = 10000; // 润色文本最大长度（字符数）
+    private static final int MIN_POLISH_TEXT_LENGTH = 10; // 润色文本最小长度（字符数）
 
     /**
      * AI审核书籍（小说名和简介）
@@ -465,22 +470,53 @@ public class TextServiceImpl implements TextService {
     }
 
     /**
-     * 从响应中提取JSON内容
-     * @param response 响应字符串
+     * 从响应中提取JSON内容（容错处理）
+     * 优先使用Jackson解析，失败时使用正则表达式兜底
+     * @param response AI模型返回的响应
      * @return JSON内容
      */
     private String extractJsonFromResponse(String response) {
-        // 尝试提取JSON对象
-        Pattern jsonPattern = Pattern.compile("\\{[^}]*\"auditStatus\"[^}]*\\}", Pattern.DOTALL);
+        if (response == null || response.trim().isEmpty()) {
+            return response;
+        }
+        
+        // 尝试使用Jackson解析，如果已经是有效的JSON，直接返回
+        try {
+            JsonNode jsonNode = objectMapper.readTree(response);
+            if (jsonNode != null) {
+                return response;
+            }
+        } catch (Exception e) {
+            // 不是纯JSON，继续尝试提取
+        }
+        
+        // 兜底：使用正则表达式提取JSON对象（兼容旧逻辑）
+        // 匹配包含auditStatus的JSON对象
+        Pattern jsonPattern = Pattern.compile("\\{[^{}]*\"auditStatus\"[^{}]*\\}", Pattern.DOTALL);
         Matcher matcher = jsonPattern.matcher(response);
         if (matcher.find()) {
             return matcher.group();
         }
+        
+        // 匹配包含polishedText的JSON对象
+        jsonPattern = Pattern.compile("\\{[^{}]*\"polishedText\"[^{}]*\\}", Pattern.DOTALL);
+        matcher = jsonPattern.matcher(response);
+        if (matcher.find()) {
+            return matcher.group();
+        }
+        
+        // 尝试提取第一个完整的JSON对象
+        jsonPattern = Pattern.compile("\\{[^{}]*(?:\\{[^{}]*\\}[^{}]*)*\\}", Pattern.DOTALL);
+        matcher = jsonPattern.matcher(response);
+        if (matcher.find()) {
+            return matcher.group();
+        }
+        
         return response;
     }
 
     /**
-     * 从JSON字符串中提取字段值（简化版解析，存入书籍表或者章节表）
+     * 从JSON字符串中提取字段值（使用Jackson解析，更健壮）
      * @param json JSON字符串
      * @param fieldName 字段名
      * @param type 字段类型
@@ -489,8 +525,32 @@ public class TextServiceImpl implements TextService {
      */
     @SuppressWarnings("unchecked")
     private <T> T extractField(String json, String fieldName, Class<T> type) {
+        if (json == null || json.trim().isEmpty()) {
+            return null;
+        }
+        
         try {
-            Pattern pattern = Pattern.compile("\"" + fieldName + "\"\\s*:\\s*([^,}\\]]+)");
+            // 优先使用Jackson解析
+            JsonNode jsonNode = objectMapper.readTree(json);
+            if (jsonNode != null && jsonNode.has(fieldName)) {
+                JsonNode fieldNode = jsonNode.get(fieldName);
+                if (fieldNode != null && !fieldNode.isNull()) {
+                    if (type == Integer.class) {
+                        return (T) Integer.valueOf(fieldNode.asInt());
+                    } else if (type == BigDecimal.class) {
+                        return (T) new BigDecimal(fieldNode.asText());
+                    } else if (type == String.class) {
+                        return (T) fieldNode.asText();
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.debug("使用Jackson解析字段 {} 失败，尝试使用正则表达式: {}", fieldName, e.getMessage());
+        }
+        
+        // 兜底：使用正则表达式（兼容旧逻辑）
+        try {
+            Pattern pattern = Pattern.compile("\"" + Pattern.quote(fieldName) + "\"\\s*:\\s*([^,}\\]]+)");
             Matcher matcher = pattern.matcher(json);
             if (matcher.find()) {
                 String value = matcher.group(1).trim();
@@ -769,21 +829,44 @@ public class TextServiceImpl implements TextService {
     @Override
     @Trace(operationName = "AI润色文本")
     public RestResp<TextPolishRespDto> polishText(TextPolishReqDto reqDto) {
+        // 参数校验
+        if (reqDto == null || reqDto.getSelectedText() == null) {
+            return RestResp.fail(ErrorCodeEnum.USER_REQUEST_PARAM_ERROR, "待润色文本不能为空");
+        }
+        
+        String selectedText = reqDto.getSelectedText().trim();
+        if (selectedText.isEmpty()) {
+            return RestResp.fail(ErrorCodeEnum.USER_REQUEST_PARAM_ERROR, "待润色文本不能为空");
+        }
+        
+        // 文本长度校验
+        if (selectedText.length() < MIN_POLISH_TEXT_LENGTH) {
+            return RestResp.fail(ErrorCodeEnum.USER_REQUEST_PARAM_ERROR, 
+                String.format("待润色文本长度不能少于%d个字符", MIN_POLISH_TEXT_LENGTH));
+        }
+        
+        if (selectedText.length() > MAX_POLISH_TEXT_LENGTH) {
+            return RestResp.fail(ErrorCodeEnum.USER_REQUEST_PARAM_ERROR, 
+                String.format("待润色文本长度不能超过%d个字符", MAX_POLISH_TEXT_LENGTH));
+        }
+        
         // 设置 SkyWalking 监控标签
         ActiveSpan.tag("ai.model", "qwen3-max");
         ActiveSpan.tag("ai.operation", "polish_text");
-        if (reqDto != null && reqDto.getSelectedText() != null) {
-            ActiveSpan.tag("text.length", String.valueOf(reqDto.getSelectedText().length()));
-        }
-        if (reqDto != null && reqDto.getStyle() != null) {
+        ActiveSpan.tag("text.length", String.valueOf(selectedText.length()));
+        if (reqDto.getStyle() != null) {
             ActiveSpan.tag("polish.style", reqDto.getStyle());
         }
         
         long startTime = System.currentTimeMillis();
         
         try {
-            // 构建润色提示词
-            String prompt = buildPolishPrompt(reqDto);
+            // 构建润色提示词（使用校验后的文本）
+            TextPolishReqDto validatedReq = new TextPolishReqDto();
+            validatedReq.setSelectedText(selectedText);
+            validatedReq.setStyle(reqDto.getStyle());
+            validatedReq.setRequirement(reqDto.getRequirement());
+            String prompt = buildPolishPrompt(validatedReq);
             ActiveSpan.tag("prompt.length", String.valueOf(prompt.length()));
 
             // 调用AI模型

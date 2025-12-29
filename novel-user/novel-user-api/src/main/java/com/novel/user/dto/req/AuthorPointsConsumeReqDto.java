@@ -56,5 +56,13 @@ public class AuthorPointsConsumeReqDto {
 
     @Schema(description = "润色要求")
     private String requirement;
+
+    /* ***************** 内部使用字段（用于回滚） ***************** */
+    
+    @Schema(description = "已使用的免费积分（内部使用，用于精确回滚）")
+    private Integer usedFreePoints;
+    
+    @Schema(description = "已使用的付费积分（内部使用，用于精确回滚）")
+    private Integer usedPaidPoints;
 }
 

@@ -236,6 +236,10 @@ public class AuthorServiceImpl implements AuthorService {
             usedPaidPoints = needPaid;
         }
 
+        // 保存使用的积分信息到dto，用于后续回滚
+        dto.setUsedFreePoints(usedFreePoints);
+        dto.setUsedPaidPoints(usedPaidPoints);
+
         // 6. 发送 MQ 消息，异步持久化到数据库
         try {
             AuthorPointsConsumeMqDto mqDto = AuthorPointsConsumeMqDto.builder()
@@ -294,22 +298,52 @@ public class AuthorServiceImpl implements AuthorService {
         // 1. 从 Redis 获取当前积分值，计算需要回滚的积分
         initPointsIfNeeded(authorId);
         
-        // 2. 根据消费类型和点数，回滚积分（优先回滚到付费积分，再回滚到免费积分）
-        // 这里简化处理：全部回滚到免费积分（因为通常免费积分先扣除）
-        // 实际可以根据业务需求调整回滚策略
+        // 2. 精确回滚：根据实际使用的免费积分和付费积分进行回滚
+        // 优先回滚到付费积分，再回滚到免费积分（与扣除顺序相反）
+        Integer usedFreePoints = dto.getUsedFreePoints();
+        Integer usedPaidPoints = dto.getUsedPaidPoints();
+        
+        // 如果没有记录使用的积分信息，使用旧逻辑（全部回滚到免费积分）
+        if (usedFreePoints == null && usedPaidPoints == null) {
+            log.warn("作者[{}]回滚积分时缺少使用记录，使用默认回滚策略（全部回滚到免费积分）", authorId);
+            usedFreePoints = consumePoints;
+            usedPaidPoints = 0;
+        } else {
+            // 确保值不为null
+            if (usedFreePoints == null) usedFreePoints = 0;
+            if (usedPaidPoints == null) usedPaidPoints = 0;
+        }
+        
         try {
-            Long newFree = stringRedisTemplate.opsForValue()
-                .increment(getFreePointsKey(authorId), consumePoints);
-            
-            if (newFree == null) {
-                log.error("作者[{}]回滚积分失败，Redis操作返回null", authorId);
-                return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR);
+            // 先回滚付费积分
+            if (usedPaidPoints > 0) {
+                Long newPaid = stringRedisTemplate.opsForValue()
+                    .increment(getPaidPointsKey(authorId), usedPaidPoints);
+                if (newPaid == null) {
+                    log.error("作者[{}]回滚付费积分失败，Redis操作返回null", authorId);
+                    return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR);
+                }
+                log.debug("作者[{}]回滚付费积分成功，回滚点数: {}, 当前付费积分: {}", 
+                    authorId, usedPaidPoints, newPaid);
             }
             
-            log.info("作者[{}]积分回滚成功，回滚点数: {}, 当前免费积分: {}", 
-                authorId, consumePoints, newFree);
+            // 再回滚免费积分
+            if (usedFreePoints > 0) {
+                Long newFree = stringRedisTemplate.opsForValue()
+                    .increment(getFreePointsKey(authorId), usedFreePoints);
+                if (newFree == null) {
+                    log.error("作者[{}]回滚免费积分失败，Redis操作返回null", authorId);
+                    return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR);
+                }
+                log.debug("作者[{}]回滚免费积分成功，回滚点数: {}, 当前免费积分: {}", 
+                    authorId, usedFreePoints, newFree);
+            }
+            
+            log.info("作者[{}]积分回滚成功，回滚免费积分: {}, 回滚付费积分: {}", 
+                authorId, usedFreePoints, usedPaidPoints);
         } catch (Exception e) {
-            log.error("作者[{}]回滚积分失败，回滚点数: {}", authorId, consumePoints, e);
+            log.error("作者[{}]回滚积分失败，回滚免费积分: {}, 回滚付费积分: {}", 
+                authorId, usedFreePoints, usedPaidPoints, e);
             return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR);
         }
 
@@ -320,8 +354,8 @@ public class AuthorServiceImpl implements AuthorService {
                 .authorId(authorId)
                 .consumeType(dto.getConsumeType())
                 .consumePoints(consumePoints)
-                .usedFreePoints(consumePoints) // 回滚时，全部回滚到免费积分
-                .usedPaidPoints(0)
+                .usedFreePoints(usedFreePoints != null ? usedFreePoints : consumePoints) // 使用实际使用的免费积分
+                .usedPaidPoints(usedPaidPoints != null ? usedPaidPoints : 0) // 使用实际使用的付费积分
                 .relatedId(dto.getRelatedId())
                 .relatedDesc(dto.getRelatedDesc() != null ? 
                     "回滚: " + dto.getRelatedDesc() : "积分回滚")
