@@ -2,9 +2,11 @@ package com.novel.ai.service.impl;
 
 import com.alibaba.cloud.ai.dashscope.image.DashScopeImageOptions;
 import com.novel.ai.service.ImageService;
+import com.novel.common.manager.TencentCosManager;
 import com.novel.common.resp.RestResp;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.apache.skywalking.apm.toolkit.trace.ActiveSpan;
 import org.apache.skywalking.apm.toolkit.trace.Trace;
 import org.springframework.ai.image.ImageModel;
@@ -20,6 +22,10 @@ public class ImageServiceImpl implements ImageService {
 
     @Resource
     private ImageModel imageModel;
+    
+    // 可选注入 COS 管理器（如果配置了 COS，则注入；否则为 null）
+    @Autowired(required = false)
+    private TencentCosManager tencentCosManager;
 
     /**
      * 生成图片（带 SkyWalking 监控）
@@ -88,15 +94,40 @@ public class ImageServiceImpl implements ImageService {
                 throw new RuntimeException("AI生图结果为空");
             }
             
-            String url = response.getResult().getOutput().getUrl();
+            String tempUrl = response.getResult().getOutput().getUrl();
             long duration = System.currentTimeMillis() - startTime;
             
             ActiveSpan.tag("ai.duration.ms", String.valueOf(duration));
             ActiveSpan.tag("ai.status", "success");
-            ActiveSpan.tag("ai.image.url", url != null ? "generated" : "null");
+            ActiveSpan.tag("ai.image.url", tempUrl != null ? "generated" : "null");
             
-            log.info("图片生成成功，耗时: {}ms, URL: {}", duration, url);
-            return RestResp.ok(url);
+            log.info("图片生成成功，耗时: {}ms, 临时URL: {}", duration, tempUrl);
+            
+            // 如果配置了 COS，立即转存到 COS
+            String finalUrl = tempUrl;
+            if (tencentCosManager != null && tempUrl != null) {
+                try {
+                    long transferStartTime = System.currentTimeMillis();
+                    log.info("开始转存图片到 COS，临时URL: {}", tempUrl);
+                    finalUrl = tencentCosManager.uploadImageFromUrl(tempUrl);
+                    long transferDuration = System.currentTimeMillis() - transferStartTime;
+                    ActiveSpan.tag("cos.transfer.duration.ms", String.valueOf(transferDuration));
+                    ActiveSpan.tag("cos.transfer.status", "success");
+                    log.info("图片转存到 COS 成功，耗时: {}ms, COS URL: {}", transferDuration, finalUrl);
+                } catch (Exception e) {
+                    // 转存失败，记录日志但不影响主流程，返回临时URL
+                    ActiveSpan.tag("cos.transfer.status", "failed");
+                    ActiveSpan.tag("cos.transfer.error", e.getMessage());
+                    log.error("图片转存到 COS 失败，将返回临时URL。临时URL: {}, 错误: {}", tempUrl, e.getMessage(), e);
+                    // 继续使用临时URL，不抛出异常
+                }
+            } else {
+                if (tencentCosManager == null) {
+                    log.warn("TencentCosManager 未配置，返回临时URL。如需自动转存，请在 Nacos 中配置 cipher-aes-tencent-cos.yml");
+                }
+            }
+            
+            return RestResp.ok(finalUrl);
 
         } catch (Exception e) {
             long duration = System.currentTimeMillis() - startTime;

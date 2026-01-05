@@ -1,4 +1,4 @@
-package com.novel.resource.util;
+package com.novel.common.util;
 
 import lombok.experimental.UtilityClass;
 
@@ -107,3 +107,4 @@ public class ImgVerifyCodeUtils {
     }
 
 }
+

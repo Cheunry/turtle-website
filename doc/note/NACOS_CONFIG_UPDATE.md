@@ -28,7 +28,7 @@ spring:
         - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
       routes:
         - id: novel-resource-front
-          uri: lb://novel-resource-service
+          uri: lb://novel-user-service
           predicates:
             - Path=/api/front/resource/**
         - id: novel-user-front

@@ -6,7 +6,6 @@
         <module>novel-core</module>
         <module>novel-gateway</module>
         <module>novel-user</module>
-        <module>novel-resource</module>
         <module>novel-book</module>
         <module>novel-search</module>
         <module>novel-ai</module>
@@ -51,8 +50,6 @@
         <cos_api-qcloud.version>5.6.227</cos_api-qcloud.version>
         <rocketmq.version>2.3.1</rocketmq.version>
         <rocketmq-client.version>5.3.3</rocketmq-client.version>
-<!--        <rocketmq.version>2.2.2</rocketmq.version>-->
-<!--        <rocketmq-client.version>4.9.4</rocketmq-client.version>-->
 
 
         <jaxb.version>2.3.1</jaxb.version>
