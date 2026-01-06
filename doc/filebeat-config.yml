@@ -1,0 +1,111 @@
+filebeat.inputs:
+  - type: log
+    enabled: true
+    paths:
+      # 修改为你的实际日志路径
+      - /var/log/novel-search/novel-search-service.log
+      - /var/log/novel-search/debug.*.log
+    multiline.pattern: '^\d{4}-\d{2}-\d{2}'
+    multiline.negate: true
+    multiline.match: after
+    fields:
+      service: novel-search
+      environment: production
+    fields_under_root: false
+    # 只收集包含 SEARCH_METRIC 的日志行
+    include_lines: ['SEARCH_METRIC']
+
+# 处理器：解析 SEARCH_METRIC 日志格式
+processors:
+  # 使用 dissect 解析日志格式
+  - dissect:
+      tokenizer: "%{timestamp} %{level} %{pid} --- [%{thread}] %{logger} : %{message}"
+      field: "message"
+      target_prefix: "parsed"
+      ignore_failure: true
+
+  # 使用 grok 解析 SEARCH_METRIC 格式
+  - grok:
+      match:
+        parsed.message: 'SEARCH_METRIC\|mode=%{WORD:search_mode}\|keyword=%{DATA:keyword}\|resultCount=%{NUMBER:result_count:int}\|totalHits=%{NUMBER:total_hits:long}\|latency=%{NUMBER:latency_ms:int}ms\|vectorGenTime=%{NUMBER:vector_gen_time_ms:int}ms\|knnOnly=%{NUMBER:knn_only:int}\|bm25Only=%{NUMBER:bm25_only:int}\|both=%{NUMBER:both:int}\|pageNum=%{NUMBER:page_num:int}\|pageSize=%{NUMBER:page_size:int}'
+      field: "parsed.message"
+      ignore_missing: true
+      ignore_failure: true
+
+  # 处理纯文本搜索模式（没有 vectorGenTime 等字段）
+  - grok:
+      match:
+        parsed.message: 'SEARCH_METRIC\|mode=%{WORD:search_mode}\|keyword=%{DATA:keyword}\|resultCount=%{NUMBER:result_count:int}\|totalHits=%{NUMBER:total_hits:long}\|latency=%{NUMBER:latency_ms:int}ms\|pageNum=%{NUMBER:page_num:int}\|pageSize=%{NUMBER:page_size:int}'
+      field: "parsed.message"
+      ignore_missing: true
+      ignore_failure: true
+
+  # 添加时间戳字段
+  - timestamp:
+      field: "parsed.timestamp"
+      layouts:
+        - '2006-01-02 15:04:05.000'
+      test:
+        - '2026-01-05 18:54:03.489'
+      ignore_failure: true
+
+  # 移除原始 message 字段（可选，减少存储）
+  - drop_fields:
+      fields: ["message"]
+      ignore_missing: true
+
+# 输出到 Elasticsearch
+output.elasticsearch:
+  hosts: ["http://elasticsearch:9200"]
+  # 索引名称：按日期分片
+  index: "novel-search-metrics-%{+yyyy.MM.dd}"
+  # 如果 ES 需要认证，取消下面的注释
+  # username: "elastic"
+  # password: "your_password"
+
+# 索引模板设置
+setup.template.settings:
+  index.number_of_shards: 1
+  index.number_of_replicas: 0
+  index.codec: best_compression
+
+# 索引模板映射（可选，让 ES 自动推断也可以）
+setup.template.mappings:
+  properties:
+    "@timestamp":
+      type: date
+    search_mode:
+      type: keyword
+    keyword:
+      type: text
+      fields:
+        keyword:
+          type: keyword
+    result_count:
+      type: integer
+    total_hits:
+      type: long
+    latency_ms:
+      type: integer
+    vector_gen_time_ms:
+      type: integer
+    knn_only:
+      type: integer
+    bm25_only:
+      type: integer
+    both:
+      type: integer
+    page_num:
+      type: integer
+    page_size:
+      type: integer
+
+# 日志级别
+logging.level: info
+logging.to_files: true
+logging.files:
+  path: /var/log/filebeat
+  name: filebeat
+  keepfiles: 7
+  permissions: 0644
+
