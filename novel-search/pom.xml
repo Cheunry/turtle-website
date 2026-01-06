@@ -42,6 +42,11 @@
             <artifactId>rocketmq-client</artifactId>
         </dependency>
 
+        <!-- Spring AI Alibaba 用于调用 DashScope 模型生成向量 -->
+        <dependency>
+            <groupId>com.alibaba.cloud.ai</groupId>
+            <artifactId>spring-ai-alibaba-starter-dashscope</artifactId>
+        </dependency>
 
         <!-- 添加 swagger-annotations-jakarta 依赖 -->
         <dependency>

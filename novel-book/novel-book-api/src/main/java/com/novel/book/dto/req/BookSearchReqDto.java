@@ -74,4 +74,10 @@ public class BookSearchReqDto extends PageReqDto {
      */
     @Parameter(description = "排序字段")
     private String sort;
+
+    /**
+     * 搜索模式；0-普通文本搜索 1-AI混合搜索
+     */
+    @Parameter(description = "搜索模式；0-普通文本搜索 1-AI混合搜索")
+    private Integer searchMode;
 }

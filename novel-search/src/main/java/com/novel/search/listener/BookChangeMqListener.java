@@ -3,14 +3,14 @@ package com.novel.search.listener;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.ElasticsearchException;
 import com.novel.book.dto.resp.BookEsRespDto;
-import com.novel.book.feign.BookFeign;
+import com.novel.search.feign.BookFeignManager;
 import com.novel.common.constant.AmqpConsts;
-import com.novel.common.resp.RestResp;
 import com.novel.common.constant.EsConsts;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.spring.annotation.RocketMQMessageListener;
 import org.apache.rocketmq.spring.core.RocketMQListener;
+import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -35,8 +35,9 @@ import java.util.List;
 public class BookChangeMqListener implements RocketMQListener<String> {
 
     private final ElasticsearchClient elasticsearchClient;
-    private final BookFeign bookFeign;
+    private final BookFeignManager bookFeignManager;
     private final ObjectMapper objectMapper;
+    private final EmbeddingModel embeddingModel;
 
     @Override
     public void onMessage(String message) {
@@ -66,26 +67,50 @@ public class BookChangeMqListener implements RocketMQListener<String> {
 
         for (Long bookId : bookIds) {
             try {
-                // 1. 调用 Feign 获取最新书籍数据
-                // 这里调用的是我们刚刚添加的接口
-                RestResp<BookEsRespDto> resp = bookFeign.getEsBookById(bookId);
+                // 1. 通过 BookFeignManager 安全地获取最新书籍数据
+                BookEsRespDto book = bookFeignManager.getEsBookById(bookId);
                 
-                if (!resp.isOk()) {
-                    log.error(">>> [MQ] 调用 Feign 获取书籍数据失败，bookId={}，Code={}，Msg={}", 
-                            bookId, resp.getCode(), resp.getMessage());
-                    // 如果是服务调用失败，抛出异常让 MQ 重试
-                    throw new RuntimeException("Feign调用失败: " + resp.getMessage());
-                }
-
-                BookEsRespDto book = resp.getData();
                 if (book == null) {
-                    // 如果查不到数据，可能是书籍被删除了？
-                    // 根据业务逻辑，这里可能需要从 ES 删除，或者直接忽略
-                    log.warn(">>> [MQ] 查无此书，bookId={}", bookId);
-                    // 尝试从 ES 删除（防止是删除操作触发的更新）
-                    deleteFromEs(bookId);
+                    // 如果查不到数据，可能是：
+                    // 1. 书籍被删除了
+                    // 2. 书籍未审核通过（auditStatus != 1）
+                    // 3. Feign 调用失败（BookFeignManager 已记录警告日志）
+                    // 4. 新增书籍但服务调用失败（ES 中本来就没有数据）
+                    // 
+                    // 重要：只有当 ES 中存在该书籍时，才需要删除
+                    // 如果是新增书籍，ES 中本来就没有，不需要删除
+                    if (existsInEs(bookId)) {
+                        log.warn(">>> [MQ] 书籍数据为空，但 ES 中存在该书籍，可能原因：1)书籍被删除 2)书籍未审核通过，bookId={}，将从ES删除", bookId);
+                        deleteFromEs(bookId);
+                    } else {
+                        log.warn(">>> [MQ] 书籍数据为空，且 ES 中不存在该书籍，可能原因：1)新增书籍但服务调用失败 2)消息错误，bookId={}，跳过处理", bookId);
+                    }
                     continue;
                 }
+
+                // --- 生成向量 ---
+                try {
+                    // 组合书名、作者和简介作为向量化内容
+                    String textToEmbed = "书名:" + book.getBookName() + 
+                                       "; 作者:" + book.getAuthorName() + 
+                                       "; 简介:" + book.getBookDesc();
+                    
+                    // 简单截断文本以防过长 (假设模型限制为 8k token，这里保守截取 2000 字符)
+                    if (textToEmbed.length() > 2000) {
+                        textToEmbed = textToEmbed.substring(0, 2000);
+                    }
+                    
+                    float[] embeddingArray = embeddingModel.embed(textToEmbed);
+                    List<Float> embeddingList = new ArrayList<>();
+                    for (float v : embeddingArray) {
+                        embeddingList.add(v);
+                    }
+                    book.setEmbedding(embeddingList);
+                    log.debug(">>> [MQ] 已为书籍生成向量。bookId={}", bookId);
+                } catch (Exception e) {
+                    log.error(">>> [MQ] 向量生成失败，将只保存文本字段。bookId={}", bookId, e);
+                }
+
 
                 // 2. 更新 ES
                 elasticsearchClient.index(idx -> idx
@@ -102,6 +127,22 @@ public class BookChangeMqListener implements RocketMQListener<String> {
                 // 注意：在批量消费中，抛出异常会导致整批消息重试，这可能是个副作用
                 throw new RuntimeException("ES同步失败", e);
             }
+        }
+    }
+    
+    /**
+     * 检查 ES 中是否存在该书籍
+     */
+    private boolean existsInEs(Long bookId) {
+        try {
+            return elasticsearchClient.exists(e -> e
+                .index(EsConsts.BookIndex.INDEX_NAME)
+                .id(bookId.toString())
+            ).value();
+        } catch (Exception e) {
+            log.warn(">>> [MQ] 检查 ES 中是否存在书籍时发生异常。bookId={}", bookId, e);
+            // 如果检查失败，保守处理：假设存在，让删除逻辑处理
+            return true;
         }
     }
     

@@ -42,8 +42,15 @@ public class BookFeignManager {
     public BookEsRespDto getEsBookById(Long bookId) {
         RestResp<BookEsRespDto> resp = bookFeign.getEsBookById(bookId);
         if (Objects.equals(ErrorCodeEnum.OK.getCode(), resp.getCode())) {
-            return resp.getData();
+            BookEsRespDto data = resp.getData();
+            if (data == null) {
+                log.warn(">>> [Feign] getEsBookById 返回 OK 但数据为 null，bookId={}，可能原因：1)书籍不存在 2)书籍未审核通过", bookId);
+            }
+            return data;
         }
+        // 打印异常原因
+        log.warn(">>> [Feign] getEsBookById 调用失败或返回非 OK 状态，bookId={}，Code={}，Msg={}", 
+                bookId, resp.getCode(), resp.getMessage());
         return null;
     }
 

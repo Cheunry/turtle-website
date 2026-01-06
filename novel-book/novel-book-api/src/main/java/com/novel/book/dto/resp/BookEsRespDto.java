@@ -94,6 +94,11 @@ public class BookEsRespDto {
      */
     private Integer isVip;
 
+    /**
+     * 向量数据 (用于混合检索)
+     */
+    private java.util.List<Float> embedding;
+
 }
 
 /*

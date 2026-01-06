@@ -48,7 +48,7 @@ public class FrontBookController {
     @Operation(summary = "小说分类列表查询接口")
     @GetMapping("category/list")
     public RestResp<List<BookCategoryRespDto>> listCategory(
-            @Parameter(description = "作品方向", required = true) Integer workDirection) {
+            @Parameter(description = "作品方向，不传则返回所有分类") Integer workDirection) {
         return bookSearchService.listCategory(workDirection);
     }
 

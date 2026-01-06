@@ -28,6 +28,7 @@ import org.apache.rocketmq.spring.core.RocketMQTemplate;
 
 import com.novel.common.constant.CacheConsts;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.cache.annotation.Cacheable;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -348,10 +349,18 @@ public class BookSearchServiceImpl implements BookSearchService {
 
         BookInfo bookInfo = bookInfoMapper.selectById(bookId);
         // 只有审核通过的书籍才能被索引到ES
-        if (bookInfo == null || bookInfo.getAuditStatus() == null || bookInfo.getAuditStatus() != 1) {
+        if (bookInfo == null) {
+            log.warn(">>> [ES] 书籍不存在，bookId={}", bookId);
+            return RestResp.ok(null);
+        }
+        
+        if (bookInfo.getAuditStatus() == null || bookInfo.getAuditStatus() != 1) {
+            log.warn(">>> [ES] 书籍未审核通过，不返回ES数据，bookId={}, auditStatus={}, bookName={}", 
+                    bookId, bookInfo.getAuditStatus(), bookInfo.getBookName());
             return RestResp.ok(null);
         }
 
+        log.debug(">>> [ES] 获取书籍ES数据成功，bookId={}, bookName={}", bookId, bookInfo.getBookName());
         return RestResp.ok(convertToBookEsRespDto(bookInfo));
     }
 
@@ -427,13 +436,21 @@ public class BookSearchServiceImpl implements BookSearchService {
 
     /**
      * 获取根据书籍方向获取这个方向的书籍类型列表
-     * @param workDirection 作品方向;0-男频 1-女频
+     * @param workDirection 作品方向;0-男频 1-女频，null 表示查询所有分类
      * @return 书籍类型信息列表
      */
     @Override
+    @Cacheable(value = CacheConsts.BOOK_CATEGORY_LIST_CACHE_NAME, 
+               cacheManager = CacheConsts.REDIS_CACHE_MANAGER_TYPED,
+               key = "#workDirection == null ? 'all' : #workDirection.toString()",
+               unless = "#result == null || #result.data == null || #result.data.isEmpty()")
     public RestResp<List<BookCategoryRespDto>> listCategory(Integer workDirection) {
         QueryWrapper<BookCategory> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq(DatabaseConsts.BookCategoryTable.COLUMN_WORK_DIRECTION, workDirection);
+        // workDirection 为 null 时，返回所有分类
+        if (workDirection != null) {
+            queryWrapper.eq(DatabaseConsts.BookCategoryTable.COLUMN_WORK_DIRECTION, workDirection);
+        }
+        queryWrapper.orderByAsc(DatabaseConsts.BookCategoryTable.COLUMN_SORT);
         List<BookCategoryRespDto> categoryList = bookCategoryMapper.selectList(queryWrapper).stream().map(v->
                 BookCategoryRespDto.builder()
                         .id(v.getId())

@@ -72,6 +72,8 @@ public class DatabaseConsts {
 
         public static final String COLUMN_WORK_DIRECTION = "work_direction";
 
+        public static final String COLUMN_SORT = "sort";
+
     }
 
     /**

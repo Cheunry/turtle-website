@@ -13,9 +13,11 @@ import com.xxl.job.core.handler.annotation.XxlJob;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Component
@@ -25,6 +27,7 @@ public class AllBookToEsTask {
 
     private final BookFeignManager bookFeignManager;
     private final ElasticsearchClient elasticsearchClient;
+    private final EmbeddingModel embeddingModel;
 
 
     /**
@@ -51,6 +54,30 @@ public class AllBookToEsTask {
 
                 for (BookEsRespDto book : books) {
 
+                    // --- 批量同步时的向量生成逻辑 ---
+                    try {
+                        String textToEmbed = "书名:" + book.getBookName() + 
+                                           "; 作者:" + book.getAuthorName() + 
+                                           "; 简介:" + book.getBookDesc();
+                        if (textToEmbed.length() > 2000) {
+                            textToEmbed = textToEmbed.substring(0, 2000);
+                        }
+                        
+                        // 生成向量
+                        float[] embeddingArray = embeddingModel.embed(textToEmbed);
+                        log.info(">>> Generated embedding for bookId={}, length={}", book.getId(), embeddingArray.length);
+
+                        List<Float> embeddingList = new ArrayList<>();
+                        for (float v : embeddingArray) {
+                            embeddingList.add(v);
+                        }
+                        book.setEmbedding(embeddingList);
+                        
+                    } catch (Exception e) {
+                        log.error(">>> 全量同步-向量生成失败，bookId={}", book.getId(), e);
+                    }
+                    // ------------------------------------
+
                     br.operations(op -> op
                             .index(idx -> idx
                                     .index(EsConsts.BookIndex.INDEX_NAME)
@@ -72,7 +99,10 @@ public class AllBookToEsTask {
                     log.error("Bulk had errors");
                     for (BulkResponseItem item : result.items()) {
                         if (item.error() != null) {
-                            log.error(item.error().reason());
+                            log.error("Id: {}, Error Type: {}, Reason: {}", 
+                                item.id(), 
+                                item.error().type(), 
+                                item.error().reason());
                         }
                     }
                 }

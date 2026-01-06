@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.spring.annotation.RocketMQMessageListener;
 import org.apache.rocketmq.spring.core.RocketMQListener;
+import org.apache.rocketmq.spring.core.RocketMQTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +33,7 @@ public class BookInfoUpdateListener implements RocketMQListener<BookInfoUpdateMq
 
     private final BookInfoMapper bookInfoMapper;
     private final BookChapterMapper bookChapterMapper;
+    private final RocketMQTemplate rocketMQTemplate;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -89,6 +91,23 @@ public class BookInfoUpdateListener implements RocketMQListener<BookInfoUpdateMq
             bookInfoMapper.updateById(updateBook);
             
             log.debug("书籍信息更新完成，bookId: {}, 新字数: {}", bookId, updateBook.getWordCount());
+            
+            // 4. 如果书籍已审核通过，发送ES同步消息
+            // 注意：只有审核通过的书籍才需要同步到ES
+            // 使用更新前的bookInfo判断审核状态（因为这里只更新字数和最新章节，不改变审核状态）
+            if (bookInfo.getAuditStatus() != null && bookInfo.getAuditStatus() == 1) {
+                try {
+                    String destination = AmqpConsts.BookChangeMq.TOPIC + ":" + AmqpConsts.BookChangeMq.TAG_UPDATE;
+                    rocketMQTemplate.convertAndSend(destination, bookId);
+                    log.debug("书籍信息更新完成，已发送ES同步消息，bookId: {}", bookId);
+                } catch (Exception e) {
+                    log.error("发送ES同步消息失败，bookId: {}", bookId, e);
+                    // ES消息发送失败不影响业务
+                }
+            } else {
+                log.debug("书籍未审核通过，不发送ES同步消息，bookId: {}, auditStatus: {}", 
+                        bookId, bookInfo.getAuditStatus());
+            }
         } catch (Exception e) {
             log.error("处理书籍信息更新MQ消息失败，bookId: {}, chapterId: {}", 
                     bookId, updateDto.getChapterId(), e);
