@@ -5,19 +5,17 @@ import com.novel.book.dto.resp.BookChapterRespDto;
 import com.novel.book.dto.resp.BookEsRespDto;
 import com.novel.book.dto.resp.BookInfoRespDto;
 import com.novel.common.constant.ApiRouterConsts;
-import com.novel.common.constant.ErrorCodeEnum;
 import com.novel.common.resp.PageRespDto;
 import com.novel.common.resp.RestResp;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
 import java.util.List;
 
 
 @Component
-@FeignClient(value = "novel-book-service", fallback = BookFeign.BookFeignFallback.class)
+@FeignClient(value = "novel-book-service", fallbackFactory = BookFeignFallbackFactory.class)
 public interface BookFeign {
 
     /**
@@ -122,102 +120,5 @@ public interface BookFeign {
      */
     @PostMapping(ApiRouterConsts.API_INNER_BOOK_URL_PREFIX + "/deleteComment")
     RestResp<Void> deleteComment(@RequestBody BookCommentReqDto dto);
-
-
-    @Component
-    class BookFeignFallback implements BookFeign {
-
-        @Override
-        public RestResp<List<BookInfoRespDto>> listBookInfoByIds(List<Long> bookIds) {
-
-            return RestResp.ok(new ArrayList<>(0));
-        }
-
-        @Override
-        public RestResp<List<BookInfoRespDto>> listBookInfoByIdsForBookshelf(List<Long> bookIds) {
-            return RestResp.ok(new ArrayList<>(0));
-        }
-
-        @Override
-        public RestResp<Void> publishBook(BookAddReqDto dto) {
-
-            return RestResp.fail(ErrorCodeEnum.THIRD_SERVICE_ERROR);
-        }
-
-        @Override
-        public RestResp<Void> updateBook(BookUptReqDto dto) {
-            return RestResp.fail(ErrorCodeEnum.THIRD_SERVICE_ERROR);
-        }
-
-        @Override
-        public RestResp<Void> deleteBook(BookDelReqDto dto) {
-            return RestResp.fail(ErrorCodeEnum.THIRD_SERVICE_ERROR);
-        }
-
-        @Override
-        public RestResp<Void> publishBookChapter(ChapterAddReqDto dto) {
-
-            return RestResp.fail(ErrorCodeEnum.THIRD_SERVICE_ERROR);
-        }
-
-        @Override
-        public RestResp<PageRespDto<BookInfoRespDto>> listPublishBooks(BookPageReqDto dto) {
-
-            return RestResp.ok(PageRespDto.of(dto.getPageNum(), dto.getPageSize(), 0, new ArrayList<>(0)));
-        }
-
-        @Override
-        public RestResp<PageRespDto<BookChapterRespDto>> listPublishBookChapters(ChapterPageReqDto dto) {
-            return RestResp.ok(PageRespDto.of(dto.getPageNum(), dto.getPageSize(), 0, new ArrayList<>(0)));
-        }
-
-        @Override
-        public RestResp<BookChapterRespDto> getBookChapter(Long bookId, Integer chapterNum) {
-            return null;
-        }
-
-        @Override
-        public RestResp<Void> updateBookChapter(ChapterUptReqDto dto) {
-            return RestResp.fail(ErrorCodeEnum.THIRD_SERVICE_ERROR);
-        }
-
-        @Override
-        public RestResp<Void> deleteBookChapter(ChapterDelReqDto dto) {
-            return RestResp.fail(ErrorCodeEnum.THIRD_SERVICE_ERROR);
-        }
-
-        @Override
-        public RestResp<BookInfoRespDto> getBookByIdForAuthor(Long bookId, Long authorId) {
-            return RestResp.fail(ErrorCodeEnum.THIRD_SERVICE_ERROR);
-        }
-
-        @Override
-        public RestResp<List<BookEsRespDto>> listNextEsBooks(Long maxBookId) {
-            return RestResp.ok(new ArrayList<>(0));
-        }
-
-        @Override
-        public RestResp<BookEsRespDto> getEsBookById(Long bookId) {
-            // 现在的 fail 方法会自动推断 T 为 BookEsRespDto
-            return RestResp.fail(ErrorCodeEnum.THIRD_SERVICE_ERROR);
-        }
-
-        @Override
-        public RestResp<Void> publishComment(BookCommentReqDto dto) {
-            return RestResp.fail(ErrorCodeEnum.THIRD_SERVICE_ERROR);
-        }
-
-        @Override
-        public RestResp<Void> updateComment(BookCommentReqDto dto) {
-            return RestResp.fail(ErrorCodeEnum.THIRD_SERVICE_ERROR);
-        }
-
-        @Override
-        public RestResp<Void> deleteComment(BookCommentReqDto dto) {
-            return RestResp.fail(ErrorCodeEnum.THIRD_SERVICE_ERROR);
-        }
-
-    }
-
 
 }

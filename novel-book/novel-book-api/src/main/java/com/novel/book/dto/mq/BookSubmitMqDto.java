@@ -5,8 +5,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.io.Serializable;
-
 /**
  * 书籍提交 MQ 消息 DTO（包含新增和更新）
  * 用于将书籍新增/更新操作完全异步化，网关只需发送此消息即可立即返回
@@ -15,9 +13,7 @@ import java.io.Serializable;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class BookSubmitMqDto implements Serializable {
-
-    private static final long serialVersionUID = 1L;
+public class BookSubmitMqDto {
 
     /**
      * 操作类型：ADD-新增，UPDATE-更新

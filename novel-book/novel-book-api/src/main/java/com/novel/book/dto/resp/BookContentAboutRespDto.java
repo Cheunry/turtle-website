@@ -2,8 +2,10 @@ package com.novel.book.dto.resp;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
@@ -12,6 +14,8 @@ import java.time.LocalDateTime;
  */
 @Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class BookContentAboutRespDto {
 
     @Schema(description = "小说信息")
@@ -25,6 +29,8 @@ public class BookContentAboutRespDto {
 
     @Data
     @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class BookInfo {
         @Schema(description = "小说类别名")
         private String categoryName;
@@ -35,6 +41,8 @@ public class BookContentAboutRespDto {
 
     @Data
     @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class ChapterInfo {
         @Schema(description = "书籍ID")
         private Long bookId;

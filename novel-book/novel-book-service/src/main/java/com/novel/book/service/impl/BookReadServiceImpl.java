@@ -16,12 +16,18 @@ import com.novel.book.dto.resp.BookCommentRespDto;
 import com.novel.book.dto.resp.BookContentAboutRespDto;
 import com.novel.book.feign.UserFeignManager;
 import com.novel.book.service.BookReadService;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.novel.common.constant.CacheConsts;
+
 import com.novel.common.constant.DatabaseConsts;
 import com.novel.common.constant.ErrorCodeEnum;
 import com.novel.common.resp.PageRespDto;
 import com.novel.common.resp.RestResp;
 import com.novel.user.dto.resp.UserInfoRespDto;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
@@ -34,6 +40,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class BookReadServiceImpl implements BookReadService {
 
     private final BookChapterMapper bookChapterMapper;
@@ -41,6 +48,9 @@ public class BookReadServiceImpl implements BookReadService {
     private final BookCommentMapper bookCommentMapper;
     private final UserFeignManager userFeignManager;
     private final StringRedisTemplate stringRedisTemplate;
+    
+    // 手动注入 ObjectMapper 并注册 JavaTimeModule
+    private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
     /**
      * 看小说某章节内容
@@ -49,8 +59,24 @@ public class BookReadServiceImpl implements BookReadService {
      */
     @Override
     public RestResp<BookContentAboutRespDto> getBookContentAbout(Long bookId, Integer chapterNum) {
+        // 1. 尝试从 Redis 获取缓存
+        String cacheKey = CacheConsts.BOOK_CONTENT_CACHE_NAME + "::content:" + bookId + ":" + chapterNum;
+        String cacheValue = stringRedisTemplate.opsForValue().get(cacheKey);
+        
+        if (cacheValue != null) {
+            try {
+                BookContentAboutRespDto dto = objectMapper.readValue(cacheValue, BookContentAboutRespDto.class);
+                log.info(">>> 章节内容命中 Redis 缓存，bookId={}, chapterNum={}", bookId, chapterNum);
+                return RestResp.ok(dto);
+            } catch (Exception e) {
+                // 缓存解析失败，打印日志并降级查库
+                log.warn("解析章节内容缓存失败，key={}", cacheKey, e);
+            }
+        }
 
-        // 1. 查询小说基本信息
+        log.info(">>> 章节内容未命中缓存，回源查询 DB，bookId={}, chapterNum={}", bookId, chapterNum);
+
+        // 2. 查询小说基本信息
         BookInfo bookInfo = bookInfoMapper.selectById(bookId);
         
         // 检查书籍审核状态：只有审核通过的书籍才能被读者查看
@@ -72,15 +98,15 @@ public class BookReadServiceImpl implements BookReadService {
                 .build());
         }
 
-        // 2. 查询章节信息（包含 content），只查询审核通过的章节
+        // 3. 查询章节信息（包含 content），只查询审核通过的章节
         QueryWrapper<BookChapter> chapterQueryWrapper = new QueryWrapper<>();
         chapterQueryWrapper.eq(DatabaseConsts.BookChapterTable.COLUMN_BOOK_ID, bookId)
                 .eq(DatabaseConsts.BookChapterTable.COLUMN_CHAPTER_NUM, chapterNum)
                 .eq("audit_status", 1); // 只查询审核通过的章节
         BookChapter bookChapter = bookChapterMapper.selectOne(chapterQueryWrapper);
 
-        // 3. 组装并返回
-        return RestResp.ok(BookContentAboutRespDto.builder()
+        // 4. 组装数据
+        BookContentAboutRespDto data = BookContentAboutRespDto.builder()
             .bookInfo(BookContentAboutRespDto.BookInfo.builder()
                 .categoryName(bookInfo != null ? bookInfo.getCategoryName() : null)
                 .authorName(bookInfo != null ? bookInfo.getAuthorName() : null)
@@ -93,7 +119,28 @@ public class BookReadServiceImpl implements BookReadService {
                 .chapterUpdateTime(bookChapter != null ? bookChapter.getUpdateTime() : null)
                 .build())
             .bookContent(bookChapter != null ? bookChapter.getContent() : null)
-            .build());
+            .build();
+            
+        // 5. 写入缓存 (根据书籍状态设置动态过期时间)
+        try {
+            if (data != null) {
+                String json = objectMapper.writeValueAsString(data);
+                
+                // 默认 12 小时 (连载中)
+                long ttl = 43200L;
+                if (bookInfo != null && Integer.valueOf(1).equals(bookInfo.getBookStatus())) {
+                    // 已完结：7天 (604800秒)
+                    ttl = 604800L;
+                }
+                
+                stringRedisTemplate.opsForValue().set(cacheKey, json, ttl, TimeUnit.SECONDS);
+                log.info(">>> 章节内容已写入 Redis，key={}，ttl={}s", cacheKey, ttl);
+            }
+        } catch (Exception e) {
+             log.error("写入章节内容缓存失败，key={}", cacheKey, e);
+        }
+        
+        return RestResp.ok(data);
     }
 
     /**
@@ -147,23 +194,61 @@ public class BookReadServiceImpl implements BookReadService {
      */
     @Override
     public RestResp<List<BookChapterRespDto>> getBookChapter(Long bookId) {
+        // 1. 尝试从 Redis 获取缓存
+        String cacheKey = CacheConsts.BOOK_CHAPTER_CACHE_NAME + "::" + bookId;
+        String cacheValue = stringRedisTemplate.opsForValue().get(cacheKey);
 
-        // 只查询审核通过的章节（auditStatus=1）
+        if (cacheValue != null) {
+            try {
+                // List 的反序列化需要使用 TypeReference
+                List<BookChapterRespDto> list = objectMapper.readValue(cacheValue, new TypeReference<List<BookChapterRespDto>>() {});
+                log.info(">>> 书籍目录命中 Redis 缓存，bookId={}", bookId);
+                return RestResp.ok(list);
+            } catch (Exception e) {
+                log.warn("解析书籍目录缓存失败，key={}", cacheKey, e);
+            }
+        }
+
+        log.info(">>> 书籍目录未命中缓存，回源查询 DB，bookId={}", bookId);
+
+        // 2. 查 DB：只查询审核通过的章节（auditStatus=1）
         QueryWrapper<BookChapter> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq(DatabaseConsts.BookChapterTable.COLUMN_BOOK_ID, bookId)
                 .eq("audit_status", 1) // 只查询审核通过的章节
                 .orderByAsc(DatabaseConsts.BookChapterTable.COLUMN_CHAPTER_NUM);
 
-        return RestResp.ok(
-                bookChapterMapper.selectList(queryWrapper).stream()
-                        .map(v -> BookChapterRespDto.builder()
-                                .chapterNum(v.getChapterNum())
-                                .chapterName(v.getChapterName())
-                                .chapterWordCount(v.getWordCount())
-                                .chapterUpdateTime(v.getUpdateTime())
-                                .isVip(v.getIsVip()).build()
-                        ).toList()
-        );
+        List<BookChapterRespDto> list = bookChapterMapper.selectList(queryWrapper).stream()
+                .map(v -> BookChapterRespDto.builder()
+                        .chapterNum(v.getChapterNum())
+                        .chapterName(v.getChapterName())
+                        .chapterWordCount(v.getWordCount())
+                        .chapterUpdateTime(v.getUpdateTime())
+                        .isVip(v.getIsVip()).build()
+                ).toList();
+
+        // 3. 写入缓存 (根据书籍状态设置动态过期时间)
+        try {
+            if (!CollectionUtils.isEmpty(list)) {
+                String json = objectMapper.writeValueAsString(list);
+
+                // 查询书籍信息获取状态
+                BookInfo bookInfo = bookInfoMapper.selectById(bookId);
+                
+                // 默认 1 小时 (连载中，让用户更快刷到新章节)
+                long ttl = 3600L;
+                if (bookInfo != null && Integer.valueOf(1).equals(bookInfo.getBookStatus())) {
+                    // 已完结：7天 (604800秒)
+                    ttl = 604800L;
+                }
+
+                stringRedisTemplate.opsForValue().set(cacheKey, json, ttl, TimeUnit.SECONDS);
+                log.info(">>> 书籍目录已写入 Redis，key={}，ttl={}s", cacheKey, ttl);
+            }
+        } catch (Exception e) {
+            log.error("写入书籍目录缓存失败，key={}", cacheKey, e);
+        }
+
+        return RestResp.ok(list);
 
     }
 

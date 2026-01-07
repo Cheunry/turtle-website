@@ -84,6 +84,11 @@ public class CacheConsts {
     public static final String LAST_UPDATE_BOOK_ID_LIST_CACHE_NAME = "lastUpdateBookIdListCache";
 
     /**
+     * 小说相关推荐缓存
+     */
+    public static final String BOOK_REC_CACHE_NAME = "bookRecCache";
+
+    /**
      * 图片验证码缓存 KEY
      */
     public static final String IMG_VERIFY_CODE_CACHE_KEY =
@@ -175,6 +180,8 @@ public class CacheConsts {
         BOOK_CHAPTER_CACHE(0, BOOK_CHAPTER_CACHE_NAME, 60 * 60 * 6, 5000),
 
         BOOK_CONTENT_CACHE(2, BOOK_CONTENT_CACHE_NAME, 60 * 60 * 12, 3000),
+
+        BOOK_REC_CACHE(2, BOOK_REC_CACHE_NAME, 60 * 60 * 24, 1000),
 
         LAST_UPDATE_BOOK_ID_LIST_CACHE(0, LAST_UPDATE_BOOK_ID_LIST_CACHE_NAME, 60 * 60, 10),
 

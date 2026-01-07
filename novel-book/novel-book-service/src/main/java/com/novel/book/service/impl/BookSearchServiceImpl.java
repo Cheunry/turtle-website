@@ -31,7 +31,14 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.cache.annotation.Cacheable;
 
 import java.time.LocalDateTime;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import org.springframework.data.redis.core.RedisCallback;
+import org.springframework.data.redis.serializer.RedisSerializer;
+
 import java.time.format.DateTimeFormatter;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
@@ -45,6 +52,11 @@ public class BookSearchServiceImpl implements BookSearchService {
     private final RocketMQTemplate rocketMQTemplate;
 
     private final BookCategoryMapper bookCategoryMapper;
+
+    // 手动注入 ObjectMapper 并注册 JavaTimeModule
+    private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
+
+    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     /**
      * 查询书籍信息
@@ -80,7 +92,7 @@ public class BookSearchServiceImpl implements BookSearchService {
                     
                     String updateTimeStr = (String) bookInfoMap.get("updateTime");
                     if (updateTimeStr != null) {
-                        dto.setUpdateTime(LocalDateTime.parse(updateTimeStr, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+                        dto.setUpdateTime(LocalDateTime.parse(updateTimeStr, DATE_TIME_FORMATTER));
                     }
                     
                     log.info(">>> 详情页命中 Redis Hash 缓存，bookId={}", bookId);
@@ -110,6 +122,32 @@ public class BookSearchServiceImpl implements BookSearchService {
                 .orderByAsc(DatabaseConsts.BookChapterTable.COLUMN_CHAPTER_NUM) // Asc 正序
                 .last(DatabaseConsts.SqlEnum.LIMIT_1.getSql());
         BookChapter firstBookChapter = bookChapterMapper.selectOne(queryWrapper);
+
+        // --- 开始回写 Redis (使用 Pipeline 减少 RTT) ---
+        try {
+            Map<String, String> cacheMap = buildBookInfoMap(bookInfo, firstBookChapter != null ? firstBookChapter.getChapterNum() : 1);
+            String redisKey = CacheConsts.BOOK_INFO_HASH_PREFIX + bookId;
+            
+            stringRedisTemplate.executePipelined((RedisCallback<Object>) connection -> {
+                RedisSerializer<String> serializer = stringRedisTemplate.getStringSerializer();
+                byte[] keyBytes = serializer.serialize(redisKey);
+                
+                // 1. HMSET 批量设置字段
+                Map<byte[], byte[]> byteMap = new HashMap<>();
+                cacheMap.forEach((k, v) -> byteMap.put(serializer.serialize(k), serializer.serialize(v)));
+                connection.hMSet(keyBytes, byteMap);
+                
+                // 2. EXPIRE 设置过期时间 (1小时 = 3600秒)
+                connection.expire(keyBytes, 3600);
+                
+                return null;
+            });
+            
+            log.info(">>> 详情页回写 Redis Hash 成功 (Pipeline), bookId={}", bookId);
+        } catch (Exception e) {
+            log.error(">>> 详情页回写 Redis 失败，bookId={}", bookId, e);
+        }
+        // --- 结束回写 Redis ---
 
         // 组装响应对象
         BookInfoRespDto bookInfoRespDto = BookInfoRespDto.builder()
@@ -193,10 +231,18 @@ public class BookSearchServiceImpl implements BookSearchService {
     public RestResp<Void> addVisitCount(Long bookId) {
         try {
             // 1. 优先更新 Redis (高性能模式)
-            // 更新点击榜 ZSet (实时排名)
-            stringRedisTemplate.opsForZSet().incrementScore(CacheConsts.BOOK_VISIT_RANK_ZSET, String.valueOf(bookId), 1);
-            // 更新点击量计数器 Hash (用于定时批量刷库)
-            stringRedisTemplate.opsForHash().increment(CacheConsts.BOOK_VISIT_COUNT_HASH, String.valueOf(bookId), 1);
+            // 使用 Pipeline 合并两次写操作 (1次 IO)
+            stringRedisTemplate.executePipelined((RedisCallback<Object>) connection -> {
+                RedisSerializer<String> serializer = stringRedisTemplate.getStringSerializer();
+                byte[] bookIdBytes = serializer.serialize(String.valueOf(bookId));
+                
+                // 更新点击榜 ZSet (实时排名)
+                connection.zIncrBy(serializer.serialize(CacheConsts.BOOK_VISIT_RANK_ZSET), 1.0, bookIdBytes);
+                // 更新点击量计数器 Hash (用于定时批量刷库)
+                connection.hIncrBy(serializer.serialize(CacheConsts.BOOK_VISIT_COUNT_HASH), bookIdBytes, 1);
+                
+                return null;
+            });
         } catch (Exception e) {
             log.error("Redis 异常，降级为直接写数据库，bookId={}", bookId, e);
             // 2. Redis 挂了，降级：直接写库 + 发 MQ (保证数据不丢失)
@@ -263,10 +309,28 @@ public class BookSearchServiceImpl implements BookSearchService {
      */
     @Override
     public RestResp<List<HomeBookRespDto>> listHomeBook() {
-        // 从首页小说展示表中查询出需要展示的小说
+        // 1. 尝试从 Redis 获取缓存
+        String cacheKey = CacheConsts.HOME_BOOK_CACHE_NAME;
+        String cacheValue = stringRedisTemplate.opsForValue().get(cacheKey);
+        
+        if (cacheValue != null) {
+            try {
+                List<HomeBookRespDto> list = objectMapper.readValue(cacheValue, new TypeReference<List<HomeBookRespDto>>() {});
+                log.info(">>> 首页推荐命中 Redis 缓存");
+                return RestResp.ok(list);
+            } catch (Exception e) {
+                log.warn("解析首页推荐缓存失败，key={}", cacheKey, e);
+            }
+        }
+
+        log.info(">>> 首页推荐未命中缓存，回源查询 DB");
+
+        // 2. 从首页小说展示表中查询出需要展示的小说
         QueryWrapper<HomeBook> queryWrapper = new QueryWrapper<>();
         queryWrapper.orderByDesc(DatabaseConsts.CommonColumnEnum.SORT.getName());
         List<HomeBook> homeBooks = homeBookMapper.selectList(queryWrapper);
+
+        List<HomeBookRespDto> respList = Collections.emptyList();
 
         // 获取首页小说展示列表书籍的id
         if(!CollectionUtils.isEmpty(homeBooks)) {
@@ -284,7 +348,7 @@ public class BookSearchServiceImpl implements BookSearchService {
             if(!CollectionUtils.isEmpty(bookInfos)) {
                 Map<Long, BookInfo> bookInfoMap = bookInfos.stream()
                         .collect(Collectors.toMap(BookInfo::getId, Function.identity()));
-                return RestResp.ok(homeBooks.stream()
+                respList = homeBooks.stream()
                         .filter(v -> bookInfoMap.containsKey(v.getBookId())) // 只保留审核通过的书籍
                         .map(v -> {
                             BookInfo bookInfo = bookInfoMap.get(v.getBookId());
@@ -296,10 +360,22 @@ public class BookSearchServiceImpl implements BookSearchService {
                             homeBookRespDto.setAuthorName(bookInfo.getAuthorName());
                             homeBookRespDto.setBookDesc(bookInfo.getBookDesc());
                             return homeBookRespDto;
-                        }).toList());
+                        }).toList();
             }
         }
-        return RestResp.ok(Collections.emptyList());
+        
+        // 3. 写入缓存 (24小时)
+        try {
+            if (!CollectionUtils.isEmpty(respList)) {
+                String json = objectMapper.writeValueAsString(respList);
+                stringRedisTemplate.opsForValue().set(cacheKey, json, 24, TimeUnit.HOURS);
+                log.info(">>> 首页推荐已写入 Redis");
+            }
+        } catch (Exception e) {
+            log.error("写入首页推荐缓存失败", e);
+        }
+        
+        return RestResp.ok(respList);
     }
 
 
@@ -381,21 +457,33 @@ public class BookSearchServiceImpl implements BookSearchService {
             return RestResp.ok(listRankBooks(bookInfoQueryWrapper));
         }
 
+        // 3. 使用 Pipeline 批量获取书籍详情 (将 30 次 IO 优化为 1 次)
+        List<Object> results = stringRedisTemplate.executePipelined((RedisCallback<Object>) connection -> {
+            RedisSerializer<String> serializer = stringRedisTemplate.getStringSerializer();
+            for (String bookIdStr : bookIdSet) {
+                String key = CacheConsts.BOOK_INFO_HASH_PREFIX + bookIdStr;
+                connection.hGetAll(serializer.serialize(key));
+            }
+            return null;
+        });
+
         List<BookRankRespDto> resultList = new ArrayList<>();
+        int i = 0;
         for (String bookIdStr : bookIdSet) {
             Long bookId = Long.valueOf(bookIdStr);
-            // 3. 尝试从 Redis Hash 获取书籍详情
-            Map<Object, Object> bookInfoMap = stringRedisTemplate.opsForHash().entries(CacheConsts.BOOK_INFO_HASH_PREFIX + bookId);
+            // 获取 Pipeline 结果
+            @SuppressWarnings("unchecked")
+            Map<Object, Object> bookInfoMap = (Map<Object, Object>) results.get(i++);
 
             if (!CollectionUtils.isEmpty(bookInfoMap)) {
-                log.info(">>> 点击榜详情命中 Redis Hash 缓存，bookId={}", bookId);
-                // 3.1 缓存命中，组装 DTO
+                log.debug(">>> 点击榜详情命中 Redis Hash 缓存，bookId={}", bookId);
                 BookRankRespDto dto = convertMapToBookRankRespDto(bookId, bookInfoMap);
                 if (dto != null) {
                     resultList.add(dto);
                 }
             } else {
-                // 3.2 缓存未命中（说明该书不在 Top 50 预热范围内，或者缓存已失效），回源查询 DB
+                // 缓存未命中（说明该书不在 Top 50 预热范围内，或者缓存已失效），回源查询 DB
+                // 注意：这里仍然可能是循环查库，但通常 Top 榜单的数据都有预热，命中率较高
                 log.info(">>> 点击榜详情未命中缓存（或不在 Top 50），回源查询 DB，bookId={}", bookId);
                 BookInfo bookInfo = bookInfoMapper.selectById(bookId);
                 if (bookInfo != null) {
@@ -467,7 +555,23 @@ public class BookSearchServiceImpl implements BookSearchService {
      */
     @Override
     public RestResp<List<BookInfoRespDto>> listRecBooks(Long bookId) {
+        // 1. 尝试从 Redis 获取缓存
+        String cacheKey = CacheConsts.BOOK_REC_CACHE_NAME + "::" + bookId;
+        String cacheValue = stringRedisTemplate.opsForValue().get(cacheKey);
 
+        if (cacheValue != null) {
+            try {
+                List<BookInfoRespDto> list = objectMapper.readValue(cacheValue, new TypeReference<List<BookInfoRespDto>>() {});
+                log.info(">>> 相关推荐命中 Redis 缓存，bookId={}", bookId);
+                return RestResp.ok(list);
+            } catch (Exception e) {
+                log.warn("解析相关推荐缓存失败，key={}", cacheKey, e);
+            }
+        }
+
+        log.info(">>> 相关推荐未命中缓存，回源查询 DB，bookId={}", bookId);
+
+        // 2. 查 DB
         BookInfo bookInfo = bookInfoMapper.selectById(bookId);
         if (bookInfo == null) {
             return RestResp.ok(Collections.emptyList());
@@ -487,6 +591,18 @@ public class BookSearchServiceImpl implements BookSearchService {
                 .bookDesc(b.getBookDesc())
                 .authorName(b.getAuthorName())
                 .build()).collect(Collectors.toList());
+        
+        // 3. 写入缓存 (24小时)
+        try {
+            if (!CollectionUtils.isEmpty(result)) {
+                String json = objectMapper.writeValueAsString(result);
+                stringRedisTemplate.opsForValue().set(cacheKey, json, 24, TimeUnit.HOURS);
+                log.info(">>> 相关推荐已写入 Redis，bookId={}", bookId);
+            }
+        } catch (Exception e) {
+            log.error("写入相关推荐缓存失败, bookId={}", bookId, e);
+        }
+        
         return RestResp.ok(result);
     }
 
@@ -599,4 +715,38 @@ public class BookSearchServiceImpl implements BookSearchService {
                 .build();
     }
 
+    /**
+     * 构建书籍信息 Map (用于 Redis Hash)
+     */
+    private Map<String, String> buildBookInfoMap(BookInfo book, Integer firstChapterNum) {
+        Map<String, String> map = new HashMap<>();
+        map.put("id", String.valueOf(book.getId()));
+        map.put("bookName", book.getBookName());
+        map.put("authorId", String.valueOf(book.getAuthorId()));
+        map.put("authorName", book.getAuthorName());
+        map.put("picUrl", book.getPicUrl());
+        map.put("bookDesc", book.getBookDesc());
+        map.put("categoryName", book.getCategoryName());
+        map.put("bookStatus", String.valueOf(book.getBookStatus()));
+        map.put("visitCount", String.valueOf(book.getVisitCount()));
+        map.put("lastChapterName", book.getLastChapterName());
+        map.put("firstChapterNum", String.valueOf(firstChapterNum));
+
+        if (book.getLastChapterNum() != null) map.put("lastChapterNum", String.valueOf(book.getLastChapterNum()));
+        if (book.getWordCount() != null) map.put("wordCount", String.valueOf(book.getWordCount()));
+        if (book.getCategoryId() != null) map.put("categoryId", String.valueOf(book.getCategoryId()));
+        if (book.getScore() != null) map.put("score", String.valueOf(book.getScore()));
+        if (book.getCommentCount() != null) map.put("commentCount", String.valueOf(book.getCommentCount()));
+        if (book.getWorkDirection() != null) map.put("workDirection", String.valueOf(book.getWorkDirection()));
+
+        if (book.getUpdateTime() != null) {
+            map.put("updateTime", book.getUpdateTime().format(DATE_TIME_FORMATTER));
+        }
+        if (book.getLastChapterUpdateTime() != null) {
+            map.put("lastChapterUpdateTime", book.getLastChapterUpdateTime().format(DATE_TIME_FORMATTER));
+        }
+        return map;
+    }
+
 }
+

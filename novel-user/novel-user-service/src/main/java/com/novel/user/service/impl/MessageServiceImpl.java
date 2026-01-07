@@ -32,8 +32,6 @@ public class MessageServiceImpl implements MessageService {
     private final MessageContentMapper messageContentMapper;
     private final MessageReceiveMapper messageReceiveMapper;
 
-
-
     /**
      * 发送消息
      * @param dto 消息内容
