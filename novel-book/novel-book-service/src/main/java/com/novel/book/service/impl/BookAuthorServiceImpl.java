@@ -7,6 +7,7 @@ import com.novel.book.dao.entity.BookChapter;
 import com.novel.book.dao.entity.BookInfo;
 import com.novel.book.dao.mapper.BookChapterMapper;
 import com.novel.book.dao.mapper.BookInfoMapper;
+import com.novel.book.dto.mq.BookSubmitMqDto;
 import com.novel.book.dto.mq.ChapterSubmitMqDto;
 import com.novel.book.dto.req.*;
 import com.novel.book.dto.resp.BookChapterRespDto;
@@ -50,52 +51,41 @@ public class BookAuthorServiceImpl implements BookAuthorService {
 
 
     /**
-     * 作家新增书籍（同步版本，保留供内部调用）
-     * 
-     * 注意：前端新增书籍的请求已改为异步MQ处理（见 BookAddListener）
-     * 此方法保留用于内部服务同步调用场景
-     * 
+     * 作家新增书籍
      * @param dto 新增书籍请求dto
      * @return 响应
      */
-    @Transactional(rollbackFor = Exception.class)
     @Override
     public RestResp<Void> saveBook(BookAddReqDto dto) {
-
-        // 校验小说名是否已存在
+        // 校验小说名是否已存在 (同步校验，提升体验)
         QueryWrapper<BookInfo> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq(DatabaseConsts.BookTable.COLUMN_BOOK_NAME, dto.getBookName());
         if (bookInfoMapper.selectCount(queryWrapper) > 0) {
             return RestResp.fail(ErrorCodeEnum.AUTHOR_BOOK_NAME_EXIST);
         }
 
-        BookInfo bookInfo = BookInfo.builder()
+        BookSubmitMqDto submitDto = BookSubmitMqDto.builder()
+                .operationType("ADD")
+                .authorId(dto.getAuthorId())
+                .penName(dto.getPenName())
                 .workDirection(dto.getWorkDirection())
                 .categoryId(dto.getCategoryId())
                 .categoryName(dto.getCategoryName())
-                .picUrl(StringUtils.isBlank(dto.getPicUrl()) ? "https://turtle-website-1379089820.cos.ap-beijing.myqcloud.com/resource/2025/12/22/b1b7e29159423d4f0ab605a35245a3ed.png" : dto.getPicUrl())
+                .picUrl(dto.getPicUrl())
                 .bookName(dto.getBookName())
-                .authorId(dto.getAuthorId())
-                .authorName(dto.getPenName())
                 .bookDesc(dto.getBookDesc())
-                .score(0)
                 .isVip(dto.getIsVip())
-                .auditStatus(auditEnable ? 0 : 1) // 根据审核开关决定初始状态
-                .createTime(LocalDateTime.now())
-                .updateTime(LocalDateTime.now())
+                .bookStatus(dto.getBookStatus())
+                .auditEnable(auditEnable)
                 .build();
 
-        // 保存小说信息
-        bookInfoMapper.insert(bookInfo);
-
-        // 如果开启审核，触发AI审核
-        if (auditEnable) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    rocketMQTemplate.convertAndSend(AmqpConsts.BookAuditMq.TOPIC + ":" + AmqpConsts.BookAuditMq.TAG_AUDIT_BOOK, bookInfo.getId());
-                }
-            });
+        // 发送MQ消息，立即返回
+        try {
+            // Updated for async submit
+            rocketMQTemplate.convertAndSend(AmqpConsts.BookSubmitMq.TOPIC + ":" + AmqpConsts.BookSubmitMq.TAG_SUBMIT, submitDto);
+        } catch (Exception e) {
+            log.error("发送书籍新增MQ消息失败，bookName: {}", dto.getBookName(), e);
+            return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR);
         }
 
         return RestResp.ok();
@@ -106,16 +96,9 @@ public class BookAuthorServiceImpl implements BookAuthorService {
      * @param dto 更新书籍请求dto
      * @return Void
      */
-    @Transactional(rollbackFor = Exception.class)
     @Override
-    /**
-     * 更新书籍信息（同步版本，保留供内部调用）
-     * 
-     * 注意：前端更新书籍的请求已改为异步MQ处理（见 BookUpdateListener）
-     * 此方法保留用于内部服务同步调用场景
-     */
     public RestResp<Void> updateBook(BookUptReqDto dto) {
-        // 1. 校验小说是否存在且属于该作者
+        // 1. 校验小说是否存在且属于该作者 (同步校验)
         BookInfo bookInfo = bookInfoMapper.selectById(dto.getBookId());
         if (Objects.isNull(bookInfo)) {
             return RestResp.fail(ErrorCodeEnum.USER_REQUEST_PARAM_ERROR);
@@ -124,85 +107,28 @@ public class BookAuthorServiceImpl implements BookAuthorService {
             return RestResp.fail(ErrorCodeEnum.USER_UN_AUTH);
         }
 
-        // 2. 更新信息
-        BookInfo updateBook = new BookInfo();
-        updateBook.setId(dto.getBookId());
-        
-        boolean hasUpdate = false;
-        boolean needAudit = false; // 标记是否需要重新审核
-        
-        if (StringUtils.isNotBlank(dto.getBookName())) {
-            updateBook.setBookName(dto.getBookName());
-            hasUpdate = true;
-            needAudit = true; // 小说名变更需要重新审核
-        }
-        if (StringUtils.isNotBlank(dto.getPicUrl())) {
-            updateBook.setPicUrl(dto.getPicUrl());
-            hasUpdate = true;
-        }
-        if (StringUtils.isNotBlank(dto.getBookDesc())) {
-            updateBook.setBookDesc(dto.getBookDesc());
-            hasUpdate = true;
-            needAudit = true; // 简介变更需要重新审核
-        }
-        if (dto.getCategoryId() != null) {
-            updateBook.setCategoryId(dto.getCategoryId());
-            hasUpdate = true;
-        }
-        if (StringUtils.isNotBlank(dto.getCategoryName())) {
-            updateBook.setCategoryName(dto.getCategoryName());
-            hasUpdate = true;
-        }
-        if (dto.getWorkDirection() != null) {
-            updateBook.setWorkDirection(dto.getWorkDirection());
-            hasUpdate = true;
-        }
-        if (dto.getIsVip() != null) {
-            updateBook.setIsVip(dto.getIsVip());
-            hasUpdate = true;
-        }
-        if (dto.getBookStatus() != null) {
-            updateBook.setBookStatus(dto.getBookStatus());
-            hasUpdate = true;
-        }
+        BookSubmitMqDto submitDto = BookSubmitMqDto.builder()
+                .operationType("UPDATE")
+                .bookId(dto.getBookId())
+                .authorId(dto.getAuthorId())
+                .workDirection(dto.getWorkDirection())
+                .categoryId(dto.getCategoryId())
+                .categoryName(dto.getCategoryName())
+                .picUrl(dto.getPicUrl())
+                .bookName(dto.getBookName())
+                .bookDesc(dto.getBookDesc())
+                .isVip(dto.getIsVip())
+                .bookStatus(dto.getBookStatus())
+                .auditEnable(auditEnable)
+                .build();
 
-        if (hasUpdate) {
-            // 如果小说名或简介有变更，且开启了审核，重置审核状态为待审核
-            if (needAudit && auditEnable) {
-                updateBook.setAuditStatus(0);
-                updateBook.setAuditReason(null);
-            }
-            
-            updateBook.setUpdateTime(LocalDateTime.now());
-            bookInfoMapper.updateById(updateBook);
-            
-            // 清除 Redis 缓存，确保下次查询时获取最新数据
-            try {
-                String cacheKey = CacheConsts.BOOK_INFO_HASH_PREFIX + dto.getBookId();
-                stringRedisTemplate.delete(cacheKey);
-                log.debug("已清除书籍信息缓存，bookId: {}, cacheKey: {}", dto.getBookId(), cacheKey);
-            } catch (Exception e) {
-                log.warn("清除书籍信息缓存失败，bookId: {}, 不影响业务", dto.getBookId(), e);
-            }
-            
-            // 如果小说名或简介有变更，且开启了审核，触发AI审核
-            if (needAudit && auditEnable) {
-                // 改为发送MQ异步审核
-                if (TransactionSynchronizationManager.isSynchronizationActive()) {
-                    TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                        @Override
-                        public void afterCommit() {
-                            try {
-                                rocketMQTemplate.convertAndSend(AmqpConsts.BookAuditMq.TOPIC + ":" + AmqpConsts.BookAuditMq.TAG_AUDIT_BOOK, dto.getBookId());
-                            } catch (Exception e) {
-                                log.error("发送书籍更新审核MQ失败，bookId: {}", dto.getBookId(), e);
-                            }
-                        }
-                    });
-                } else {
-                    rocketMQTemplate.convertAndSend(AmqpConsts.BookAuditMq.TOPIC + ":" + AmqpConsts.BookAuditMq.TAG_AUDIT_BOOK, dto.getBookId());
-                }
-            }
+        // 发送MQ消息，立即返回
+        try {
+            // Updated for async submit
+            rocketMQTemplate.convertAndSend(AmqpConsts.BookSubmitMq.TOPIC + ":" + AmqpConsts.BookSubmitMq.TAG_SUBMIT, submitDto);
+        } catch (Exception e) {
+            log.error("发送书籍更新MQ消息失败，bookId: {}", dto.getBookId(), e);
+            return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR);
         }
 
         return RestResp.ok();

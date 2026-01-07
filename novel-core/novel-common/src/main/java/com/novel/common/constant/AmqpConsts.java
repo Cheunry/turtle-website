@@ -34,60 +34,6 @@ public class AmqpConsts {
     }
 
     /**
-     * 书籍信息更新 MQ（异步更新书籍字数、最新章节等信息）
-     */
-    public static class BookInfoUpdateMq {
-
-        /**
-         * 书籍信息更新 Topic
-         */
-        public static final String TOPIC = "topic-book-info-update";
-
-        /**
-         * 书籍信息更新 Tag
-         */
-        public static final String TAG_UPDATE_INFO = "update_info";
-
-        /**
-         * 消费者组 - 异步更新书籍信息
-         */
-        public static final String CONSUMER_GROUP_UPDATE_INFO = "group-book-info-update";
-
-    }
-
-    /**
-     * 小说审核 MQ
-     */
-    public static class BookAuditMq {
-
-        /**
-         * 小说审核 Topic
-         */
-        public static final String TOPIC = "topic-book-audit";
-
-        /**
-         * 审核小说 Tag
-         */
-        public static final String TAG_AUDIT_BOOK = "audit_book";
-
-        /**
-         * 审核章节 Tag
-         */
-        public static final String TAG_AUDIT_CHAPTER = "audit_chapter";
-
-        /**
-         * 消费者组 - 审核小说
-         */
-        public static final String CONSUMER_GROUP_AUDIT_BOOK = "group-audit-book";
-
-        /**
-         * 消费者组 - 审核章节
-         */
-        public static final String CONSUMER_GROUP_AUDIT_CHAPTER = "group-audit-chapter";
-
-    }
-
-    /**
      * 小说审核请求 MQ（业务服务 -> AI服务）
      */
     public static class BookAuditRequestMq {
@@ -174,46 +120,24 @@ public class AmqpConsts {
     }
 
     /**
-     * 书籍更新 MQ（网关 -> 业务服务，用于完全异步化书籍更新）
+     * 书籍提交 MQ（网关 -> 业务服务，用于完全异步化书籍新增/更新）
      */
-    public static class BookUpdateMq {
+    public static class BookSubmitMq {
 
         /**
-         * 书籍更新 Topic
+         * 书籍提交 Topic
          */
-        public static final String TOPIC = "topic-book-update";
+        public static final String TOPIC = "topic-book-submit";
 
         /**
-         * 书籍更新 Tag
+         * 书籍提交 Tag
          */
-        public static final String TAG_UPDATE = "update";
+        public static final String TAG_SUBMIT = "submit";
 
         /**
-         * 消费者组 - 处理书籍更新
+         * 消费者组 - 处理书籍提交
          */
-        public static final String CONSUMER_GROUP_UPDATE = "group-book-update";
-
-    }
-
-    /**
-     * 书籍新增 MQ（网关 -> 业务服务，用于完全异步化书籍新增）
-     */
-    public static class BookAddMq {
-
-        /**
-         * 书籍新增 Topic
-         */
-        public static final String TOPIC = "topic-book-add";
-
-        /**
-         * 书籍新增 Tag
-         */
-        public static final String TAG_ADD = "add";
-
-        /**
-         * 消费者组 - 处理书籍新增
-         */
-        public static final String CONSUMER_GROUP_ADD = "group-book-add";
+        public static final String CONSUMER_GROUP_SUBMIT = "group-book-submit";
 
     }
 

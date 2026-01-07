@@ -5,7 +5,6 @@ import com.novel.book.dao.entity.BookChapter;
 import com.novel.book.dao.entity.BookInfo;
 import com.novel.book.dao.mapper.BookChapterMapper;
 import com.novel.book.dao.mapper.BookInfoMapper;
-import com.novel.book.dto.mq.BookInfoUpdateMqDto;
 import com.novel.book.dto.mq.ChapterAuditRequestMqDto;
 import com.novel.book.dto.mq.ChapterSubmitMqDto;
 import com.novel.common.constant.AmqpConsts;
@@ -23,7 +22,7 @@ import java.util.Objects;
 
 /**
  * 章节提交MQ消费者（处理章节更新/创建的所有数据库操作）
- * 将原本在网关同步链路中的数据库操作全部移到此处异步处理
+ * 包含：章节入库、书籍字数和最新章节更新、触发审核、发送变更通知
  */
 @Slf4j
 @Component
@@ -60,10 +59,10 @@ public class ChapterSubmitListener implements RocketMQListener<ChapterSubmitMqDt
 
             if ("UPDATE".equals(submitDto.getOperationType())) {
                 // 更新章节逻辑
-                handleChapterUpdate(submitDto);
+                handleChapterUpdate(submitDto, bookInfo);
             } else if ("CREATE".equals(submitDto.getOperationType())) {
                 // 创建章节逻辑
-                handleChapterCreate(submitDto);
+                handleChapterCreate(submitDto, bookInfo);
             } else {
                 log.warn("未知的操作类型，忽略处理，operationType: {}", submitDto.getOperationType());
             }
@@ -77,7 +76,7 @@ public class ChapterSubmitListener implements RocketMQListener<ChapterSubmitMqDt
     /**
      * 处理章节更新
      */
-    private void handleChapterUpdate(ChapterSubmitMqDto submitDto) {
+    private void handleChapterUpdate(ChapterSubmitMqDto submitDto, BookInfo bookInfo) {
         // 1. 查询章节
         QueryWrapper<BookChapter> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq(DatabaseConsts.BookChapterTable.COLUMN_BOOK_ID, submitDto.getBookId())
@@ -111,7 +110,8 @@ public class ChapterSubmitListener implements RocketMQListener<ChapterSubmitMqDt
         chapter.setContent(submitDto.getContent());
         chapter.setIsVip(submitDto.getIsVip());
         chapter.setUpdateTime(LocalDateTime.now());
-        chapter.setWordCount(submitDto.getContent() != null ? submitDto.getContent().length() : 0);
+        int newWordCount = submitDto.getContent() != null ? submitDto.getContent().length() : 0;
+        chapter.setWordCount(newWordCount);
         
         // 如果开启审核，重置审核状态为待审核
         if (Boolean.TRUE.equals(submitDto.getAuditEnable())) {
@@ -122,80 +122,22 @@ public class ChapterSubmitListener implements RocketMQListener<ChapterSubmitMqDt
         bookChapterMapper.updateById(chapter);
         log.debug("章节更新完成，chapterId: {}, bookId: {}", chapter.getId(), submitDto.getBookId());
 
-        // 5. 构建书籍信息更新MQ消息（异步更新字数和最新章节）
-        BookInfoUpdateMqDto bookInfoUpdate = BookInfoUpdateMqDto.builder()
-                .bookId(chapter.getBookId())
-                .chapterId(chapter.getId())
-                .isNew(false)
-                .oldChapterWordCount(oldWordCount)
-                .newChapterWordCount(chapter.getWordCount())
-                .chapterNum(chapter.getChapterNum())
-                .chapterName(chapter.getChapterName())
-                .chapterUpdateTime(chapter.getUpdateTime())
-                .build();
+        // 5. 更新书籍字数和最新章节信息（原 BookInfoUpdateListener 逻辑）
+        updateBookInfo(bookInfo, oldWordCount, newWordCount, false);
 
-        // 6. 发送书籍信息更新MQ（异步更新字数和最新章节）
-        try {
-            String bookInfoDestination = AmqpConsts.BookInfoUpdateMq.TOPIC + ":" 
-                    + AmqpConsts.BookInfoUpdateMq.TAG_UPDATE_INFO;
-            rocketMQTemplate.convertAndSend(bookInfoDestination, bookInfoUpdate);
-            log.debug("书籍信息更新消息已发送到MQ，bookId: {}, chapterId: {}", 
-                    chapter.getBookId(), chapter.getId());
-        } catch (Exception e) {
-            log.error("发送书籍信息更新MQ失败，bookId: {}, chapterId: {}", 
-                    chapter.getBookId(), chapter.getId(), e);
-        }
-
-        // 7. 如果开启审核，发送审核请求MQ（异步处理）
+        // 6. 如果开启审核，发送审核请求MQ（异步处理）
         if (Boolean.TRUE.equals(submitDto.getAuditEnable())) {
-            try {
-                String taskId = generateTaskId(chapter.getId());
-                ChapterAuditRequestMqDto auditRequest = ChapterAuditRequestMqDto.builder()
-                        .taskId(taskId)
-                        .chapterId(chapter.getId())
-                        .bookId(chapter.getBookId())
-                        .chapterNum(chapter.getChapterNum())
-                        .chapterName(chapter.getChapterName())
-                        .content(chapter.getContent())
-                        .build();
-                String destination = AmqpConsts.BookAuditRequestMq.TOPIC + ":" 
-                        + AmqpConsts.BookAuditRequestMq.TAG_AUDIT_CHAPTER_REQUEST;
-                rocketMQTemplate.convertAndSend(destination, auditRequest);
-                log.debug("章节[{}]审核请求已发送到MQ，taskId: {}", chapter.getId(), taskId);
-            } catch (Exception e) {
-                log.error("发送章节审核请求MQ失败，chapterId: {}", chapter.getId(), e);
-            }
+            sendAuditRequest(chapter);
         }
 
-        // 8. 发送书籍章节更新通知消息（与新增章节保持一致）
-        try {
-            BookInfo bookInfo = bookInfoMapper.selectById(submitDto.getBookId());
-            if (bookInfo != null) {
-                com.novel.book.dto.mq.BookChapterUpdateDto updateDto = 
-                        com.novel.book.dto.mq.BookChapterUpdateDto.builder()
-                        .bookId(bookInfo.getId())
-                        .bookName(bookInfo.getBookName())
-                        .authorId(bookInfo.getAuthorId())
-                        .authorName(bookInfo.getAuthorName())
-                        .chapterId(chapter.getId())
-                        .chapterName(chapter.getChapterName())
-                        .chapterNum(chapter.getChapterNum())
-                        .updateTime(LocalDateTime.now())
-                        .build();
-                rocketMQTemplate.convertAndSend(
-                        AmqpConsts.BookChangeMq.TOPIC + ":" + AmqpConsts.BookChangeMq.TAG_CHAPTER_UPDATE, 
-                        updateDto);
-                log.debug("章节更新通知消息已发送到MQ，chapterId: {}", chapter.getId());
-            }
-        } catch (Exception e) {
-            log.error("发送章节更新通知MQ失败，chapterId: {}", chapter.getId(), e);
-        }
+        // 7. 发送书籍章节更新通知消息
+        sendBookChapterUpdateNotice(bookInfo, chapter);
     }
 
     /**
      * 处理章节创建
      */
-    private void handleChapterCreate(ChapterSubmitMqDto submitDto) {
+    private void handleChapterCreate(ChapterSubmitMqDto submitDto, BookInfo bookInfo) {
         // 1. 校验章节号是否重复
         QueryWrapper<BookChapter> checkWrapper = new QueryWrapper<>();
         checkWrapper.eq(DatabaseConsts.BookChapterTable.COLUMN_BOOK_ID, submitDto.getBookId())
@@ -213,7 +155,8 @@ public class ChapterSubmitListener implements RocketMQListener<ChapterSubmitMqDt
         chapter.setChapterNum(submitDto.getChapterNum());
         chapter.setChapterName(submitDto.getChapterName());
         chapter.setContent(submitDto.getContent());
-        chapter.setWordCount(submitDto.getContent() != null ? submitDto.getContent().length() : 0);
+        int newWordCount = submitDto.getContent() != null ? submitDto.getContent().length() : 0;
+        chapter.setWordCount(newWordCount);
         chapter.setIsVip(submitDto.getIsVip());
         chapter.setAuditStatus(Boolean.TRUE.equals(submitDto.getAuditEnable()) ? 0 : 1);
         chapter.setCreateTime(LocalDateTime.now());
@@ -222,54 +165,99 @@ public class ChapterSubmitListener implements RocketMQListener<ChapterSubmitMqDt
         bookChapterMapper.insert(chapter);
         log.debug("章节创建完成，chapterId: {}, bookId: {}", chapter.getId(), submitDto.getBookId());
 
-        // 3. 构建书籍信息更新MQ消息（异步更新字数和最新章节）
-        BookInfoUpdateMqDto bookInfoUpdate = BookInfoUpdateMqDto.builder()
-                .bookId(chapter.getBookId())
-                .chapterId(chapter.getId())
-                .isNew(true)
-                .oldChapterWordCount(0)
-                .newChapterWordCount(chapter.getWordCount())
-                .chapterNum(chapter.getChapterNum())
-                .chapterName(chapter.getChapterName())
-                .chapterUpdateTime(chapter.getUpdateTime())
-                .build();
+        // 3. 更新书籍字数和最新章节信息（原 BookInfoUpdateListener 逻辑）
+        updateBookInfo(bookInfo, 0, newWordCount, true);
 
-        // 4. 发送书籍信息更新MQ（异步更新字数和最新章节）
-        try {
-            String bookInfoDestination = AmqpConsts.BookInfoUpdateMq.TOPIC + ":" 
-                    + AmqpConsts.BookInfoUpdateMq.TAG_UPDATE_INFO;
-            rocketMQTemplate.convertAndSend(bookInfoDestination, bookInfoUpdate);
-            log.debug("书籍信息更新消息已发送到MQ，bookId: {}, chapterId: {}", 
-                    chapter.getBookId(), chapter.getId());
-        } catch (Exception e) {
-            log.error("发送书籍信息更新MQ失败，bookId: {}, chapterId: {}", 
-                    chapter.getBookId(), chapter.getId(), e);
+        // 4. 如果开启审核，发送审核请求MQ（异步处理）
+        if (Boolean.TRUE.equals(submitDto.getAuditEnable())) {
+            sendAuditRequest(chapter);
         }
 
-        // 5. 如果开启审核，发送审核请求MQ（异步处理）
-        if (Boolean.TRUE.equals(submitDto.getAuditEnable())) {
+        // 5. 发送书籍章节更新通知消息
+        sendBookChapterUpdateNotice(bookInfo, chapter);
+    }
+
+    /**
+     * 更新书籍字数和最新章节信息
+     * (逻辑迁移自原 BookInfoUpdateListener)
+     */
+    private void updateBookInfo(BookInfo bookInfo, int oldChapterWordCount, int newChapterWordCount, boolean isNewChapter) {
+        Long bookId = bookInfo.getId();
+        BookInfo updateBook = new BookInfo();
+        updateBook.setId(bookId);
+
+        // 1. 计算新总字数
+        int currentTotal = bookInfo.getWordCount() == null ? 0 : bookInfo.getWordCount();
+        if (isNewChapter) {
+            updateBook.setWordCount(currentTotal + newChapterWordCount);
+        } else {
+            updateBook.setWordCount(currentTotal - oldChapterWordCount + newChapterWordCount);
+        }
+
+        // 2. 查询当前该书真正的最新章节（只查询审核通过的章节，auditStatus=1）
+        QueryWrapper<BookChapter> lastChapterQuery = new QueryWrapper<>();
+        lastChapterQuery.eq(DatabaseConsts.BookChapterTable.COLUMN_BOOK_ID, bookId)
+                .eq("audit_status", 1) // 只查询审核通过的章节
+                .orderByDesc(DatabaseConsts.BookChapterTable.COLUMN_CHAPTER_NUM)
+                .last("limit 1");
+        BookChapter realLastChapter = bookChapterMapper.selectOne(lastChapterQuery);
+
+        if (realLastChapter != null) {
+            updateBook.setLastChapterNum(realLastChapter.getChapterNum());
+            updateBook.setLastChapterName(realLastChapter.getChapterName());
+            updateBook.setLastChapterUpdateTime(realLastChapter.getUpdateTime());
+        } else {
+            // 如果没有审核通过的章节，清空最新章节信息
+            updateBook.setLastChapterNum(null);
+            updateBook.setLastChapterName(null);
+            updateBook.setLastChapterUpdateTime(null);
+        }
+
+        updateBook.setUpdateTime(LocalDateTime.now());
+        bookInfoMapper.updateById(updateBook);
+        log.debug("书籍信息更新完成，bookId: {}, 新字数: {}", bookId, updateBook.getWordCount());
+
+        // 3. 如果书籍已审核通过，发送ES同步消息
+        // 注意：只有审核通过的书籍才需要同步到ES
+        if (bookInfo.getAuditStatus() != null && bookInfo.getAuditStatus() == 1) {
             try {
-                String taskId = generateTaskId(chapter.getId());
-                ChapterAuditRequestMqDto auditRequest = ChapterAuditRequestMqDto.builder()
-                        .taskId(taskId)
-                        .chapterId(chapter.getId())
-                        .bookId(chapter.getBookId())
-                        .chapterNum(chapter.getChapterNum())
-                        .chapterName(chapter.getChapterName())
-                        .content(chapter.getContent())
-                        .build();
-                String destination = AmqpConsts.BookAuditRequestMq.TOPIC + ":" 
-                        + AmqpConsts.BookAuditRequestMq.TAG_AUDIT_CHAPTER_REQUEST;
-                rocketMQTemplate.convertAndSend(destination, auditRequest);
-                log.debug("章节[{}]审核请求已发送到MQ，taskId: {}", chapter.getId(), taskId);
+                String destination = AmqpConsts.BookChangeMq.TOPIC + ":" + AmqpConsts.BookChangeMq.TAG_UPDATE;
+                rocketMQTemplate.convertAndSend(destination, bookId);
+                log.debug("书籍信息更新完成，已发送ES同步消息，bookId: {}", bookId);
             } catch (Exception e) {
-                log.error("发送章节审核请求MQ失败，chapterId: {}", chapter.getId(), e);
+                log.error("发送ES同步消息失败，bookId: {}", bookId, e);
             }
         }
+    }
 
-        // 6. 发送书籍章节更新通知消息
+    /**
+     * 发送审核请求MQ
+     */
+    private void sendAuditRequest(BookChapter chapter) {
         try {
-            BookInfo bookInfo = bookInfoMapper.selectById(submitDto.getBookId());
+            String taskId = generateTaskId(chapter.getId());
+            ChapterAuditRequestMqDto auditRequest = ChapterAuditRequestMqDto.builder()
+                    .taskId(taskId)
+                    .chapterId(chapter.getId())
+                    .bookId(chapter.getBookId())
+                    .chapterNum(chapter.getChapterNum())
+                    .chapterName(chapter.getChapterName())
+                    .content(chapter.getContent())
+                    .build();
+            String destination = AmqpConsts.BookAuditRequestMq.TOPIC + ":" 
+                    + AmqpConsts.BookAuditRequestMq.TAG_AUDIT_CHAPTER_REQUEST;
+            rocketMQTemplate.convertAndSend(destination, auditRequest);
+            log.debug("章节[{}]审核请求已发送到MQ，taskId: {}", chapter.getId(), taskId);
+        } catch (Exception e) {
+            log.error("发送章节审核请求MQ失败，chapterId: {}", chapter.getId(), e);
+        }
+    }
+
+    /**
+     * 发送书籍章节更新通知消息
+     */
+    private void sendBookChapterUpdateNotice(BookInfo bookInfo, BookChapter chapter) {
+        try {
             if (bookInfo != null) {
                 com.novel.book.dto.mq.BookChapterUpdateDto updateDto = 
                         com.novel.book.dto.mq.BookChapterUpdateDto.builder()
@@ -302,4 +290,3 @@ public class ChapterSubmitListener implements RocketMQListener<ChapterSubmitMqDt
                 java.util.UUID.randomUUID().toString().substring(0, 8));
     }
 }
-

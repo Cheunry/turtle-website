@@ -16,8 +16,7 @@ import com.novel.user.dto.resp.MessageRespDto;
 import com.novel.book.dto.req.*;
 import com.novel.book.dto.resp.BookChapterRespDto;
 import com.novel.book.dto.resp.BookInfoRespDto;
-import com.novel.book.dto.mq.BookAddMqDto;
-import com.novel.book.dto.mq.BookUpdateMqDto;
+import com.novel.book.dto.mq.BookSubmitMqDto;
 import com.novel.book.dto.mq.ChapterSubmitMqDto;
 import com.novel.ai.feign.AiFeign;
 import com.novel.book.dto.req.BookAuditReqDto;
@@ -518,7 +517,8 @@ public class AuthorServiceImpl implements AuthorService {
     @Override
     public RestResp<Void> publishBook(Long authorId, String penName, BookAddReqDto dto, Boolean auditEnable) {
         // 构建MQ消息
-        BookAddMqDto mqDto = BookAddMqDto.builder()
+        BookSubmitMqDto mqDto = BookSubmitMqDto.builder()
+                .operationType("ADD")
                 .authorId(authorId)
                 .penName(penName)
                 .workDirection(dto.getWorkDirection())
@@ -534,7 +534,7 @@ public class AuthorServiceImpl implements AuthorService {
         
         // 发送MQ消息
         try {
-            String destination = AmqpConsts.BookAddMq.TOPIC + ":" + AmqpConsts.BookAddMq.TAG_ADD;
+            String destination = AmqpConsts.BookSubmitMq.TOPIC + ":" + AmqpConsts.BookSubmitMq.TAG_SUBMIT;
             rocketMQTemplate.convertAndSend(destination, mqDto);
             log.debug("书籍新增请求已发送到MQ，bookName: {}, authorId: {}", dto.getBookName(), authorId);
         } catch (Exception e) {
@@ -548,7 +548,8 @@ public class AuthorServiceImpl implements AuthorService {
     @Override
     public RestResp<Void> updateBook(Long authorId, Long bookId, BookUptReqDto dto, Boolean auditEnable) {
         // 构建MQ消息
-        BookUpdateMqDto mqDto = BookUpdateMqDto.builder()
+        BookSubmitMqDto mqDto = BookSubmitMqDto.builder()
+                .operationType("UPDATE")
                 .bookId(bookId)
                 .authorId(authorId)
                 .picUrl(dto.getPicUrl())
@@ -564,7 +565,7 @@ public class AuthorServiceImpl implements AuthorService {
         
         // 发送MQ消息
         try {
-            String destination = AmqpConsts.BookUpdateMq.TOPIC + ":" + AmqpConsts.BookUpdateMq.TAG_UPDATE;
+            String destination = AmqpConsts.BookSubmitMq.TOPIC + ":" + AmqpConsts.BookSubmitMq.TAG_SUBMIT;
             rocketMQTemplate.convertAndSend(destination, mqDto);
             log.debug("书籍更新请求已发送到MQ，bookId: {}, authorId: {}", bookId, authorId);
         } catch (Exception e) {

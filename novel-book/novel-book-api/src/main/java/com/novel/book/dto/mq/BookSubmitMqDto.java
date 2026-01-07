@@ -8,16 +8,26 @@ import lombok.NoArgsConstructor;
 import java.io.Serializable;
 
 /**
- * 书籍新增 MQ 消息 DTO（作者提交书籍新增请求）
- * 用于将书籍新增操作完全异步化，网关只需发送此消息即可立即返回
+ * 书籍提交 MQ 消息 DTO（包含新增和更新）
+ * 用于将书籍新增/更新操作完全异步化，网关只需发送此消息即可立即返回
  */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class BookAddMqDto implements Serializable {
+public class BookSubmitMqDto implements Serializable {
 
     private static final long serialVersionUID = 1L;
+
+    /**
+     * 操作类型：ADD-新增，UPDATE-更新
+     */
+    private String operationType;
+
+    /**
+     * 书籍ID（更新时必填）
+     */
+    private Long bookId;
 
     /**
      * 作家ID
@@ -25,7 +35,7 @@ public class BookAddMqDto implements Serializable {
     private Long authorId;
 
     /**
-     * 作家笔名
+     * 作家笔名（新增时使用）
      */
     private String penName;
 

@@ -29,7 +29,8 @@ import java.util.List;
 @Component
 @RequiredArgsConstructor
 @RocketMQMessageListener(
-    topic = AmqpConsts.BookChangeMq.TOPIC, 
+    topic = AmqpConsts.BookChangeMq.TOPIC,
+    selectorExpression = AmqpConsts.BookChangeMq.TAG_UPDATE,
     consumerGroup = AmqpConsts.BookChangeMq.CONSUMER_GROUP_ES
 )
 public class BookChangeMqListener implements RocketMQListener<String> {

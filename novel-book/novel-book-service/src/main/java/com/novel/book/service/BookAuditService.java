@@ -1,6 +1,5 @@
 package com.novel.book.service;
 
-import com.novel.book.dao.entity.BookChapter;
 import com.novel.book.dao.entity.BookInfo;
 import com.novel.book.dto.mq.BookAuditResultMqDto;
 import com.novel.book.dto.mq.ChapterAuditResultMqDto;
@@ -10,18 +9,6 @@ import com.novel.common.resp.RestResp;
  * 书籍审核服务接口
  */
 public interface BookAuditService {
-
-    /**
-     * AI审核书籍基本信息（小说名和描述）
-     * @param bookInfo 书籍信息
-     */
-    void auditBookInfo(BookInfo bookInfo);
-
-    /**
-     * AI审核章节内容（同步方式，已废弃，保留用于兼容）
-     * @param bookChapter 章节信息
-     */
-    void auditChapter(BookChapter bookChapter);
 
     /**
      * 处理章节审核结果（MQ异步回调方式）

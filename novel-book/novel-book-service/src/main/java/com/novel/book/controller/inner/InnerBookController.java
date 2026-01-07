@@ -47,8 +47,6 @@ public class InnerBookController {
         return bookSearchService.getEsBookById(bookId);
     }
 
-
-
     /**
      * 批量查询小说信息
      */
