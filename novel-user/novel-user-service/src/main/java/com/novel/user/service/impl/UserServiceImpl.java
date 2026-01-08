@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.novel.book.dto.resp.BookInfoRespDto;
-import com.novel.common.auth.JwtUtils;
+import com.novel.common.auth.JwtService;
 import com.novel.common.constant.*;
 import com.novel.common.resp.RestResp;
 import com.novel.config.exception.BusinessException;
@@ -23,6 +23,7 @@ import com.novel.user.dto.resp.UserLoginRespDto;
 import com.novel.user.dto.resp.UserRegisterRespDto;
 import com.novel.user.feign.BookFeignManager;
 import com.novel.user.service.CacheService;
+import com.novel.user.service.TokenBlacklistService;
 import com.novel.user.service.UserService;
 import com.novel.user.service.AuthorService;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +31,8 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.DigestUtils;
 
@@ -55,6 +58,9 @@ public class UserServiceImpl implements UserService {
 
     private final UserBookshelfMapper userBookshelfMapper;
     private final BookFeignManager bookFeignManager;
+    private final JwtService jwtService;
+    private final TokenBlacklistService tokenBlacklistService;
+    private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     public UserServiceImpl(UserInfoMapper userInfoMapper,
                            UserFeedbackMapper userFeedbackMapper,
@@ -63,7 +69,9 @@ public class UserServiceImpl implements UserService {
                            AuthorService authorService,
                            UserBookshelfMapper userBookshelfMapper,
                            BookFeignManager bookFeignManager,
-                           CacheService chacheService) {
+                           CacheService chacheService,
+                           JwtService jwtService,
+                           TokenBlacklistService tokenBlacklistService) {
         this.userInfoMapper = userInfoMapper;
         this.userFeedbackMapper = userFeedbackMapper;
         this.redisTemplate = redisTemplate;
@@ -71,6 +79,8 @@ public class UserServiceImpl implements UserService {
         this.cacheService = chacheService;
         this.userBookshelfMapper = userBookshelfMapper;
         this.bookFeignManager = bookFeignManager;
+        this.jwtService = jwtService;
+        this.tokenBlacklistService = tokenBlacklistService;
     }
 
     @Override
@@ -92,13 +102,13 @@ public class UserServiceImpl implements UserService {
 
         // 注册成功，保存用户信息
         UserInfo userInfo = new UserInfo();
-        userInfo.setPassword(
-                DigestUtils.md5DigestAsHex(dto.getPassword().getBytes(StandardCharsets.UTF_8)));
+        // 使用BCrypt加密密码
+        userInfo.setPassword(passwordEncoder.encode(dto.getPassword()));
         userInfo.setUsername(dto.getUsername());
         userInfo.setNickName(dto.getUsername());
         userInfo.setCreateTime(LocalDateTime.now());
         userInfo.setUpdateTime(LocalDateTime.now());
-        userInfo.setSalt("0");
+        userInfo.setSalt("0"); // BCrypt不需要单独的salt字段，但保留字段以保持兼容性
         userInfoMapper.insert(userInfo);
 
         // 删除验证码
@@ -107,7 +117,7 @@ public class UserServiceImpl implements UserService {
         // 生成JWT 并返回
         return RestResp.ok(
                 UserRegisterRespDto.builder()
-                        .token(JwtUtils.generateToken(userInfo.getId(), SystemConfigConsts.NOVEL_FRONT_KEY))
+                        .token(jwtService.generateToken(userInfo.getId(), SystemConfigConsts.NOVEL_FRONT_KEY))
                         .uid(userInfo.getId())
                         .build()
         );
@@ -135,9 +145,25 @@ public class UserServiceImpl implements UserService {
         }
 
         // 验证密码
-        String encryptedPassword = DigestUtils.md5DigestAsHex(
-                dto.getPassword().getBytes(StandardCharsets.UTF_8));
-        if (!Objects.equals(userInfo.getPassword(), encryptedPassword)) {
+        // 兼容旧密码（MD5）和新密码（BCrypt）
+        boolean passwordMatches = false;
+        if (userInfo.getPassword().startsWith("$2a$") || userInfo.getPassword().startsWith("$2b$")) {
+            // BCrypt密码（新格式）
+            passwordMatches = passwordEncoder.matches(dto.getPassword(), userInfo.getPassword());
+        } else {
+            // MD5密码（旧格式，兼容处理）
+            String md5Password = DigestUtils.md5DigestAsHex(dto.getPassword().getBytes(StandardCharsets.UTF_8));
+            passwordMatches = Objects.equals(userInfo.getPassword(), md5Password);
+            // 如果旧密码验证成功，升级为BCrypt
+            if (passwordMatches) {
+                userInfo.setPassword(passwordEncoder.encode(dto.getPassword()));
+                userInfo.setUpdateTime(LocalDateTime.now());
+                userInfoMapper.updateById(userInfo);
+                log.info("用户 {} 密码已升级为BCrypt加密", username);
+            }
+        }
+        
+        if (!passwordMatches) {
             // 密码错误，记录失败次数
             processLoginFailure(username);
             int remainAttempts = getRemainAttempts(username);
@@ -329,7 +355,7 @@ public class UserServiceImpl implements UserService {
      * 构建登录成功响应
      */
     private RestResp<UserLoginRespDto> buildLoginSuccessResponse(UserInfo userInfo) {
-        String token = JwtUtils.generateToken(userInfo.getId(), SystemConfigConsts.NOVEL_FRONT_KEY);
+        String token = jwtService.generateToken(userInfo.getId(), SystemConfigConsts.NOVEL_FRONT_KEY);
         UserLoginRespDto respDto = UserLoginRespDto.builder()
                 .token(token)
                 .uid(userInfo.getId())
@@ -339,8 +365,13 @@ public class UserServiceImpl implements UserService {
         return RestResp.ok(respDto);
     }
 
-
-
+    @Override
+    public RestResp<Void> logout(String token) {
+        // 将Token加入黑名单
+        tokenBlacklistService.addToBlacklist(token);
+        log.info("用户登出，Token已加入黑名单");
+        return RestResp.ok();
+    }
 
     @Override
     public RestResp<Void> addToBookshelf(Long userId, Long bookId) {

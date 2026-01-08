@@ -30,6 +30,14 @@ public interface UserService {
     RestResp<UserLoginRespDto> login(UserLoginReqDto dto);
 
     /**
+     * 用户登出
+     *
+     * @param token 用户Token
+     * @return void
+     */
+    RestResp<Void> logout(String token);
+
+    /**
      * 用户信息查询
      *
      * @param userId 用户ID

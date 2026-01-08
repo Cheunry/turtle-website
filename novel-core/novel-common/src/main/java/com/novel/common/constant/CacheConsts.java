@@ -157,6 +157,11 @@ public class CacheConsts {
     public static final String BOOK_VISIT_COUNT_HASH = REDIS_CACHE_PREFIX + "book_visit_buffer";
 
     /**
+     * Token 黑名单 Redis Key 前缀
+     */
+    public static final String TOKEN_BLACKLIST_PREFIX = REDIS_CACHE_PREFIX + "token:blacklist:";
+
+    /**
      * 缓存配置常量
      */
     public enum CacheEnum {

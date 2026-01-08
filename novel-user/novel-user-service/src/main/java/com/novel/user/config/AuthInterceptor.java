@@ -1,6 +1,6 @@
 package com.novel.user.config;
 
-import com.novel.common.auth.JwtUtils;
+import com.novel.common.auth.JwtService;
 import com.novel.common.auth.UserHolder;
 import com.novel.common.constant.ErrorCodeEnum;
 import com.novel.common.constant.SystemConfigConsts;
@@ -8,6 +8,7 @@ import com.novel.config.exception.BusinessException;
 import com.novel.user.dao.entity.AuthorInfo;
 import com.novel.user.dao.entity.UserInfo;
 import com.novel.user.service.CacheService;
+import com.novel.user.service.TokenBlacklistService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +30,8 @@ import java.util.Objects;
 public class AuthInterceptor implements HandlerInterceptor {
 
     private final CacheService cacheService;
+    private final JwtService jwtService;
+    private final TokenBlacklistService tokenBlacklistService;
 
     /**
      * handle 执行前调用
@@ -45,9 +48,15 @@ public class AuthInterceptor implements HandlerInterceptor {
             // token 为空
             throw new BusinessException(ErrorCodeEnum.USER_LOGIN_EXPIRED);
         }
-        Long userId = JwtUtils.parseToken(token, SystemConfigConsts.NOVEL_FRONT_KEY);
+        
+        // 检查Token是否在黑名单中（如已登出）
+        if (tokenBlacklistService.isBlacklisted(token)) {
+            throw new BusinessException(ErrorCodeEnum.USER_LOGIN_EXPIRED);
+        }
+        
+        Long userId = jwtService.parseToken(token, SystemConfigConsts.NOVEL_FRONT_KEY);
         if (Objects.isNull(userId)) {
-            // token 解析失败
+            // token 解析失败或已过期
             throw new BusinessException(ErrorCodeEnum.USER_LOGIN_EXPIRED);
         }
 
@@ -57,6 +66,12 @@ public class AuthInterceptor implements HandlerInterceptor {
         if (Objects.isNull(userInfo)) {
             // 用户不存在
             throw new BusinessException(ErrorCodeEnum.USER_ACCOUNT_NOT_EXIST);
+        }
+
+        // 检查用户状态（0-正常）
+        if (userInfo.getStatus() == null || userInfo.getStatus() != 0) {
+            // 用户账号异常（被禁用等）
+            throw new BusinessException(ErrorCodeEnum.USER_UN_AUTH);
         }
 
         // 设置 userId 到当前线程

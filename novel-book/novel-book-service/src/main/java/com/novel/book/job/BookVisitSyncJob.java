@@ -25,7 +25,12 @@ public class BookVisitSyncJob {
     private final StringRedisTemplate stringRedisTemplate;
     private final RocketMQTemplate rocketMQTemplate;
 
-    @Scheduled(cron = "0 0/1 * * * ?")
+    /**
+     * 同步访问量到数据库并更新ES索引
+     * 优化：每5分钟执行一次，减少ES更新频率
+     * 原：每1分钟执行一次（过于频繁）
+     */
+    @Scheduled(cron = "0 0/5 * * * ?")
     public void syncVisitCount() {
         String sourceKey = CacheConsts.BOOK_VISIT_COUNT_HASH;
         String tempKey = sourceKey + ":temp";
@@ -49,21 +54,32 @@ public class BookVisitSyncJob {
         // 2. 批量更新数据库 (维持现状)
         bookInfoMapper.batchUpdateVisitCount(updateList);
 
-        // 3. 核心优化：MQ 批量发送
-        try {
-            String destination = AmqpConsts.BookChangeMq.TOPIC + ":" + AmqpConsts.BookChangeMq.TAG_UPDATE;
+        // 3. 优化：只对访问量变化较大的书籍更新ES索引
+        // 过滤掉访问量变化小于阈值的书籍（减少不必要的ES更新）
+        final long MIN_VISIT_CHANGE_THRESHOLD = 10; // 访问量变化阈值：至少增加10次才更新ES
+        List<BookInfo> esUpdateList = updateList.stream()
+                .filter(book -> book.getVisitCount() >= MIN_VISIT_CHANGE_THRESHOLD)
+                .collect(Collectors.toList());
 
-            // 使用 RocketMQ 的 syncSend(Batch) 功能，发送批量消息
-            // 消费者端无需修改，依然可以单条消费，但发送端减少了网络 IO
-            List<Message<Long>> messages = updateList.stream()
-                    .map(BookInfo::getId)
-                    .map(id -> MessageBuilder.withPayload(id).build())
-                    .collect(Collectors.toList());
+        // 4. 核心优化：MQ 批量发送（只发送需要更新ES的书籍）
+        if (!esUpdateList.isEmpty()) {
+            try {
+                String destination = AmqpConsts.BookChangeMq.TOPIC + ":" + AmqpConsts.BookChangeMq.TAG_UPDATE;
 
-            rocketMQTemplate.syncSend(destination, messages);
+                // 使用 RocketMQ 的 syncSend(Batch) 功能，发送批量消息
+                // 消费者端无需修改，依然可以单条消费，但发送端减少了网络 IO
+                List<Message<Long>> messages = esUpdateList.stream()
+                        .map(BookInfo::getId)
+                        .map(id -> MessageBuilder.withPayload(id).build())
+                        .collect(Collectors.toList());
 
-        } catch (Exception e) {
-            log.error("MQ 批量发送失败", e);
+                rocketMQTemplate.syncSend(destination, messages);
+                log.debug("已发送 {} 条ES更新消息（访问量变化>={}）", esUpdateList.size(), MIN_VISIT_CHANGE_THRESHOLD);
+            } catch (Exception e) {
+                log.error("MQ 批量发送失败", e);
+            }
+        } else {
+            log.debug("访问量变化较小，跳过ES更新（阈值：{}）", MIN_VISIT_CHANGE_THRESHOLD);
         }
 
         // 4. 清理临时键

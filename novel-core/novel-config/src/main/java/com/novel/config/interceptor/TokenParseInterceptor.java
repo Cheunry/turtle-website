@@ -1,6 +1,6 @@
 package com.novel.config.interceptor;
 
-import com.novel.common.auth.JwtUtils;
+import com.novel.common.auth.JwtService;
 import com.novel.common.auth.UserHolder;
 import com.novel.common.constant.SystemConfigConsts;
 import jakarta.servlet.http.HttpServletRequest;
@@ -17,6 +17,8 @@ import org.springframework.web.servlet.HandlerInterceptor;
 @RequiredArgsConstructor
 public class TokenParseInterceptor implements HandlerInterceptor {
 
+    private final JwtService jwtService;
+
     @SuppressWarnings("NullableProblems")
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response,
@@ -24,8 +26,11 @@ public class TokenParseInterceptor implements HandlerInterceptor {
         // 获取登录 JWT
         String token = request.getHeader(SystemConfigConsts.HTTP_AUTH_HEADER_NAME);
         if (StringUtils.hasText(token)) {
-            // 解析 token 并保存
-            UserHolder.setUserId(JwtUtils.parseToken(token, SystemConfigConsts.NOVEL_FRONT_KEY));
+            // 解析 token 并保存（解析失败时不会设置，避免设置null值）
+            Long userId = jwtService.parseToken(token, SystemConfigConsts.NOVEL_FRONT_KEY);
+            if (userId != null) {
+                UserHolder.setUserId(userId);
+            }
         }
         return HandlerInterceptor.super.preHandle(request, response, handler);
     }

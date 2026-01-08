@@ -5,30 +5,27 @@ import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
-import lombok.experimental.UtilityClass;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.Objects;
 
 /**
- * JWT 工具类（已废弃，请使用 JwtService）
- * 
- * @deprecated 为了保持向后兼容性保留，建议迁移到 {@link JwtService}
- * 注意：此工具类仍使用硬编码密钥，新代码请使用JwtService
+ * JWT 服务类
+ * 重构自 JwtUtils，支持配置注入和过期时间
  */
-@Deprecated
-@UtilityClass
-public class JwtUtils {
+@Slf4j
+@Service
+public class JwtService {
 
-    private static final Logger log = LoggerFactory.getLogger(JwtUtils.class);
+    @Value("${novel.jwt.secret:E66559580A1ADF48CDD928516062F12E}")
+    private String secret;
 
-    /**
-     * JWT 加密密钥（已废弃，请使用JwtService）
-     */
-    private static final String SECRET = "E66559580A1ADF48CDD928516062F12E";
+    @Value("${novel.jwt.expiration:604800000}")
+    private long expiration;
 
     /**
      * 定义系统标识头常量
@@ -36,22 +33,15 @@ public class JwtUtils {
     private static final String HEADER_SYSTEM_KEY = "systemKeyHeader";
 
     /**
-     * Token过期时间（7天），单位：毫秒
-     */
-    private static final long EXPIRATION_TIME = 7 * 24 * 60 * 60 * 1000L;
-
-    /**
      * 根据用户ID生成JWT
      *
      * @param uid       用户ID
      * @param systemKey 系统标识
      * @return JWT
-     * @deprecated 请使用 {@link JwtService#generateToken(Long, String)}
      */
-    @Deprecated
-    public static String generateToken(Long uid, String systemKey) {
+    public String generateToken(Long uid, String systemKey) {
         Date now = new Date();
-        Date expiration = new Date(now.getTime() + EXPIRATION_TIME);
+        Date expirationDate = new Date(now.getTime() + expiration);
 
         return Jwts.builder()
                 .header()
@@ -59,8 +49,8 @@ public class JwtUtils {
                 .and()
                 .subject(uid.toString())
                 .issuedAt(now)
-                .expiration(expiration)
-                .signWith(Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8)))
+                .expiration(expirationDate)
+                .signWith(Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8)))
                 .compact();
     }
 
@@ -69,20 +59,18 @@ public class JwtUtils {
      *
      * @param token     JWT
      * @param systemKey 系统标识
-     * @return 用户ID
-     * @deprecated 请使用 {@link JwtService#parseToken(String, String)}
+     * @return 用户ID，解析失败返回null
      */
-    @Deprecated
-    public static Long parseToken(String token, String systemKey) {
+    public Long parseToken(String token, String systemKey) {
         try {
             Jws<Claims> claimsJws = Jwts.parser()
-                    .verifyWith(Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8)))
+                    .verifyWith(Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8)))
                     .build()
                     .parseSignedClaims(token);
 
             // 判断该 JWT 是否属于指定系统
             if (Objects.equals(claimsJws.getHeader().get(HEADER_SYSTEM_KEY), systemKey)) {
-                // 检查是否过期
+                // 检查是否过期（JWT库会自动检查，但这里可以额外验证）
                 Claims claims = claimsJws.getPayload();
                 if (claims.getExpiration().before(new Date())) {
                     log.warn("JWT已过期: {}", token);
@@ -97,6 +85,25 @@ public class JwtUtils {
             log.error("JWT解析异常", e);
         }
         return null;
+    }
+
+    /**
+     * 获取Token的过期时间
+     *
+     * @param token JWT
+     * @return 过期时间，解析失败返回null
+     */
+    public Date getExpirationDate(String token) {
+        try {
+            Jws<Claims> claimsJws = Jwts.parser()
+                    .verifyWith(Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8)))
+                    .build()
+                    .parseSignedClaims(token);
+            return claimsJws.getPayload().getExpiration();
+        } catch (JwtException e) {
+            log.warn("获取JWT过期时间失败: {}", e.getMessage());
+            return null;
+        }
     }
 
 }

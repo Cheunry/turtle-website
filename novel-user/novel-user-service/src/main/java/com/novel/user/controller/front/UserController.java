@@ -57,6 +57,12 @@ public class UserController {
         return userService.login(dto);
     }
 
+    @Operation(summary = "用户登出接口")
+    @PostMapping("logout")
+    public RestResp<Void> logout(@RequestHeader(SystemConfigConsts.HTTP_AUTH_HEADER_NAME) String token) {
+        return userService.logout(token);
+    }
+
     @Operation(summary = "用户信息查询接口")
     @GetMapping
     public RestResp<UserInfoRespDto> getUserInfo() {
