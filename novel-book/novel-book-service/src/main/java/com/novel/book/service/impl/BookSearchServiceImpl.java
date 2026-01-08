@@ -230,27 +230,54 @@ public class BookSearchServiceImpl implements BookSearchService {
     @Override
     public RestResp<Void> addVisitCount(Long bookId) {
         try {
-            // 1. 优先更新 Redis (高性能模式)
-            // 使用 Pipeline 合并两次写操作 (1次 IO)
-            stringRedisTemplate.executePipelined((RedisCallback<Object>) connection -> {
-                RedisSerializer<String> serializer = stringRedisTemplate.getStringSerializer();
-                byte[] bookIdBytes = serializer.serialize(String.valueOf(bookId));
-                
-                // 更新点击榜 ZSet (实时排名)
-                connection.zIncrBy(serializer.serialize(CacheConsts.BOOK_VISIT_RANK_ZSET), 1.0, bookIdBytes);
-                // 更新点击量计数器 Hash (用于定时批量刷库)
-                connection.hIncrBy(serializer.serialize(CacheConsts.BOOK_VISIT_COUNT_HASH), bookIdBytes, 1);
-                
-                return null;
-            });
+            // 1. 只负责增加 Redis 计数（这是唯一事实来源）
+            // 书籍 ID 为 String.valueOf(bookId) 的排位分数加 1
+            stringRedisTemplate.opsForZSet().incrementScore(CacheConsts.BOOK_VISIT_RANK_ZSET, String.valueOf(bookId), 1);
+            // 书籍 ID 为 String.valueOf(bookId) 的 Hash 值加 1
+            stringRedisTemplate.opsForHash().increment(CacheConsts.BOOK_VISIT_COUNT_HASH, String.valueOf(bookId), 1);
+            // 使用Lua脚本可以让排名修改与访问量修改保持原子性。后续可以修正
+            log.info(">>> 访问量回写 Redis 成功, bookId={}", bookId);
         } catch (Exception e) {
-            log.error("Redis 异常，降级为直接写数据库，bookId={}", bookId, e);
-            // 2. Redis 挂了，降级：直接写库 + 发 MQ (保证数据不丢失)
-            bookInfoMapper.addVisitCount(bookId);
-            rocketMQTemplate.convertAndSend(AmqpConsts.BookChangeMq.TOPIC + ":" + AmqpConsts.BookChangeMq.TAG_UPDATE, bookId);
+            log.error("Redis 写入异常，进入异步补偿模式, bookId={}", bookId, e);
+            // 2. 降级逻辑：仅发送 MQ，让消费端慢慢消化，保护数据库
+            // 注意：这里需要考虑 MQ 如果也挂了的极端情况（可记录本地 Error Log）
+            sendUpdateMq(bookId);
         }
         return RestResp.ok();
     }
+
+    private void sendUpdateMq(Long bookId) {
+        try {
+            rocketMQTemplate.convertAndSend(AmqpConsts.BookChangeMq.TOPIC + ":" + AmqpConsts.BookChangeMq.TAG_UPDATE, bookId);
+        } catch (Exception ex) {
+            log.error("MQ 发送失败，需要人工介入或本地日志补单, bookId={}", bookId);
+        }
+    }
+
+//    @Override
+//    public RestResp<Void> addVisitCount(Long bookId) {
+//        try {
+//            // 1. 优先更新 Redis (高性能模式)
+//            // 使用 Pipeline 合并两次写操作 (1次 IO)
+//            stringRedisTemplate.executePipelined((RedisCallback<Object>) connection -> {
+//                RedisSerializer<String> serializer = stringRedisTemplate.getStringSerializer();
+//                byte[] bookIdBytes = serializer.serialize(String.valueOf(bookId));
+//
+//                // 更新点击榜 ZSet (实时排名)
+//                connection.zIncrBy(serializer.serialize(CacheConsts.BOOK_VISIT_RANK_ZSET), 1.0, bookIdBytes);
+//                // 更新点击量计数器 Hash (用于定时批量刷库)
+//                connection.hIncrBy(serializer.serialize(CacheConsts.BOOK_VISIT_COUNT_HASH), bookIdBytes, 1);
+//
+//                return null;
+//            });
+//        } catch (Exception e) {
+//            log.error("Redis 异常，降级为直接写数据库，bookId={}", bookId, e);
+//            // 2. Redis 挂了，降级：直接写库 + 发 MQ (保证数据不丢失)
+//            bookInfoMapper.addVisitCount(bookId);
+//            rocketMQTemplate.convertAndSend(AmqpConsts.BookChangeMq.TOPIC + ":" + AmqpConsts.BookChangeMq.TAG_UPDATE, bookId);
+//        }
+//        return RestResp.ok();
+//    }
 
     /**
      * 获取书籍最新章节信息

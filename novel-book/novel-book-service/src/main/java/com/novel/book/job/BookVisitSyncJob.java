@@ -1,11 +1,9 @@
 package com.novel.book.job;
 import com.novel.book.dao.entity.BookInfo;
 import com.novel.book.dao.mapper.BookInfoMapper;
-import com.novel.common.constant.AmqpConsts;
 import com.novel.common.constant.CacheConsts;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.rocketmq.spring.core.RocketMQTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -13,9 +11,14 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import org.springframework.messaging.Message;
-import org.springframework.messaging.support.MessageBuilder;
 
+/**
+ * 书籍访问量同步任务
+ * 功能：将 Redis 中的访问量批量同步到数据库
+ * 频率：每5分钟执行一次
+ * 
+ * 注意：ES更新已分离到 BookVisitEsSyncJob，每小时批量更新一次，避免ES压力过大
+ */
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -23,27 +26,36 @@ public class BookVisitSyncJob {
 
     private final BookInfoMapper bookInfoMapper;
     private final StringRedisTemplate stringRedisTemplate;
-    private final RocketMQTemplate rocketMQTemplate;
 
     /**
-     * 同步访问量到数据库并更新ES索引
-     * 优化：每5分钟执行一次，减少ES更新频率
-     * 原：每1分钟执行一次（过于频繁）
+     * 同步访问量到数据库
+     * 优化说明：
+     * - 每5分钟执行一次，将Redis中的访问量批量更新到数据库
+     * - ES更新已分离到独立的定时任务（BookVisitEsSyncJob），每小时批量更新一次
+     * - 这样可以避免高并发时ES压力过大导致服务宕机
      */
     @Scheduled(cron = "0 0/5 * * * ?")
     public void syncVisitCount() {
         String sourceKey = CacheConsts.BOOK_VISIT_COUNT_HASH;
         String tempKey = sourceKey + ":temp";
 
-        if (!stringRedisTemplate.hasKey(sourceKey)) return;
+        if (!stringRedisTemplate.hasKey(sourceKey)) {
+            return;
+        }
+        
         try {
             stringRedisTemplate.rename(sourceKey, tempKey);
-        } catch (Exception e) { return; }
+        } catch (Exception e) {
+            return;
+        }
 
         Map<Object, Object> visitMap = stringRedisTemplate.opsForHash().entries(tempKey);
-        if (visitMap.isEmpty()) return;
+        if (visitMap.isEmpty()) {
+            stringRedisTemplate.delete(tempKey);
+            return;
+        }
 
-        // 1. 组装数据
+        // 组装数据
         List<BookInfo> updateList = visitMap.entrySet().stream().map(entry -> {
             BookInfo book = new BookInfo();
             book.setId(Long.valueOf(entry.getKey().toString()));
@@ -51,40 +63,16 @@ public class BookVisitSyncJob {
             return book;
         }).collect(Collectors.toList());
 
-        // 2. 批量更新数据库 (维持现状)
-        bookInfoMapper.batchUpdateVisitCount(updateList);
-
-        // 3. 优化：只对访问量变化较大的书籍更新ES索引
-        // 过滤掉访问量变化小于阈值的书籍（减少不必要的ES更新）
-        final long MIN_VISIT_CHANGE_THRESHOLD = 10; // 访问量变化阈值：至少增加10次才更新ES
-        List<BookInfo> esUpdateList = updateList.stream()
-                .filter(book -> book.getVisitCount() >= MIN_VISIT_CHANGE_THRESHOLD)
-                .collect(Collectors.toList());
-
-        // 4. 核心优化：MQ 批量发送（只发送需要更新ES的书籍）
-        if (!esUpdateList.isEmpty()) {
-            try {
-                String destination = AmqpConsts.BookChangeMq.TOPIC + ":" + AmqpConsts.BookChangeMq.TAG_UPDATE;
-
-                // 使用 RocketMQ 的 syncSend(Batch) 功能，发送批量消息
-                // 消费者端无需修改，依然可以单条消费，但发送端减少了网络 IO
-                List<Message<Long>> messages = esUpdateList.stream()
-                        .map(BookInfo::getId)
-                        .map(id -> MessageBuilder.withPayload(id).build())
-                        .collect(Collectors.toList());
-
-                rocketMQTemplate.syncSend(destination, messages);
-                log.debug("已发送 {} 条ES更新消息（访问量变化>={}）", esUpdateList.size(), MIN_VISIT_CHANGE_THRESHOLD);
-            } catch (Exception e) {
-                log.error("MQ 批量发送失败", e);
-            }
-        } else {
-            log.debug("访问量变化较小，跳过ES更新（阈值：{}）", MIN_VISIT_CHANGE_THRESHOLD);
+        // 批量更新数据库
+        try {
+            bookInfoMapper.batchUpdateVisitCount(updateList);
+            log.info("访问量同步完成，处理书籍数量：{}", updateList.size());
+        } catch (Exception e) {
+            log.error("批量更新访问量失败", e);
         }
 
-        // 4. 清理临时键
+        // 清理临时键
         stringRedisTemplate.delete(tempKey);
-        log.info("同步完成，处理书籍数量：{}", updateList.size());
     }
 }
 

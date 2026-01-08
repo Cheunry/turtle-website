@@ -179,7 +179,6 @@ public class ChapterSubmitListener implements RocketMQListener<ChapterSubmitMqDt
 
     /**
      * 更新书籍字数和最新章节信息
-     * (逻辑迁移自原 BookInfoUpdateListener)
      */
     private void updateBookInfo(BookInfo bookInfo, int oldChapterWordCount, int newChapterWordCount, boolean isNewChapter) {
         Long bookId = bookInfo.getId();

@@ -35,7 +35,7 @@ public class BookRankCacheJob {
 
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-    @Scheduled(cron = "0 0/2 * * * ?")
+    @Scheduled(cron = "0 0/5 * * * ?")
     public void refreshVisitRankCache() {
         log.info("开始刷新小说点击榜缓存...");
 
