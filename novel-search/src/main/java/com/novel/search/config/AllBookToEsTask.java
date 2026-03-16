@@ -9,12 +9,9 @@ import com.novel.book.dto.resp.BookEsRespDto;
 import com.novel.common.constant.EsConsts;
 import com.novel.search.feign.BookFeignManager;
 import com.xxl.job.core.biz.model.ReturnT;
-import com.xxl.job.core.handler.annotation.XxlJob;
 import lombok.RequiredArgsConstructor;
-import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.embedding.EmbeddingModel;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -39,17 +36,22 @@ public class AllBookToEsTask {
 //    @Scheduled(cron = "0 0 2 * * ?")
     public ReturnT<String> saveToEs() {
 
-        log.info(">>> 开始执行全量同步任务");
+        log.info(">>> ========== 开始执行全量同步任务 ==========");
+        long startTime = System.currentTimeMillis();
+        int totalCount = 0;
         try {
             long maxId = 0;
+            int batchCount = 0;
             for (; ; ) {
+                batchCount++;
+                log.info(">>> 第 {} 批：开始查询书籍数据，maxId={}", batchCount, maxId);
                 List<BookEsRespDto> books = bookFeignManager.listEsBooks(maxId);
                 if (books.isEmpty()) {
-                    log.info(">>> 本次查询结果为空，同步结束。maxId={}", maxId);
+                    log.info(">>> 第 {} 批：查询结果为空，同步结束。maxId={}", batchCount, maxId);
                     break;
                 }
 
-                log.info(">>> 查询到 {} 条书籍数据，准备写入 ES，当前 maxId={}", books.size(), maxId);
+                log.info(">>> 第 {} 批：查询到 {} 条书籍数据，准备写入 ES，当前 maxId={}", batchCount, books.size(), maxId);
                 BulkRequest.Builder br = new BulkRequest.Builder();
 
                 for (BookEsRespDto book : books) {
@@ -90,28 +92,39 @@ public class AllBookToEsTask {
                 }
 
                 BulkResponse result = elasticsearchClient.bulk(br.build());
+                totalCount += books.size();
 
                 // 打印写入结果
-                log.info(">>> ES 写入完成，耗时: {}ms, 是否有错误: {}", result.took(), result.errors());
+                log.info(">>> 第 {} 批：ES 写入完成，耗时: {}ms, 是否有错误: {}, 累计同步: {} 条", 
+                        batchCount, result.took(), result.errors(), totalCount);
 
                 // Log errors
                 if (result.errors()) {
-                    log.error("Bulk had errors");
+                    log.error(">>> 第 {} 批：Bulk 操作有错误", batchCount);
                     for (BulkResponseItem item : result.items()) {
                         if (item.error() != null) {
-                            log.error("Id: {}, Error Type: {}, Reason: {}", 
+                            var error = item.error();
+                            log.error(">>> 第 {} 批：文档ID: {}, 错误类型: {}, 错误原因: {}", 
+                                batchCount,
                                 item.id(), 
-                                item.error().type(), 
-                                item.error().reason());
+                                error != null ? error.type() : "未知",
+                                error != null ? error.reason() : "未知");
                         }
                     }
                 }
             }
+            long endTime = System.currentTimeMillis();
+            long duration = endTime - startTime;
+            log.info(">>> ========== 全量同步任务执行完成 ==========");
+            log.info(">>> 总耗时: {} 秒 ({} 毫秒), 总同步数量: {} 条", duration / 1000, duration, totalCount);
             return ReturnT.SUCCESS;
 
         } catch (Exception e) {
-
-            log.error(e.getMessage(), e);
+            long endTime = System.currentTimeMillis();
+            long duration = endTime - startTime;
+            log.error(">>> ========== 全量同步任务执行失败 ==========");
+            log.error(">>> 总耗时: {} 秒 ({} 毫秒), 已同步数量: {} 条", duration / 1000, duration, totalCount);
+            log.error(">>> 异常信息: {}", e.getMessage(), e);
             return ReturnT.FAIL;
         }
     }

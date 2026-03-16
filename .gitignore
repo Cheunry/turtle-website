@@ -60,3 +60,5 @@ logs/
 
 doc/docker/
 **/doc/docker/
+
+turtle-images.tar

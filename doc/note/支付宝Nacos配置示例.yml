@@ -1,0 +1,50 @@
+# 支付宝沙箱环境配置示例
+# 在Nacos中创建或更新配置文件：novel-user-service-dev.yml
+# 将以下配置添加到该文件中
+
+# 支付宝配置
+alipay:
+  # 应用ID（APPID）- 从支付宝开放平台沙箱环境获取
+  app-id: 2021001234567890
+  
+  # 应用私钥（用于签名）
+  # 注意：需要是PKCS8格式，可以保留完整的-----BEGIN PRIVATE KEY-----格式
+  app-private-key: |
+    -----BEGIN PRIVATE KEY-----
+    MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC...
+    （你的应用私钥内容，去掉这里的示例内容，替换为实际私钥）
+    -----END PRIVATE KEY-----
+  
+  # 支付宝公钥（用于验签）
+  # 注意：这是支付宝返回的公钥，不是你自己生成的应用公钥
+  alipay-public-key: |
+    -----BEGIN PUBLIC KEY-----
+    MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...
+    （支付宝公钥内容，去掉这里的示例内容，替换为实际公钥）
+    -----END PUBLIC KEY-----
+  
+  # 网关地址
+  # 沙箱环境：https://openapi.alipaydev.com/gateway.do
+  # 正式环境：https://openapi.alipay.com/gateway.do
+  gateway-url: https://openapi.alipaydev.com/gateway.do
+  
+  # 签名算法类型（推荐使用RSA2）
+  sign-type: RSA2
+  
+  # 字符编码格式
+  charset: UTF-8
+  
+  # 返回格式
+  format: JSON
+  
+  # 异步通知地址（支付成功后支付宝回调的地址）
+  # 注意：
+  # 1. 需要是公网可访问的地址
+  # 2. 本地开发需要使用内网穿透工具（如ngrok、natapp等）
+  # 3. 示例：https://abc123.ngrok.io/payment/alipay/notify
+  notify-url: http://你的域名或内网穿透地址/payment/alipay/notify
+  
+  # 同步跳转地址（支付完成后用户跳转的地址）
+  # 注意：同样需要是公网可访问的地址
+  # 示例：https://abc123.ngrok.io/payment/alipay/return
+  return-url: http://你的域名或内网穿透地址/payment/alipay/return

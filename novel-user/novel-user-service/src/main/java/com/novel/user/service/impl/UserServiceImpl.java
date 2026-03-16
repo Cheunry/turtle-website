@@ -372,7 +372,9 @@ public class UserServiceImpl implements UserService {
         log.info("用户登出，Token已加入黑名单");
         return RestResp.ok();
     }
-
+    /**
+     * 添加书籍到书架，需要增加的功能：让用户订阅后更新订阅量到书籍表
+     */
     @Override
     public RestResp<Void> addToBookshelf(Long userId, Long bookId) {
         // 1. 校验是否已在书架

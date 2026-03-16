@@ -52,6 +52,12 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- 支付宝SDK -->
+        <dependency>
+            <groupId>com.alipay.sdk</groupId>
+            <artifactId>alipay-sdk-java</artifactId>
+        </dependency>
+
 
     </dependencies>
 

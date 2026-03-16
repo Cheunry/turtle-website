@@ -57,6 +57,7 @@
         <checker-qual.version>3.49.0</checker-qual.version>
         <swagger-annotations-jakarta.version>2.2.30</swagger-annotations-jakarta.version>
         <apm-toolkit-trace.version>9.2.0</apm-toolkit-trace.version>
+        <alipay-sdk-java.version>4.38.170.ALL</alipay-sdk-java.version>
 
 
 <!--        <shardingsphere-jdbc.version>5.5.2</shardingsphere-jdbc.version>-->
@@ -239,6 +240,13 @@
                 <groupId>org.apache.skywalking</groupId>
                 <artifactId>apm-toolkit-trace</artifactId>
                 <version>${apm-toolkit-trace.version}</version>
+            </dependency>
+
+            <!-- 支付宝SDK -->
+            <dependency>
+                <groupId>com.alipay.sdk</groupId>
+                <artifactId>alipay-sdk-java</artifactId>
+                <version>${alipay-sdk-java.version}</version>
             </dependency>
 
 

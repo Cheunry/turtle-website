@@ -224,7 +224,7 @@ PUT /book
 
 **查询索引数量**：
 ```json
-GET book/_count
+1111GET book/_count
 ```
 
 **删除索引**：
@@ -242,7 +242,7 @@ DELETE book
 - **模型名称**: `text-embedding-v4`
 - **提供商**: 阿里云 DashScope（通义千问）
 - **基础架构**: 基于 Qwen3 的 Transformer 模型
-- **向量维度**: **1024 维**（当前配置）
+- **向量维度**: **1024 aaaaaaaaaaaaaawwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww sa      维**（当前配置）
 - **语言支持**: 多语言，对中文优化
 - **API 接口**: DashScope Embedding API
 

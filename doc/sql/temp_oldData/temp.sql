@@ -124,3 +124,6 @@ drop table if exists sys_role_menu;
 drop table if exists sys_user;
 drop table if exists sys_user_role;
 
+drop table if exists author_code ;
+drop table if exists author_income ;
+

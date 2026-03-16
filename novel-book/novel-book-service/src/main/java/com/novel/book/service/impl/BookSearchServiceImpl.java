@@ -36,9 +36,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.serializer.RedisSerializer;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.core.io.ClassPathResource;
 
 import java.time.format.DateTimeFormatter;
 import java.util.concurrent.TimeUnit;
+import java.util.Collections;
 
 @Service
 @RequiredArgsConstructor
@@ -57,6 +60,16 @@ public class BookSearchServiceImpl implements BookSearchService {
     private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+    // Lua 脚本：原子性地增加访问量
+    @SuppressWarnings("rawtypes")
+    private static final DefaultRedisScript<List> INCREMENT_VISIT_COUNT_SCRIPT;
+
+    static {
+        INCREMENT_VISIT_COUNT_SCRIPT = new DefaultRedisScript<>();
+        INCREMENT_VISIT_COUNT_SCRIPT.setLocation(new ClassPathResource("lua/incrementVisitCount.lua"));
+        INCREMENT_VISIT_COUNT_SCRIPT.setResultType(List.class);
+    }
 
     /**
      * 查询书籍信息
@@ -124,26 +137,37 @@ public class BookSearchServiceImpl implements BookSearchService {
         BookChapter firstBookChapter = bookChapterMapper.selectOne(queryWrapper);
 
         // --- 开始回写 Redis (使用 Pipeline 减少 RTT) ---
+        // 注意：只缓存榜单中的热门书籍，其他书籍不缓存（避免Redis内存占用过大）
+        // 判断是否在榜单中：检查ZSet中是否存在该书籍ID
         try {
-            Map<String, String> cacheMap = buildBookInfoMap(bookInfo, firstBookChapter != null ? firstBookChapter.getChapterNum() : 1);
-            String redisKey = CacheConsts.BOOK_INFO_HASH_PREFIX + bookId;
+            Double zsetScore = stringRedisTemplate.opsForZSet().score(CacheConsts.BOOK_VISIT_RANK_ZSET, String.valueOf(bookId));
+            boolean isInRank = (zsetScore != null && zsetScore > 0);
             
-            stringRedisTemplate.executePipelined((RedisCallback<Object>) connection -> {
-                RedisSerializer<String> serializer = stringRedisTemplate.getStringSerializer();
-                byte[] keyBytes = serializer.serialize(redisKey);
+            if (isInRank) {
+                // 在榜单中，写入缓存（1小时过期）
+                Map<String, String> cacheMap = buildBookInfoMap(bookInfo, firstBookChapter != null ? firstBookChapter.getChapterNum() : 1);
+                String redisKey = CacheConsts.BOOK_INFO_HASH_PREFIX + bookId;
                 
-                // 1. HMSET 批量设置字段
-                Map<byte[], byte[]> byteMap = new HashMap<>();
-                cacheMap.forEach((k, v) -> byteMap.put(serializer.serialize(k), serializer.serialize(v)));
-                connection.hMSet(keyBytes, byteMap);
+                stringRedisTemplate.executePipelined((RedisCallback<Object>) connection -> {
+                    RedisSerializer<String> serializer = stringRedisTemplate.getStringSerializer();
+                    byte[] keyBytes = serializer.serialize(redisKey);
+                    
+                    // 1. HMSET 批量设置字段（使用新的命令接口）
+                    Map<byte[], byte[]> byteMap = new HashMap<>();
+                    cacheMap.forEach((k, v) -> byteMap.put(serializer.serialize(k), serializer.serialize(v)));
+                    connection.hashCommands().hMSet(keyBytes, byteMap);
+                    
+                    // 2. EXPIRE 设置过期时间 (1小时 = 3600秒)（使用新的命令接口）
+                    connection.keyCommands().expire(keyBytes, 3600);
+                    
+                    return null;
+                });
                 
-                // 2. EXPIRE 设置过期时间 (1小时 = 3600秒)
-                connection.expire(keyBytes, 3600);
-                
-                return null;
-            });
-            
-            log.info(">>> 详情页回写 Redis Hash 成功 (Pipeline), bookId={}", bookId);
+                log.info(">>> 详情页回写 Redis Hash 成功 (Pipeline), bookId={} (榜单书籍)", bookId);
+            } else {
+                // 不在榜单中，不缓存（避免Redis内存占用过大）
+                log.debug(">>> 书籍不在榜单中，不缓存到Redis，bookId={}", bookId);
+            }
         } catch (Exception e) {
             log.error(">>> 详情页回写 Redis 失败，bookId={}", bookId, e);
         }
@@ -230,13 +254,27 @@ public class BookSearchServiceImpl implements BookSearchService {
     @Override
     public RestResp<Void> addVisitCount(Long bookId) {
         try {
-            // 1. 只负责增加 Redis 计数（这是唯一事实来源）
-            // 书籍 ID 为 String.valueOf(bookId) 的排位分数加 1
-            stringRedisTemplate.opsForZSet().incrementScore(CacheConsts.BOOK_VISIT_RANK_ZSET, String.valueOf(bookId), 1);
-            // 书籍 ID 为 String.valueOf(bookId) 的 Hash 值加 1
-            stringRedisTemplate.opsForHash().increment(CacheConsts.BOOK_VISIT_COUNT_HASH, String.valueOf(bookId), 1);
-            // 使用Lua脚本可以让排名修改与访问量修改保持原子性。后续可以修正
-            log.info(">>> 访问量回写 Redis 成功, bookId={}", bookId);
+            // 使用 Lua 脚本原子性地增加访问量（保证 ZSet、Hash 和书籍详情缓存的原子性）
+            String bookIdStr = String.valueOf(bookId);
+            List<String> keys = Arrays.asList(
+                    CacheConsts.BOOK_VISIT_RANK_ZSET,
+                    CacheConsts.BOOK_VISIT_COUNT_HASH,
+                    CacheConsts.BOOK_INFO_HASH_PREFIX + bookId  // 书籍详情 Hash key
+            );
+            @SuppressWarnings("unchecked")
+            List<Long> result = stringRedisTemplate.execute(
+                    INCREMENT_VISIT_COUNT_SCRIPT,
+                    keys,
+                    bookIdStr,
+                    "1"
+            );
+            
+            if (result != null && !result.isEmpty()) {
+                log.debug(">>> 访问量更新成功（Lua脚本原子操作）, bookId={}, zsetScore={}, hashValue={}, 已同步更新书籍详情Hash缓存", 
+                        bookId, result.get(0), result.size() > 1 ? result.get(1) : "N/A");
+            } else {
+                log.warn(">>> Lua脚本执行返回null或空, bookId={}", bookId);
+            }
         } catch (Exception e) {
             log.error("Redis 写入异常，进入异步补偿模式, bookId={}", bookId, e);
             // 2. 降级逻辑：仅发送 MQ，让消费端慢慢消化，保护数据库
@@ -254,30 +292,6 @@ public class BookSearchServiceImpl implements BookSearchService {
         }
     }
 
-//    @Override
-//    public RestResp<Void> addVisitCount(Long bookId) {
-//        try {
-//            // 1. 优先更新 Redis (高性能模式)
-//            // 使用 Pipeline 合并两次写操作 (1次 IO)
-//            stringRedisTemplate.executePipelined((RedisCallback<Object>) connection -> {
-//                RedisSerializer<String> serializer = stringRedisTemplate.getStringSerializer();
-//                byte[] bookIdBytes = serializer.serialize(String.valueOf(bookId));
-//
-//                // 更新点击榜 ZSet (实时排名)
-//                connection.zIncrBy(serializer.serialize(CacheConsts.BOOK_VISIT_RANK_ZSET), 1.0, bookIdBytes);
-//                // 更新点击量计数器 Hash (用于定时批量刷库)
-//                connection.hIncrBy(serializer.serialize(CacheConsts.BOOK_VISIT_COUNT_HASH), bookIdBytes, 1);
-//
-//                return null;
-//            });
-//        } catch (Exception e) {
-//            log.error("Redis 异常，降级为直接写数据库，bookId={}", bookId, e);
-//            // 2. Redis 挂了，降级：直接写库 + 发 MQ (保证数据不丢失)
-//            bookInfoMapper.addVisitCount(bookId);
-//            rocketMQTemplate.convertAndSend(AmqpConsts.BookChangeMq.TOPIC + ":" + AmqpConsts.BookChangeMq.TAG_UPDATE, bookId);
-//        }
-//        return RestResp.ok();
-//    }
 
     /**
      * 获取书籍最新章节信息
@@ -489,7 +503,8 @@ public class BookSearchServiceImpl implements BookSearchService {
             RedisSerializer<String> serializer = stringRedisTemplate.getStringSerializer();
             for (String bookIdStr : bookIdSet) {
                 String key = CacheConsts.BOOK_INFO_HASH_PREFIX + bookIdStr;
-                connection.hGetAll(serializer.serialize(key));
+                // 使用新的命令接口
+                connection.hashCommands().hGetAll(serializer.serialize(key));
             }
             return null;
         });
