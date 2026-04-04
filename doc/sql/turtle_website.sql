@@ -128,9 +128,7 @@ create table book_category
     name           varchar(20)                   not null comment '类别名',
     sort           tinyint unsigned default '10' not null comment '排序',
     create_time    datetime                      null comment '创建时间',
-    update_time    datetime                      null comment '更新时间',
-    constraint pk_id
-        unique (id)
+    update_time    datetime                      null comment '更新时间'
 )
     comment '小说类别';
 
@@ -149,11 +147,12 @@ create table book_chapter
     audit_reason varchar(500)                 null comment '审核不通过原因',
     primary key (book_id, chapter_num),
     constraint book_chapter_id_uindex
-        unique (id),
-    constraint uk_id
         unique (id)
 )
     comment '小说章节';
+
+create index book_chapter_audit
+    on book_chapter (chapter_num, audit_status, book_id);
 
 create table book_comment
 (
@@ -198,40 +197,59 @@ create table book_info
     last_chapter_num         smallint unsigned              null comment '最新章节号',
     audit_status             tinyint unsigned default '0'   not null comment '审核状态;0-待审核 1-审核通过 2-审核不通过',
     audit_reason             varchar(500)                   null comment '审核不通过原因',
-    constraint pk_id
-        unique (id),
     constraint uk_bookName_authorName
         unique (book_name, author_name)
 )
     comment '小说信息';
 
-create index idx_createTime
-    on book_info (create_time);
+create index idx_author_book
+    on book_info (author_name asc, audit_status asc, create_time desc);
 
-create index idx_lastChapterUpdateTime
-    on book_info (last_chapter_update_time);
+create index idx_createTime
+    on book_info (audit_status asc, create_time desc);
+
+create index idx_updateTime
+    on book_info (audit_status asc, update_time desc);
+
+create index idx_visitCount
+    on book_info (audit_status asc, visit_count desc);
 
 create table content_audit
 (
-    id            bigint unsigned              not null comment '顺序id',
-    source_type   tinyint unsigned             not null comment '数据来源;0-小说基本信息表 1-小说章节表',
-    source_id     bigint unsigned              not null comment '数据来源ID',
-    content_text  mediumtext                   not null comment '内容文本',
-    ai_confidence decimal(5, 2)                null comment 'AI审核置信度;范围0-1，NULL表示未进行AI审核',
-    audit_status  tinyint unsigned default '0' not null comment '审核状态;0-待审核 1-通过 2-不通过',
-    audit_reason  varchar(500)                 null comment '通过/不通过原因',
-    create_time   datetime                     null comment '创建时间',
-    update_time   datetime                     null comment '更新时间',
-    primary key (source_type, source_id) comment '数据来源唯一索引，确保同一数据源只有一条审核记录'
+    id              bigint unsigned auto_increment not null comment '顺序id'
+        primary key,
+    source_type     tinyint unsigned             not null comment '数据来源;0-小说基本信息表 1-小说章节表',
+    source_id       bigint unsigned              not null comment '数据来源ID',
+    content_text    mediumtext                   not null comment '内容文本',
+    ai_confidence   decimal(5, 2)                null comment 'AI审核置信度;范围0-1，NULL表示未进行AI审核',
+    audit_status    tinyint unsigned default '0' not null comment '审核状态;0-待审核 1-通过 2-不通过',
+    is_human_final  tinyint(1)                   null comment '是否人工最终裁决;NULL-非人工最终裁决(或历史未标记),1-人工最终裁决',
+    audit_reason    varchar(500)                 null comment '通过/不通过原因',
+    violation_label varchar(100)                 null comment '争议/违规标签（由AI提炼）',
+    key_snippet     text                         null comment '核心争议片段（由AI提炼）',
+    audit_rule      varchar(500)                 null comment '判例规则总结（由AI提炼）',
+    create_time     datetime                     null comment '创建时间',
+    update_time     datetime                     null comment '更新时间'
 )
-    comment '内容审核表（仅保存审核不通过和AI置信度过低的内容）';
+    comment '内容审核表（保存所有审核记录）';
 
 create index idx_auditStatus
     on content_audit (audit_status)
     comment '审核状态索引，方便查询待审核内容';
 
+create index idx_human_final_status
+    on content_audit (is_human_final, audit_reason);
+
 create index pk_id
     on content_audit (id);
+
+create index source_type
+    on content_audit (source_type, source_id)
+    comment '同一数据源允许多条审核记录';
+
+
+
+
 
 create table home_book
 (

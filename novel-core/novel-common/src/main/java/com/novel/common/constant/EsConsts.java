@@ -111,4 +111,18 @@ public class EsConsts {
         public static final String FIELD_IS_VIP = "isVip";
     }
 
+    public class AuditExperienceIndex {
+        private AuditExperienceIndex() {
+            throw new IllegalStateException(SystemConfigConsts.CONST_INSTANCE_EXCEPTION_MSG);
+        }
+
+        public static final String INDEX_NAME = "audit_experience_index";
+        public static final String FIELD_ID = "id";
+        public static final String FIELD_AUDIT_STATUS = "audit_status";
+        public static final String FIELD_VIOLATION_LABEL = "violation_label";
+        public static final String FIELD_KEY_SNIPPET = "key_snippet";
+        public static final String FIELD_AUDIT_RULE = "audit_rule";
+        public static final String FIELD_CONTENT_VECTOR = "content_vector";
+    }
+
 }

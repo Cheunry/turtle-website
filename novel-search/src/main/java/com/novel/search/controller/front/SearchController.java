@@ -6,6 +6,7 @@ import com.novel.common.constant.ApiRouterConsts;
 import com.novel.common.resp.PageRespDto;
 import com.novel.common.resp.RestResp;
 import com.novel.search.service.SearchService;
+import com.novel.search.service.AuditExperienceSyncService;
 import com.novel.search.config.AllBookToEsTask;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -27,6 +28,7 @@ public class SearchController {
 
     private final SearchService searchService;
     private final AllBookToEsTask allBookToEsTask;
+    private final AuditExperienceSyncService auditExperienceSyncService;
 
     /*
         前端代码中定义了 searchBooks 方法用于搜索小说，对应的后端接口路径为：
@@ -75,6 +77,32 @@ public class SearchController {
         } catch (Exception e) {
             log.error(">>> 触发全量同步任务时发生异常", e);
             return RestResp.ok("全量同步任务触发失败，请查看后台日志: " + e.getMessage());
+        }
+    }
+
+    /** 临时手动触发审核经验全量同步的接口
+     *  执行只需打开网址：<a href="http://localhost:8888/api/front/search/sync/audit-experience">...</a>
+     *  注意：此接口会异步执行全量同步任务，立即返回响应，实际同步任务在后台执行
+     */
+    @GetMapping("sync/audit-experience")
+    public RestResp<String> syncAuditExperience() {
+        log.info(">>> ========== syncAuditExperience 方法被调用 ==========");
+        try {
+            log.info(">>> 收到审核经验全量同步请求，开始异步执行同步任务");
+            // 异步执行同步任务，避免HTTP请求超时
+            CompletableFuture.runAsync(() -> {
+                try {
+                    log.info(">>> 异步任务开始执行审核经验全量同步");
+                    auditExperienceSyncService.syncAllAuditExperienceToEs();
+                    log.info(">>> 异步任务审核经验全量同步执行完成");
+                } catch (Exception e) {
+                    log.error(">>> 异步任务执行审核经验全量同步时发生异常", e);
+                }
+            });
+            return RestResp.ok("审核经验全量同步任务已触发，正在后台执行，请观察后台日志");
+        } catch (Exception e) {
+            log.error(">>> 触发审核经验全量同步任务时发生异常", e);
+            return RestResp.ok("审核经验全量同步任务触发失败，请查看后台日志: " + e.getMessage());
         }
     }
 

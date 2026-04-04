@@ -1,0 +1,21 @@
+id,select_type,table,partitions,type,possible_keys,key,key_len,ref,rows,filtered,Extra
+1,SIMPLE,book_chapter,,ALL,,,,,3450,100,Using where
+2,SIMPLE,book_chapter,,ALL,,,,,3450,10,Using where
+3,SIMPLE,book_chapter,,const,PRIMARY,PRIMARY,10,"const,const",1,100,
+4,SIMPLE,book_chapter,,const,PRIMARY,PRIMARY,10,"const,const",1,100,
+5,SIMPLE,book_chapter,,ref,PRIMARY,PRIMARY,8,const,88,10.0,Using where
+6,SIMPLE,book_chapter,,ref,"PRIMARY,book_chapter_audit",PRIMARY,8,const,88,10.0,Using where
+7,SIMPLE,book_chapter,,ref,PRIMARY,PRIMARY,8,const,88,10.0,Using where
+8,SIMPLE,book_chapter,,ref,"PRIMARY,book_chapter_audit",PRIMARY,8,const,88,10.0,Using where
+9,SIMPLE,book_chapter,,index,book_chapter_audit,book_chapter_audit,11,,3448,0.14,Using where; Using index
+10,SIMPLE,book_info,,range,"idx_createTime,idx_lastChapterUpdateTime,idx_visitCount",idx_visitCount,1,,116,100.0,Using index condition
+11,SIMPLE,book_info,,range,"idx_createTime,idx_visitCount,idx_updateTime",idx_updateTime,1,,116,100.0,Using index condition
+12,SIMPLE,book_chapter,,range,"PRIMARY,book_chapter_audit",PRIMARY,10,,3,10.0,Using where; Backward index scan
+13,SIMPLE,book_chapter,,range,"PRIMARY,book_chapter_audit",PRIMARY,10,,84,10.0,Using where
+14,SIMPLE,book_chapter,,ref,"PRIMARY,book_chapter_id_uindex,book_chapter_audit",PRIMARY,8,const,88,10.0,Using where
+15,SIMPLE,book_info,,const,PRIMARY,PRIMARY,8,const,1,100.0,
+16,SIMPLE,book_info,,ALL,,,,,116,0.86,Using where; Using filesort
+17-1,SIMPLE,book_info,,ALL,"idx_createTime,idx_visitCount,idx_updateTime",,,,116,0.94,Using where; Using filesort
+17-2,SIMPLE,book_info,,ref,"idx_createTime,idx_visitCount,idx_updateTime,idx_author_book",idx_author_book,203,"const,const",8,100.0,
+18,UPDATE,book_info,,range,PRIMARY,PRIMARY,8,const,1,100.0,Using where
+19,SIMPLE,user_bookshelf,,ref,uk_userId_bookId,uk_userId_bookId,8,const,4,100.0,

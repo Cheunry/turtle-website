@@ -114,7 +114,7 @@ public class TextServiceImpl implements TextService {
             String prompt = buildAuditPrompt(reqDto.getBookName(), reqDto.getBookDesc());
 
             // 【关键】创建自定义 Span 监控 AI API 调用
-            ActiveSpan.tag("ai.model", "qwen3-max");
+            ActiveSpan.tag("ai.model", "text_model");
             ActiveSpan.tag("ai.operation", "audit_book");
             ActiveSpan.tag("prompt.length", String.valueOf(prompt.length()));
             
@@ -313,7 +313,7 @@ public class ImageServiceImpl implements ImageService {
 |------|------|------|
 | `@Trace` | 标记方法为追踪点，创建新的 Span | `@Trace(operationName = "AI审核书籍")` |
 | `@Tag` | 在方法入口自动添加标签 | `@Tag(key = "bookId", value = "arg[0].id")` |
-| `ActiveSpan.tag()` | 手动添加标签到当前 Span | `ActiveSpan.tag("ai.model", "qwen3-max")` |
+| `ActiveSpan.tag()` | 手动添加标签到当前 Span | `ActiveSpan.tag("ai.model", "text_model")` |
 | `ActiveSpan.error()` | 记录异常到当前 Span | `ActiveSpan.error(exception)` |
 
 ---
@@ -323,7 +323,7 @@ public class ImageServiceImpl implements ImageService {
 ### 4.1 在 SkyWalking UI 中查看的指标
 
 #### Trace 详情中的标签（Tags）
-- `ai.model`: AI 模型名称（如 `qwen3-max`、`qwen-image-plus`）
+- `ai.model`: AI 模型名称（如 `text_model`、`qwen-image-plus`）
 - `ai.operation`: 操作类型（如 `audit_book`、`polish_text`、`generate_image`）
 - `ai.duration.ms`: 本次调用的耗时（毫秒）
 - `ai.status`: 调用状态（`success`、`error`、`pending_or_failed`）

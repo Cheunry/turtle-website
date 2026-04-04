@@ -12,15 +12,12 @@ services:
       - SPRING_PROFILES_ACTIVE=prod
       - NACOS_SERVER_ADDR=novel-nacos-server:8848
       - TZ=Asia/Shanghai
-      # SkyWalking 配置
-      - JAVA_TOOL_OPTIONS=-javaagent:/agent/skywalking-agent.jar
+      # --- 新增 SkyWalking 配置 ---
       - SW_AGENT_NAME=novel-gateway
       - SW_AGENT_COLLECTOR_BACKEND_SERVICES=10.2.24.4:11800
-      - SW_AGENT_SAMPLE_N_PER_3_SECS=1
-      - SW_LOGGING_LEVEL=ERROR
+      - JAVA_OPTS=-javaagent:/skywalking/agent/skywalking-agent.jar
     volumes:
-      # 修改为你的 dependence 目录路径
-      - /home/ubuntu/dependence/skywalking-agent:/agent
+      - /home/ubuntu/dependence/skywalking-agent:/skywalking/agent # 将宿主机探针目录挂载到容器
     networks:
       - common-network
 
@@ -33,14 +30,12 @@ services:
       - SPRING_PROFILES_ACTIVE=prod
       - NACOS_SERVER_ADDR=novel-nacos-server:8848
       - TZ=Asia/Shanghai
-      # SkyWalking 配置
-      - JAVA_TOOL_OPTIONS=-javaagent:/agent/skywalking-agent.jar
+      # --- 新增 SkyWalking 配置 ---
       - SW_AGENT_NAME=novel-user-service
       - SW_AGENT_COLLECTOR_BACKEND_SERVICES=10.2.24.4:11800
-      - SW_AGENT_SAMPLE_N_PER_3_SECS=1
-      - SW_LOGGING_LEVEL=ERROR
+      - JAVA_OPTS=-javaagent:/skywalking/agent/skywalking-agent.jar
     volumes:
-      - /home/ubuntu/dependence/skywalking-agent:/agent
+      - /home/ubuntu/dependence/skywalking-agent:/skywalking/agent # 将宿主机探针目录挂载到容器
     networks:
       - common-network
 
@@ -53,14 +48,12 @@ services:
       - SPRING_PROFILES_ACTIVE=prod
       - NACOS_SERVER_ADDR=novel-nacos-server:8848
       - TZ=Asia/Shanghai
-      # SkyWalking 配置
-      - JAVA_TOOL_OPTIONS=-javaagent:/agent/skywalking-agent.jar
+      # --- 新增 SkyWalking 配置 ---
       - SW_AGENT_NAME=novel-book-service
       - SW_AGENT_COLLECTOR_BACKEND_SERVICES=10.2.24.4:11800
-      - SW_AGENT_SAMPLE_N_PER_3_SECS=1
-      - SW_LOGGING_LEVEL=ERROR
+      - JAVA_OPTS=-javaagent:/skywalking/agent/skywalking-agent.jar
     volumes:
-      - /home/ubuntu/dependence/skywalking-agent:/agent
+      - /home/ubuntu/dependence/skywalking-agent:/skywalking/agent # 将宿主机探针目录挂载到容器
     networks:
       - common-network
 
@@ -73,14 +66,12 @@ services:
       - SPRING_PROFILES_ACTIVE=prod
       - NACOS_SERVER_ADDR=novel-nacos-server:8848
       - TZ=Asia/Shanghai
-      # SkyWalking 配置
-      - JAVA_TOOL_OPTIONS=-javaagent:/agent/skywalking-agent.jar
+      # --- 新增 SkyWalking 配置 ---
       - SW_AGENT_NAME=novel-search-service
       - SW_AGENT_COLLECTOR_BACKEND_SERVICES=10.2.24.4:11800
-      - SW_AGENT_SAMPLE_N_PER_3_SECS=1
-      - SW_LOGGING_LEVEL=ERROR
+      - JAVA_OPTS=-javaagent:/skywalking/agent/skywalking-agent.jar
     volumes:
-      - /home/ubuntu/dependence/skywalking-agent:/agent
+      - /home/ubuntu/dependence/skywalking-agent:/skywalking/agent # 将宿主机探针目录挂载到容器
     networks:
       - common-network
 
@@ -93,14 +84,12 @@ services:
       - SPRING_PROFILES_ACTIVE=prod
       - NACOS_SERVER_ADDR=novel-nacos-server:8848
       - TZ=Asia/Shanghai
-      # SkyWalking 配置
-      - JAVA_TOOL_OPTIONS=-javaagent:/agent/skywalking-agent.jar
+      # --- 新增 SkyWalking 配置 ---
       - SW_AGENT_NAME=novel-ai-service
       - SW_AGENT_COLLECTOR_BACKEND_SERVICES=10.2.24.4:11800
-      - SW_AGENT_SAMPLE_N_PER_3_SECS=1
-      - SW_LOGGING_LEVEL=ERROR
+      - JAVA_OPTS=-javaagent:/skywalking/agent/skywalking-agent.jar
     volumes:
-      - /home/ubuntu/dependence/skywalking-agent:/agent
+      - /home/ubuntu/dependence/skywalking-agent:/skywalking/agent # 将宿主机探针目录挂载到容器
     networks:
       - common-network
 

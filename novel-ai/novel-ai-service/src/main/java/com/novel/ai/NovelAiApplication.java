@@ -11,7 +11,7 @@ import org.springframework.retry.annotation.EnableRetry;
 @EnableCaching
 @EnableDiscoveryClient
 @EnableRetry // 开启重试机制
-@EnableFeignClients(basePackages = {"com.novel.user.feign"})
+@EnableFeignClients(basePackages = {"com.novel.user.feign", "com.novel.ai.feign"})
 public class NovelAiApplication {
     public static void main(String[] args) {
         SpringApplication.run(NovelAiApplication.class, args);

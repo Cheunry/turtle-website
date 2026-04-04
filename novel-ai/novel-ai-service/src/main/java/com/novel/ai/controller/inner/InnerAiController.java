@@ -1,5 +1,7 @@
 package com.novel.ai.controller.inner;
 
+import com.novel.ai.dto.req.AuditRuleReqDto;
+import com.novel.ai.dto.resp.AuditRuleRespDto;
 import com.novel.book.dto.req.BookAuditReqDto;
 import com.novel.book.dto.req.BookCoverReqDto;
 import com.novel.book.dto.req.ChapterAuditReqDto;
@@ -69,5 +71,14 @@ public class InnerAiController {
     @PostMapping("/generate/image")
     public RestResp<String> generateImage(@org.springframework.web.bind.annotation.RequestParam("prompt") String prompt) {
         return imageService.generateImage(prompt);
+    }
+
+    /**
+     * 提取审核经验规则
+     */
+    @Operation(summary = "提取审核经验规则")
+    @PostMapping("/audit/extractRule")
+    public RestResp<AuditRuleRespDto> extractAuditRule(@RequestBody AuditRuleReqDto req) {
+        return textService.extractAuditRule(req);
     }
 }

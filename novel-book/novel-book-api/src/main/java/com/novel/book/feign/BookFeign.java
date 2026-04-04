@@ -4,6 +4,7 @@ import com.novel.book.dto.req.*;
 import com.novel.book.dto.resp.BookChapterRespDto;
 import com.novel.book.dto.resp.BookEsRespDto;
 import com.novel.book.dto.resp.BookInfoRespDto;
+import com.novel.book.dto.resp.ContentAuditRespDto;
 import com.novel.common.constant.ApiRouterConsts;
 import com.novel.common.resp.PageRespDto;
 import com.novel.common.resp.RestResp;
@@ -89,6 +90,12 @@ public interface BookFeign {
      */
     @GetMapping(ApiRouterConsts.API_INNER_BOOK_URL_PREFIX + "/getBookByIdForAuthor")
     RestResp<BookInfoRespDto> getBookByIdForAuthor(@RequestParam("bookId") Long bookId, @RequestParam("authorId") Long authorId);
+
+    /**
+     * 查询下一批审核经验数据（用于同步到ES向量库）
+     */
+    @PostMapping(ApiRouterConsts.API_INNER_BOOK_URL_PREFIX + "/listNextAuditExperience")
+    RestResp<List<ContentAuditRespDto>> listNextAuditExperience(@RequestBody(required = false) Long maxId);
 
     /**
      * 查询下一批保存到 ES 中的小说列表

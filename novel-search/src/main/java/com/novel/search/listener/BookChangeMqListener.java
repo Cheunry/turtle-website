@@ -108,6 +108,13 @@ public class BookChangeMqListener implements RocketMQListener<String> {
                     }
                     book.setEmbedding(embeddingList);
                     log.debug(">>> [MQ] 已为书籍生成向量。bookId={}", bookId);
+                    
+                    // 添加延迟，避免触发大模型 API 的流控限制 (HTTP 429)
+                    try {
+                        Thread.sleep(500); // 延迟 500ms
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                    }
                 } catch (Exception e) {
                     log.error(">>> [MQ] 向量生成失败，将只保存文本字段。bookId={}", bookId, e);
                 }

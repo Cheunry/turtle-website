@@ -19,6 +19,8 @@ import com.novel.book.dto.resp.BookInfoRespDto;
 import com.novel.common.resp.PageRespDto;
 import com.novel.common.resp.RestResp;
 import com.novel.common.constant.EsConsts;
+import com.novel.search.dto.req.AuditExperienceSearchReqDto;
+import com.novel.search.dto.resp.AuditExperienceSearchRespDto;
 import com.novel.search.service.SearchService;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -244,8 +246,84 @@ public class SearchServiceImpl implements SearchService {
                 PageRespDto.of(condition.getPageNum(), condition.getPageSize(), totalValue, list));
     }
 
+    @SneakyThrows
+    @Override
+    public RestResp<List<AuditExperienceSearchRespDto>> searchAuditExperience(AuditExperienceSearchReqDto reqDto) {
+        String contentText = reqDto.getContentText();
+        if (StringUtils.isBlank(contentText)) {
+            return RestResp.ok(Collections.emptyList());
+        }
+        
+        // 截断文本以防过长导致 embedding 报错
+        if (contentText.length() > 2000) {
+            contentText = contentText.substring(0, 2000);
+        }
+
+        // 1. 生成查询向量
+        float[] queryVectorArray = embeddingModel.embed(contentText);
+        List<Float> queryVector = new ArrayList<>();
+        for (float v : queryVectorArray) {
+            queryVector.add(v);
+        }
+
+        // 2. 执行 KNN 查询
+        int topK = reqDto.getTopK() != null ? reqDto.getTopK() : 3;
+        double threshold = reqDto.getSimilarityThreshold() != null ? reqDto.getSimilarityThreshold() : 0.75;
+
+        SearchResponse<Map> knnResponse = esClient.search(s -> s
+            .index(EsConsts.AuditExperienceIndex.INDEX_NAME)
+            .knn(knn -> knn
+                .field(EsConsts.AuditExperienceIndex.FIELD_CONTENT_VECTOR)
+                .k(topK)
+                .numCandidates(Math.max(topK * 2, 20))
+                .queryVector(queryVector)
+            )
+            .size(topK)
+        , Map.class);
+
+        // 3. 封装结果并过滤相似度
+        List<AuditExperienceSearchRespDto> resultList = new ArrayList<>();
+        for (Hit<Map> hit : knnResponse.hits().hits()) {
+            Double score = hit.score();
+            if (score == null || score < threshold) {
+                continue; // 过滤掉低于相似度阈值的结果
+            }
+
+            Map source = hit.source();
+            if (source == null) continue;
+
+            AuditExperienceSearchRespDto dto = new AuditExperienceSearchRespDto();
+            dto.setScore(score);
+            
+            Object auditStatusObj = source.get(EsConsts.AuditExperienceIndex.FIELD_AUDIT_STATUS);
+            if (auditStatusObj instanceof Number) {
+                dto.setAuditStatus(((Number) auditStatusObj).intValue());
+            }
+            
+            Object violationLabelObj = source.get(EsConsts.AuditExperienceIndex.FIELD_VIOLATION_LABEL);
+            if (violationLabelObj != null) {
+                dto.setViolationLabel(violationLabelObj.toString());
+            }
+            
+            Object keySnippetObj = source.get(EsConsts.AuditExperienceIndex.FIELD_KEY_SNIPPET);
+            if (keySnippetObj != null) {
+                dto.setKeySnippet(keySnippetObj.toString());
+            }
+            
+            Object auditRuleObj = source.get(EsConsts.AuditExperienceIndex.FIELD_AUDIT_RULE);
+            if (auditRuleObj != null) {
+                dto.setAuditRule(auditRuleObj.toString());
+            }
+
+            resultList.add(dto);
+        }
+
+        return RestResp.ok(resultList);
+    }
+
     /**
      * 内部类：用于合并 KNN 和 BM25 的结果
+
      */
     private static class CombinedResult {
         BookEsRespDto book;

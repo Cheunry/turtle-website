@@ -29,6 +29,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import com.novel.ai.feign.AiFeign;
+import com.novel.ai.dto.req.AuditRuleReqDto;
+import com.novel.ai.dto.resp.AuditRuleRespDto;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 书籍审核服务实现类（包含AI审核和人工审核）
@@ -44,6 +49,7 @@ public class BookAuditServiceImpl implements BookAuditService {
     private final RocketMQTemplate rocketMQTemplate; // 添加MQ依赖
     private final UserFeignManager userFeignManager; // 添加用户服务依赖，用于发送消息
     private final StringRedisTemplate stringRedisTemplate; // 添加Redis依赖，用于清除缓存
+    private final AiFeign aiFeign; // 添加AI服务依赖，用于提取审核规则
 
     /**
      * AI审核置信度阈值，低于此值需要人工审核
@@ -75,6 +81,20 @@ public class BookAuditServiceImpl implements BookAuditService {
      */
     private static final Integer AUDIT_STATUS_REJECTED = 2;
 
+    /** 与表 content_audit.audit_reason 列 varchar(500) 一致 */
+    private static final int CONTENT_AUDIT_AUDIT_REASON_MAX_LEN = 500;
+
+    /**
+     * 同一数据源可有多条审核记录，业务上取最新一条
+     */
+    private ContentAudit findLatestContentAuditBySource(Integer sourceType, Long sourceId) {
+        QueryWrapper<ContentAudit> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("source_type", sourceType)
+                .eq("source_id", sourceId)
+                .orderByDesc("id")
+                .last("LIMIT 1");
+        return contentAuditMapper.selectOne(queryWrapper);
+    }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -93,13 +113,9 @@ public class BookAuditServiceImpl implements BookAuditService {
         // 2. 如果AI处理失败，更新审核表记录失败原因
         if (!Boolean.TRUE.equals(resultDto.getSuccess())) {
             try {
-                QueryWrapper<ContentAudit> queryWrapper = new QueryWrapper<>();
-                queryWrapper.eq("source_type", DATA_SOURCE_BOOK_CHAPTER)
-                        .eq("source_id", chapterId);
-                ContentAudit existingAudit = contentAuditMapper.selectOne(queryWrapper);
-                
+                ContentAudit existingAudit = findLatestContentAuditBySource(DATA_SOURCE_BOOK_CHAPTER, chapterId);
                 if (existingAudit != null) {
-                    updateAuditRecordOnFailure(DATA_SOURCE_BOOK_CHAPTER, chapterId, 
+                    updateAuditRecordOnFailure(existingAudit.getId(),
                             resultDto.getErrorMessage() != null ? resultDto.getErrorMessage() : "AI审核处理失败");
                 }
             } catch (Exception e) {
@@ -111,10 +127,7 @@ public class BookAuditServiceImpl implements BookAuditService {
         // 3. 先查询是否已存在审核记录，如果存在则更新，不存在则插入
         ContentAudit initialAudit = null;
         try {
-            QueryWrapper<ContentAudit> queryWrapper = new QueryWrapper<>();
-            queryWrapper.eq("source_type", DATA_SOURCE_BOOK_CHAPTER)
-                    .eq("source_id", chapterId);
-            initialAudit = contentAuditMapper.selectOne(queryWrapper);
+            initialAudit = findLatestContentAuditBySource(DATA_SOURCE_BOOK_CHAPTER, chapterId);
         } catch (Exception e) {
             log.warn("查询审核记录失败，章节ID: {}，将创建新记录。错误: {}", chapterId, e.getMessage());
         }
@@ -164,10 +177,10 @@ public class BookAuditServiceImpl implements BookAuditService {
         // 6. 更新审核表和章节表
         if (isPassed && isHighConfidence) {
             // 情况1：AI审核通过且置信度高 -> 更新审核表和章节表
-            if (initialAudit != null && initialAudit.getDataSource() != null && initialAudit.getDataSourceId() != null) {
+            if (initialAudit != null && initialAudit.getId() != null) {
                 try {
-                    updateChapterAuditRecord(initialAudit.getDataSource(), initialAudit.getDataSourceId(), 
-                            AUDIT_STATUS_PASSED, aiResult);
+                    updateContentAuditFromAiResult(initialAudit.getId(),
+                            AUDIT_STATUS_PASSED, aiResult.getAiConfidence(), aiResult.getAuditReason());
                     log.debug("章节[{}]审核表已更新", chapterId);
                 } catch (Exception e) {
                     log.error("更新审核表失败，章节ID: {}", chapterId, e);
@@ -187,6 +200,24 @@ public class BookAuditServiceImpl implements BookAuditService {
                 log.debug("书籍[{}]最新章节信息已更新", bookChapter.getBookId());
             } catch (Exception e) {
                 log.error("更新书籍最新章节信息失败，书籍ID: {}", bookChapter.getBookId(), e);
+            }
+
+            // 审核通过后，清除章节目录缓存，使读者立即可见新章节
+            try {
+                String chapterCacheKey = CacheConsts.BOOK_CHAPTER_CACHE_NAME + "::" + bookChapter.getBookId();
+                stringRedisTemplate.delete(chapterCacheKey);
+                log.debug("已清除书籍章节目录缓存，bookId: {}, cacheKey: {}", bookChapter.getBookId(), chapterCacheKey);
+            } catch (Exception e) {
+                log.warn("清除章节目录缓存失败，bookId: {}, 不影响业务", bookChapter.getBookId(), e);
+            }
+
+            // 审核通过后，清除章节内容缓存，使读者立即看到更新后的内容
+            try {
+                String contentCacheKey = CacheConsts.BOOK_CONTENT_CACHE_NAME + "::content:" + bookChapter.getBookId() + ":" + bookChapter.getChapterNum();
+                stringRedisTemplate.delete(contentCacheKey);
+                log.debug("已清除章节内容缓存，bookId: {}, chapterNum: {}, cacheKey: {}", bookChapter.getBookId(), bookChapter.getChapterNum(), contentCacheKey);
+            } catch (Exception e) {
+                log.warn("清除章节内容缓存失败，bookId: {}, chapterNum: {}, 不影响业务", bookChapter.getBookId(), bookChapter.getChapterNum(), e);
             }
             
             // 审核通过后发送ES消息
@@ -213,10 +244,10 @@ public class BookAuditServiceImpl implements BookAuditService {
 
         } else if (isPassed && !isHighConfidence) {
             // 情况2：AI审核通过但置信度低 -> 更新审核表为待人工审核，章节表保持待审核状态
-            if (initialAudit != null && initialAudit.getDataSource() != null && initialAudit.getDataSourceId() != null) {
+            if (initialAudit != null && initialAudit.getId() != null) {
                 try {
-                    updateChapterAuditRecord(initialAudit.getDataSource(), initialAudit.getDataSourceId(), 
-                            AUDIT_STATUS_PENDING, aiResult);
+                    updateContentAuditFromAiResult(initialAudit.getId(),
+                            AUDIT_STATUS_PENDING, aiResult.getAiConfidence(), aiResult.getAuditReason());
                     log.info("章节[{}]AI审核通过但置信度低[{}]，已更新审核表等待人工审核",
                             chapterId, aiConfidence);
                 } catch (Exception e) {
@@ -227,10 +258,10 @@ public class BookAuditServiceImpl implements BookAuditService {
         } else {
             // 情况3：AI审核不通过 -> 更新审核表和章节表为不通过
             String shortReason = extractShortReason(fullReason, aiConfidence);
-            if (initialAudit != null && initialAudit.getDataSource() != null && initialAudit.getDataSourceId() != null) {
+            if (initialAudit != null && initialAudit.getId() != null) {
                 try {
-                    updateChapterAuditRecord(initialAudit.getDataSource(), initialAudit.getDataSourceId(), 
-                            AUDIT_STATUS_REJECTED, aiResult);
+                    updateContentAuditFromAiResult(initialAudit.getId(),
+                            AUDIT_STATUS_REJECTED, aiResult.getAiConfidence(), aiResult.getAuditReason());
                     log.debug("章节[{}]审核表已更新为不通过", chapterId);
                 } catch (Exception e) {
                     log.error("更新审核表失败，章节ID: {}", chapterId, e);
@@ -238,14 +269,23 @@ public class BookAuditServiceImpl implements BookAuditService {
             }
             
             try {
-                log.info("开始更新章节表，章节ID: {}, auditStatus: {}, reason: {}", 
+                log.info("开始更新章节表，章节ID: {}, auditStatus: {}, reason: {}",
                         chapterId, AUDIT_STATUS_REJECTED, shortReason);
                 updateChapterDirectly(chapterId, AUDIT_STATUS_REJECTED, shortReason);
                 log.info("章节[{}]章节表已更新为不通过，auditStatus: {}", chapterId, AUDIT_STATUS_REJECTED);
             } catch (Exception e) {
                 log.error("更新章节表失败，章节ID: {}, 错误信息: {}", chapterId, e.getMessage(), e);
             }
-            
+
+            // 审核不通过后，删除章节内容缓存，防止读者看到不应可见的内容
+            try {
+                String contentCacheKey = CacheConsts.BOOK_CONTENT_CACHE_NAME + "::content:" + bookChapter.getBookId() + ":" + bookChapter.getChapterNum();
+                stringRedisTemplate.delete(contentCacheKey);
+                log.info("AI审核不通过，已删除章节内容缓存，bookId: {}, chapterNum: {}", bookChapter.getBookId(), bookChapter.getChapterNum());
+            } catch (Exception e) {
+                log.warn("删除章节内容缓存失败，bookId: {}, chapterNum: {}, 不影响业务", bookChapter.getBookId(), bookChapter.getChapterNum(), e);
+            }
+
             log.warn("章节[{}]AI审核不通过，原因: {}，已更新审核表和章节表", chapterId, shortReason);
         }
     }
@@ -267,13 +307,9 @@ public class BookAuditServiceImpl implements BookAuditService {
         // 2. 如果AI处理失败，更新审核表记录失败原因
         if (!Boolean.TRUE.equals(resultDto.getSuccess())) {
             try {
-                QueryWrapper<ContentAudit> queryWrapper = new QueryWrapper<>();
-                queryWrapper.eq("source_type", DATA_SOURCE_BOOK_INFO)
-                        .eq("source_id", bookId);
-                ContentAudit existingAudit = contentAuditMapper.selectOne(queryWrapper);
-                
+                ContentAudit existingAudit = findLatestContentAuditBySource(DATA_SOURCE_BOOK_INFO, bookId);
                 if (existingAudit != null) {
-                    updateAuditRecordOnFailure(DATA_SOURCE_BOOK_INFO, bookId, 
+                    updateAuditRecordOnFailure(existingAudit.getId(),
                             resultDto.getErrorMessage() != null ? resultDto.getErrorMessage() : "AI审核处理失败");
                 }
             } catch (Exception e) {
@@ -285,10 +321,7 @@ public class BookAuditServiceImpl implements BookAuditService {
         // 3. 先查询是否已存在审核记录，如果存在则更新，不存在则插入
         ContentAudit initialAudit = null;
         try {
-            QueryWrapper<ContentAudit> queryWrapper = new QueryWrapper<>();
-            queryWrapper.eq("source_type", DATA_SOURCE_BOOK_INFO)
-                    .eq("source_id", bookId);
-            initialAudit = contentAuditMapper.selectOne(queryWrapper);
+            initialAudit = findLatestContentAuditBySource(DATA_SOURCE_BOOK_INFO, bookId);
         } catch (Exception e) {
             log.warn("查询审核记录失败，书籍ID: {}，将创建新记录。错误: {}", bookId, e.getMessage());
         }
@@ -337,10 +370,10 @@ public class BookAuditServiceImpl implements BookAuditService {
         // 6. 更新审核表和书籍表
         if (isPassed && isHighConfidence) {
             // 情况1：AI审核通过且置信度高 -> 更新审核表和书籍表
-            if (initialAudit != null && initialAudit.getDataSource() != null && initialAudit.getDataSourceId() != null) {
+            if (initialAudit != null && initialAudit.getId() != null) {
                 try {
-                    updateAuditRecord(initialAudit.getDataSource(), initialAudit.getDataSourceId(), 
-                            AUDIT_STATUS_PASSED, aiResult);
+                    updateContentAuditFromAiResult(initialAudit.getId(),
+                            AUDIT_STATUS_PASSED, aiResult.getAiConfidence(), aiResult.getAuditReason());
                     log.debug("书籍[{}]审核表已更新", bookId);
                 } catch (Exception e) {
                     log.error("更新审核表失败，书籍ID: {}", bookId, e);
@@ -376,10 +409,10 @@ public class BookAuditServiceImpl implements BookAuditService {
 
         } else if (isPassed && !isHighConfidence) {
             // 情况2：AI审核通过但置信度低 -> 更新审核表为待人工审核，书籍表保持待审核状态
-            if (initialAudit != null && initialAudit.getDataSource() != null && initialAudit.getDataSourceId() != null) {
+            if (initialAudit != null && initialAudit.getId() != null) {
                 try {
-                    updateAuditRecord(initialAudit.getDataSource(), initialAudit.getDataSourceId(), 
-                            AUDIT_STATUS_PENDING, aiResult);
+                    updateContentAuditFromAiResult(initialAudit.getId(),
+                            AUDIT_STATUS_PENDING, aiResult.getAiConfidence(), aiResult.getAuditReason());
                     log.info("书籍[{}]AI审核通过但置信度低[{}]，已更新审核表等待人工审核",
                             bookId, aiConfidence);
                 } catch (Exception e) {
@@ -390,10 +423,10 @@ public class BookAuditServiceImpl implements BookAuditService {
         } else {
             // 情况3：AI审核不通过 -> 更新审核表和书籍表为不通过
             String shortReason = extractShortReason(fullReason, aiConfidence);
-            if (initialAudit != null && initialAudit.getDataSource() != null && initialAudit.getDataSourceId() != null) {
+            if (initialAudit != null && initialAudit.getId() != null) {
                 try {
-                    updateAuditRecord(initialAudit.getDataSource(), initialAudit.getDataSourceId(), 
-                            AUDIT_STATUS_REJECTED, aiResult);
+                    updateContentAuditFromAiResult(initialAudit.getId(),
+                            AUDIT_STATUS_REJECTED, aiResult.getAiConfidence(), aiResult.getAuditReason());
                     log.debug("书籍[{}]审核表已更新为不通过", bookId);
                 } catch (Exception e) {
                     log.error("更新审核表失败，书籍ID: {}", bookId, e);
@@ -426,15 +459,50 @@ public class BookAuditServiceImpl implements BookAuditService {
             return RestResp.fail(ErrorCodeEnum.AUDIT_STATUS_PARAM_ERROR);
         }
 
-        // 3. 更新审核表（使用联合主键更新）
+        // 3. 更新审核表（主键 id）
         audit.setAuditStatus(auditStatus);
-        audit.setAuditReason(auditReason);
+        audit.setIsHumanFinal(1); // 标记为人工最终裁决
+        audit.setAuditReason(truncateForContentAuditAuditReason(auditReason));
         audit.setUpdateTime(LocalDateTime.now()); // 使用 update_time 而不是 audit_time
+
+        final Long contentAuditRowId = audit.getId();
+        final String contentTextSnapshot = audit.getContentText();
         
-        QueryWrapper<ContentAudit> updateWrapper = new QueryWrapper<>();
-        updateWrapper.eq("source_type", audit.getDataSource())
-                .eq("source_id", audit.getDataSourceId());
-        contentAuditMapper.update(audit, updateWrapper);
+        // 异步调用 AI 提取审核规则
+        if (contentTextSnapshot != null && !contentTextSnapshot.trim().isEmpty()) {
+            java.util.concurrent.CompletableFuture.runAsync(() -> {
+                try {
+                    log.info("开始异步提取审核规则，auditId: {}", auditId);
+                    AuditRuleReqDto ruleReq = new AuditRuleReqDto();
+                    ruleReq.setContentText(contentTextSnapshot);
+                    ruleReq.setAuditStatus(auditStatus);
+                    ruleReq.setAuditReason(auditReason);
+                    
+                    RestResp<AuditRuleRespDto> ruleResp = aiFeign.extractAuditRule(ruleReq);
+                    if (ruleResp.isOk() && ruleResp.getData() != null) {
+                        AuditRuleRespDto ruleData = ruleResp.getData();
+                        
+                        // 更新回数据库
+                        ContentAudit updateRuleAudit = new ContentAudit();
+                        updateRuleAudit.setViolationLabel(ruleData.getViolationLabel());
+                        updateRuleAudit.setKeySnippet(ruleData.getKeySnippet());
+                        updateRuleAudit.setAuditRule(ruleData.getAuditRule());
+                        
+                        QueryWrapper<ContentAudit> ruleUpdateWrapper = new QueryWrapper<>();
+                        ruleUpdateWrapper.eq("id", contentAuditRowId);
+                        contentAuditMapper.update(updateRuleAudit, ruleUpdateWrapper);
+                        
+                        log.info("异步提取审核规则成功，auditId: {}, label: {}", auditId, ruleData.getViolationLabel());
+                    } else {
+                        log.warn("异步提取审核规则失败，auditId: {}, 响应: {}", auditId, ruleResp.getMessage());
+                    }
+                } catch (Exception e) {
+                    log.error("异步提取审核规则异常，auditId: {}", auditId, e);
+                }
+            });
+        }
+        
+        contentAuditMapper.updateById(audit);
 
         // 4. 根据数据来源同步更新对应的业务表
         if (DATA_SOURCE_BOOK_INFO.equals(audit.getDataSource())) {
@@ -468,9 +536,8 @@ public class BookAuditServiceImpl implements BookAuditService {
             updateChapterFromAudit(audit.getDataSourceId(), auditStatus, auditReason);
             
             // 如果审核通过，更新bookInfo表的最新章节信息并发送ES消息
+            BookChapter chapter = bookChapterMapper.selectById(audit.getDataSourceId());
             if (AUDIT_STATUS_PASSED.equals(auditStatus)) {
-                // 查询章节信息获取bookId
-                BookChapter chapter = bookChapterMapper.selectById(audit.getDataSourceId());
                 if (chapter != null) {
                     try {
                         updateBookInfoLastChapter(chapter.getBookId());
@@ -478,7 +545,25 @@ public class BookAuditServiceImpl implements BookAuditService {
                     } catch (Exception e) {
                         log.error("更新书籍最新章节信息失败，章节ID: {}", audit.getDataSourceId(), e);
                     }
-                    
+
+                    // 审核通过后，清除章节目录缓存，使读者立即可见新章节
+                    try {
+                        String chapterCacheKey = CacheConsts.BOOK_CHAPTER_CACHE_NAME + "::" + chapter.getBookId();
+                        stringRedisTemplate.delete(chapterCacheKey);
+                        log.info("人工审核通过，已清除书籍章节目录缓存，bookId: {}", chapter.getBookId());
+                    } catch (Exception e) {
+                        log.warn("清除章节目录缓存失败，bookId: {}, 不影响业务", chapter.getBookId(), e);
+                    }
+
+                    // 审核通过后，清除章节内容缓存，使读者立即看到更新后的内容
+                    try {
+                        String contentCacheKey = CacheConsts.BOOK_CONTENT_CACHE_NAME + "::content:" + chapter.getBookId() + ":" + chapter.getChapterNum();
+                        stringRedisTemplate.delete(contentCacheKey);
+                        log.info("人工审核通过，已清除章节内容缓存，bookId: {}, chapterNum: {}", chapter.getBookId(), chapter.getChapterNum());
+                    } catch (Exception e) {
+                        log.warn("清除章节内容缓存失败，bookId: {}, chapterNum: {}, 不影响业务", chapter.getBookId(), chapter.getChapterNum(), e);
+                    }
+
                     try {
                         sendBookChangeMsg(chapter.getBookId());
                         log.info("人工审核通过，章节[{}]已发送ES更新消息", audit.getDataSourceId());
@@ -498,6 +583,17 @@ public class BookAuditServiceImpl implements BookAuditService {
                     } catch (Exception e) {
                         log.error("发送消息给作者失败，章节ID: {}", audit.getDataSourceId(), e);
                         // 消息发送失败不影响审核结果
+                    }
+                }
+            } else {
+                // 审核不通过，删除章节内容缓存，防止读者看到不应可见的内容
+                if (chapter != null) {
+                    try {
+                        String contentCacheKey = CacheConsts.BOOK_CONTENT_CACHE_NAME + "::content:" + chapter.getBookId() + ":" + chapter.getChapterNum();
+                        stringRedisTemplate.delete(contentCacheKey);
+                        log.info("人工审核不通过，已删除章节内容缓存，bookId: {}, chapterNum: {}", chapter.getBookId(), chapter.getChapterNum());
+                    } catch (Exception e) {
+                        log.warn("删除章节内容缓存失败，bookId: {}, chapterNum: {}, 不影响业务", chapter.getBookId(), chapter.getChapterNum(), e);
                     }
                 }
             }
@@ -533,56 +629,31 @@ public class BookAuditServiceImpl implements BookAuditService {
     }
 
     /**
-     * 更新审核记录（根据AI审核结果）
-     * 使用 source_type 和 source_id 作为条件更新（联合主键）
+     * 根据主键 id 更新 AI 审核结果字段
      */
-    private void updateAuditRecord(Integer sourceType, Long sourceId, Integer auditStatus, BookAuditRespDto aiResult) {
+    private void updateContentAuditFromAiResult(Long contentAuditId, Integer auditStatus,
+            BigDecimal aiConfidence, String auditReason) {
         ContentAudit updateAudit = new ContentAudit();
         updateAudit.setAuditStatus(auditStatus);
-        updateAudit.setAiConfidence(aiResult.getAiConfidence());
-        updateAudit.setAuditReason(aiResult.getAuditReason());
-        updateAudit.setUpdateTime(LocalDateTime.now()); // 更新时间
-        
-        // 使用联合主键更新
+        updateAudit.setAiConfidence(aiConfidence);
+        updateAudit.setAuditReason(truncateForContentAuditAuditReason(auditReason));
+        updateAudit.setUpdateTime(LocalDateTime.now());
         QueryWrapper<ContentAudit> updateWrapper = new QueryWrapper<>();
-        updateWrapper.eq("source_type", sourceType)
-                .eq("source_id", sourceId);
+        updateWrapper.eq("id", contentAuditId);
         contentAuditMapper.update(updateAudit, updateWrapper);
     }
 
     /**
-     * 更新章节审核记录（根据AI审核结果）
-     * 使用 source_type 和 source_id 作为条件更新（联合主键）
+     * AI 处理失败时按主键 id 更新审核记录
      */
-    private void updateChapterAuditRecord(Integer sourceType, Long sourceId, Integer auditStatus, ChapterAuditRespDto aiResult) {
+    private void updateAuditRecordOnFailure(Long contentAuditId, String failureReason) {
         ContentAudit updateAudit = new ContentAudit();
-        updateAudit.setAuditStatus(auditStatus);
-        updateAudit.setAiConfidence(aiResult.getAiConfidence());
-        updateAudit.setAuditReason(aiResult.getAuditReason());
-        updateAudit.setUpdateTime(LocalDateTime.now()); // 更新时间
-        
-        // 使用联合主键更新
+        updateAudit.setAuditStatus(AUDIT_STATUS_PENDING);
+        updateAudit.setAiConfidence(new BigDecimal("0.0"));
+        updateAudit.setAuditReason(truncateForContentAuditAuditReason(failureReason));
+        updateAudit.setUpdateTime(LocalDateTime.now());
         QueryWrapper<ContentAudit> updateWrapper = new QueryWrapper<>();
-        updateWrapper.eq("source_type", sourceType)
-                .eq("source_id", sourceId);
-        contentAuditMapper.update(updateAudit, updateWrapper);
-    }
-
-    /**
-     * 更新审核记录（AI审核失败时）
-     * 使用 source_type 和 source_id 作为条件更新（联合主键）
-     */
-    private void updateAuditRecordOnFailure(Integer sourceType, Long sourceId, String failureReason) {
-        ContentAudit updateAudit = new ContentAudit();
-        updateAudit.setAuditStatus(AUDIT_STATUS_PENDING); // 保持待审核状态
-        updateAudit.setAiConfidence(new BigDecimal("0.0")); // 置信度为0
-        updateAudit.setAuditReason(failureReason); // 记录失败原因
-        updateAudit.setUpdateTime(LocalDateTime.now()); // 更新时间
-        
-        // 使用联合主键更新
-        QueryWrapper<ContentAudit> updateWrapper = new QueryWrapper<>();
-        updateWrapper.eq("source_type", sourceType)
-                .eq("source_id", sourceId);
+        updateWrapper.eq("id", contentAuditId);
         contentAuditMapper.update(updateAudit, updateWrapper);
     }
 
@@ -685,6 +756,17 @@ public class BookAuditServiceImpl implements BookAuditService {
         }
     }
 
+    private static String truncateForContentAuditAuditReason(String reason) {
+        if (reason == null) {
+            return null;
+        }
+        if (reason.length() <= CONTENT_AUDIT_AUDIT_REASON_MAX_LEN) {
+            return reason;
+        }
+        int keep = CONTENT_AUDIT_AUDIT_REASON_MAX_LEN - 3;
+        return keep > 0 ? reason.substring(0, keep) + "..." : "...";
+    }
+
     @Override
     public String extractShortReason(String fullReason, BigDecimal aiConfidence) {
         if (fullReason == null || fullReason.trim().isEmpty()) {
@@ -759,5 +841,42 @@ public class BookAuditServiceImpl implements BookAuditService {
             log.error("发送审核通过消息给作者失败，书籍ID: {}", bookId, e);
             // 不抛出异常，避免影响审核流程
         }
+    }
+
+    @Override
+    public RestResp<List<com.novel.book.dto.resp.ContentAuditRespDto>> listNextAuditExperience(Long maxId) {
+        QueryWrapper<ContentAudit> queryWrapper = new QueryWrapper<>();
+        queryWrapper.in("audit_status", 1, 2)
+                .eq("is_human_final", 1);
+                
+        if (maxId != null) {
+            queryWrapper.gt("id", maxId);
+        }
+        
+        queryWrapper.orderByAsc("id").last("LIMIT 100");
+        
+        List<ContentAudit> auditList = contentAuditMapper.selectList(queryWrapper);
+        
+        List<com.novel.book.dto.resp.ContentAuditRespDto> respDtoList = auditList.stream()
+                .filter(audit -> audit.getContentText() != null && !audit.getContentText().trim().isEmpty())
+                .map(audit -> {
+            com.novel.book.dto.resp.ContentAuditRespDto dto = new com.novel.book.dto.resp.ContentAuditRespDto();
+            dto.setId(audit.getId());
+            dto.setSourceType(audit.getDataSource());
+            dto.setSourceId(audit.getDataSourceId());
+            dto.setContentText(audit.getContentText());
+            dto.setAiConfidence(audit.getAiConfidence());
+            dto.setAuditStatus(audit.getAuditStatus());
+            dto.setIsHumanFinal(audit.getIsHumanFinal());
+            dto.setAuditReason(audit.getAuditReason());
+            dto.setViolationLabel(audit.getViolationLabel());
+            dto.setKeySnippet(audit.getKeySnippet());
+            dto.setAuditRule(audit.getAuditRule());
+            dto.setCreateTime(audit.getCreateTime());
+            dto.setUpdateTime(audit.getUpdateTime());
+            return dto;
+        }).collect(Collectors.toList());
+        
+        return RestResp.ok(respDtoList);
     }
 }

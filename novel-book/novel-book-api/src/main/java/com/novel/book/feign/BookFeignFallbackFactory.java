@@ -4,6 +4,7 @@ import com.novel.book.dto.req.*;
 import com.novel.book.dto.resp.BookChapterRespDto;
 import com.novel.book.dto.resp.BookEsRespDto;
 import com.novel.book.dto.resp.BookInfoRespDto;
+import com.novel.book.dto.resp.ContentAuditRespDto;
 import com.novel.common.constant.ErrorCodeEnum;
 import com.novel.common.resp.PageRespDto;
 import com.novel.common.resp.RestResp;
@@ -138,6 +139,12 @@ public class BookFeignFallbackFactory implements FallbackFactory<BookFeign> {
             public RestResp<Void> deleteComment(BookCommentReqDto dto) {
                 log.error("调用 deleteComment 异常", cause);
                 return RestResp.fail(ErrorCodeEnum.THIRD_SERVICE_ERROR);
+            }
+
+            @Override
+            public RestResp<List<ContentAuditRespDto>> listNextAuditExperience(Long maxId) {
+                log.error("调用 listNextAuditExperience 异常", cause);
+                return RestResp.ok(new ArrayList<>(0));
             }
         };
     }

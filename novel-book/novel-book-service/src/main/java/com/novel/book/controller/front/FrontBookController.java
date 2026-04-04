@@ -13,9 +13,12 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import com.novel.book.service.AuditExperienceExtractService;
 import com.novel.book.dto.req.BookCommentPageReqDto;
 import org.springdoc.core.annotations.ParameterObject;
 
@@ -26,11 +29,13 @@ import com.novel.book.job.BookRankCacheJob;
 @RestController
 @RequestMapping(ApiRouterConsts.API_FRONT_BOOK_URL_PREFIX)
 @RequiredArgsConstructor
+@Slf4j
 public class FrontBookController {
 
     private final BookSearchService bookSearchService;
     private final BookReadService bookReadService;
     private final BookRankCacheJob bookRankCacheJob;
+    private final AuditExperienceExtractService auditExperienceExtractService;
 
     /**
      * 手动触发小说点击榜缓存更新（测试用）
@@ -40,6 +45,24 @@ public class FrontBookController {
     public RestResp<Void> refreshVisitRankCache() {
         bookRankCacheJob.refreshVisitRankCache();
         return RestResp.ok();
+    }
+
+    /**
+     * 临时手动触发全量提炼审核经验标签（针对历史数据）
+     * http://localhost:8888/api/front/book/sync/extractAuditExperience
+     */
+    @Operation(summary = "临时手动触发全量提炼审核经验标签")
+    @GetMapping("sync/extractAuditExperience")
+    public RestResp<String> extractAuditExperience() {
+        log.info(">>> 收到全量提炼审核经验标签请求，开始异步执行任务");
+        CompletableFuture.runAsync(() -> {
+            try {
+                auditExperienceExtractService.extractAllMissingAuditExperience();
+            } catch (Exception e) {
+                log.error(">>> 异步任务执行全量提炼审核经验标签时发生异常", e);
+            }
+        });
+        return RestResp.ok("全量提炼审核经验标签任务已触发，正在后台执行，请观察后台日志");
     }
 
     /**

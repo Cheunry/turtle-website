@@ -121,30 +121,28 @@ public class BookReadServiceImpl implements BookReadService {
             .bookContent(bookChapter != null ? bookChapter.getContent() : null)
             .build();
             
-        // 5. 写入缓存 (只缓存榜单中的书籍，避免Redis内存占用过大)
+        // 5. 写入缓存（优化：所有书籍都缓存，非榜单书籍用较短 TTL）
         // 判断是否在榜单中：检查ZSet中是否存在该书籍ID
         try {
             if (data != null) {
                 Double zsetScore = stringRedisTemplate.opsForZSet().score(CacheConsts.BOOK_VISIT_RANK_ZSET, String.valueOf(bookId));
                 boolean isInRank = (zsetScore != null && zsetScore > 0);
-                
-                if (isInRank) {
-                    // 在榜单中，写入缓存
-                    String json = objectMapper.writeValueAsString(data);
-                    
-                    // 默认 12 小时 (连载中)
-                    long ttl = 43200L;
-                    if (bookInfo != null && Integer.valueOf(1).equals(bookInfo.getBookStatus())) {
-                        // 已完结：7天 (604800秒)
-                        ttl = 604800L;
-                    }
-                    
-                    stringRedisTemplate.opsForValue().set(cacheKey, json, ttl, TimeUnit.SECONDS);
-                    log.info(">>> 章节内容已写入 Redis，key={}，ttl={}s (榜单书籍)", cacheKey, ttl);
+
+                String json = objectMapper.writeValueAsString(data);
+
+                // 榜单书籍：连载中 12 小时，已完结 7 天
+                // 非榜单书籍：连载中 1 小时，已完结 6 小时
+                long ttl;
+                if (bookInfo != null && Integer.valueOf(1).equals(bookInfo.getBookStatus())) {
+                    // 已完结
+                    ttl = isInRank ? 604800L : 21600L;
                 } else {
-                    // 不在榜单中，不缓存
-                    log.debug(">>> 书籍不在榜单中，章节内容不缓存到Redis，bookId={}, chapterNum={}", bookId, chapterNum);
+                    // 连载中
+                    ttl = isInRank ? 43200L : 3600L;
                 }
+
+                stringRedisTemplate.opsForValue().set(cacheKey, json, ttl, TimeUnit.SECONDS);
+                log.info(">>> 章节内容已写入 Redis，key={}，ttl={}s (榜单书籍={})", cacheKey, ttl, isInRank);
             }
         } catch (Exception e) {
              log.error("写入章节内容缓存失败，key={}", cacheKey, e);
@@ -236,33 +234,31 @@ public class BookReadServiceImpl implements BookReadService {
                         .isVip(v.getIsVip()).build()
                 ).toList();
 
-        // 3. 写入缓存 (只缓存榜单中的书籍，避免Redis内存占用过大)
+        // 3. 写入缓存（优化：所有书籍都缓存，非榜单书籍用较短 TTL）
         // 判断是否在榜单中：检查ZSet中是否存在该书籍ID
         try {
             if (!CollectionUtils.isEmpty(list)) {
                 Double zsetScore = stringRedisTemplate.opsForZSet().score(CacheConsts.BOOK_VISIT_RANK_ZSET, String.valueOf(bookId));
                 boolean isInRank = (zsetScore != null && zsetScore > 0);
-                
-                if (isInRank) {
-                    // 在榜单中，写入缓存
-                    String json = objectMapper.writeValueAsString(list);
 
-                    // 查询书籍信息获取状态
-                    BookInfo bookInfo = bookInfoMapper.selectById(bookId);
-                    
-                    // 默认 1 小时 (连载中，让用户更快刷到新章节)
-                    long ttl = 3600L;
-                    if (bookInfo != null && Integer.valueOf(1).equals(bookInfo.getBookStatus())) {
-                        // 已完结：7天 (604800秒)
-                        ttl = 604800L;
-                    }
+                String json = objectMapper.writeValueAsString(list);
 
-                    stringRedisTemplate.opsForValue().set(cacheKey, json, ttl, TimeUnit.SECONDS);
-                    log.info(">>> 书籍目录已写入 Redis，key={}，ttl={}s (榜单书籍)", cacheKey, ttl);
+                // 查询书籍信息获取状态
+                BookInfo bookInfo = bookInfoMapper.selectById(bookId);
+
+                // 榜单书籍：连载中 1 小时，已完结 7 天
+                // 非榜单书籍：连载中 30 分钟，已完结 2 小时
+                long ttl;
+                if (bookInfo != null && Integer.valueOf(1).equals(bookInfo.getBookStatus())) {
+                    // 已完结
+                    ttl = isInRank ? 604800L : 7200L;
                 } else {
-                    // 不在榜单中，不缓存
-                    log.debug(">>> 书籍不在榜单中，目录不缓存到Redis，bookId={}", bookId);
+                    // 连载中
+                    ttl = isInRank ? 3600L : 1800L;
                 }
+
+                stringRedisTemplate.opsForValue().set(cacheKey, json, ttl, TimeUnit.SECONDS);
+                log.info(">>> 书籍目录已写入 Redis，key={}，ttl={}s (榜单书籍={})", cacheKey, ttl, isInRank);
             }
         } catch (Exception e) {
             log.error("写入书籍目录缓存失败，key={}", cacheKey, e);

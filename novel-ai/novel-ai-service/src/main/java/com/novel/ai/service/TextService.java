@@ -1,5 +1,7 @@
 package com.novel.ai.service;
 
+import com.novel.ai.dto.req.AuditRuleReqDto;
+import com.novel.ai.dto.resp.AuditRuleRespDto;
 import com.novel.ai.dto.req.TextPolishReqDto;
 import com.novel.ai.dto.resp.TextPolishRespDto;
 import com.novel.book.dto.req.BookAuditReqDto;
@@ -30,5 +32,10 @@ public interface TextService {
      * 获取小说封面生成提示词
      */
     RestResp<String> getBookCoverPrompt(BookCoverReqDto reqDto);
+
+    /**
+     * 提取审核经验规则
+     */
+    RestResp<com.novel.ai.dto.resp.AuditRuleRespDto> extractAuditRule(com.novel.ai.dto.req.AuditRuleReqDto reqDto);
 
 }

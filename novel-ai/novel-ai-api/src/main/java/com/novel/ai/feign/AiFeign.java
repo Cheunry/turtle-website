@@ -1,5 +1,7 @@
 package com.novel.ai.feign;
 
+import com.novel.ai.dto.req.AuditRuleReqDto;
+import com.novel.ai.dto.resp.AuditRuleRespDto;
 import com.novel.ai.dto.req.TextPolishReqDto;
 import com.novel.ai.dto.resp.TextPolishRespDto;
 import com.novel.book.dto.req.BookAuditReqDto;
@@ -52,6 +54,12 @@ public interface AiFeign {
     RestResp<String> generateImage(@RequestParam("prompt") String prompt);
 
 
+    /**
+     * 提取审核经验规则
+     */
+    @PostMapping(ApiRouterConsts.API_INNER_AI_URL_PREFIX + "/audit/extractRule")
+    RestResp<AuditRuleRespDto> extractAuditRule(@RequestBody AuditRuleReqDto req);
+
     @Component
     class AiFeignFallback implements AiFeign {
 
@@ -82,6 +90,11 @@ public interface AiFeign {
         @Override
         public RestResp<String> generateImage(String prompt) {
             // 降级处理：返回失败响应
+            return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR);
+        }
+
+        @Override
+        public RestResp<AuditRuleRespDto> extractAuditRule(AuditRuleReqDto req) {
             return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR);
         }
     }

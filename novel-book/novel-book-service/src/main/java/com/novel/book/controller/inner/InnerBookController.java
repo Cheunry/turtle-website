@@ -4,6 +4,8 @@ import com.novel.book.dto.req.*;
 import com.novel.book.dto.resp.BookChapterRespDto;
 import com.novel.book.dto.resp.BookEsRespDto;
 import com.novel.book.dto.resp.BookInfoRespDto;
+import com.novel.book.dto.resp.ContentAuditRespDto;
+import com.novel.book.service.BookAuditService;
 import com.novel.book.service.BookReadService;
 import com.novel.book.service.BookSearchService;
 import com.novel.book.service.BookAuthorService;
@@ -15,7 +17,10 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
+import java.util.concurrent.CompletableFuture;
+import com.novel.book.service.AuditExperienceExtractService;
 
 import java.util.List;
 
@@ -23,11 +28,40 @@ import java.util.List;
 @RestController
 @RequestMapping(ApiRouterConsts.API_INNER_BOOK_URL_PREFIX)
 @RequiredArgsConstructor
+@Slf4j
 public class InnerBookController {
 
     private final BookSearchService bookSearchService;
     private final BookAuthorService bookAuthorService;
     private final BookReadService bookReadService;
+    private final BookAuditService bookAuditService;
+    private final AuditExperienceExtractService auditExperienceExtractService;
+
+    /**
+     * 查询下一批审核经验数据（用于同步到ES向量库）
+     */
+    @Operation(summary = "查询下一批审核经验数据")
+    @PostMapping("listNextAuditExperience")
+    public RestResp<List<ContentAuditRespDto>> listNextAuditExperience(@Parameter(description = "已查询的最大ID") @RequestBody(required = false) Long maxId) {
+        return bookAuditService.listNextAuditExperience(maxId);
+    }
+
+    /**
+     * 临时手动触发全量提炼审核经验标签（针对历史数据）
+     */
+    @Operation(summary = "临时手动触发全量提炼审核经验标签")
+    @GetMapping("sync/extractAuditExperience")
+    public RestResp<String> extractAuditExperience() {
+        log.info(">>> 收到全量提炼审核经验标签请求，开始异步执行任务");
+        CompletableFuture.runAsync(() -> {
+            try {
+                auditExperienceExtractService.extractAllMissingAuditExperience();
+            } catch (Exception e) {
+                log.error(">>> 异步任务执行全量提炼审核经验标签时发生异常", e);
+            }
+        });
+        return RestResp.ok("全量提炼审核经验标签任务已触发，正在后台执行，请观察后台日志");
+    }
 
     /**
      * 查询下一批保存到 ES 中的小说列表

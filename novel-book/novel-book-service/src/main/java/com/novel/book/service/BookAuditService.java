@@ -39,5 +39,12 @@ public interface BookAuditService {
      */
     String extractShortReason(String fullReason, java.math.BigDecimal aiConfidence);
 
+    /**
+     * 查询下一批审核经验数据（用于同步到ES向量库）
+     * @param maxId 已查询的最大ID
+     * @return 审核经验数据列表
+     */
+    RestResp<java.util.List<com.novel.book.dto.resp.ContentAuditRespDto>> listNextAuditExperience(Long maxId);
+
 
 }
