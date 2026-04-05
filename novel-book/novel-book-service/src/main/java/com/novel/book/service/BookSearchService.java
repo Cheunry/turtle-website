@@ -63,22 +63,39 @@ public interface BookSearchService {
     RestResp<BookEsRespDto> getEsBookById(Long bookId);
 
     /**
-     * 小说点击榜查询
-     * @return 小说点击排行列表
+     * 小说点击榜（排行榜页表格，无封面简介）
      */
-    RestResp<List<BookRankRespDto>> listVisitRankBooks();
+    RestResp<List<BookRankTableRespDto>> listVisitRankBooks();
 
     /**
-     * 小说新书榜查询
-     * @return 小说新书排行列表
+     * 小说点击榜（首页侧栏，仅第一名含封面与简介预览）
      */
-    RestResp<List<BookRankRespDto>> listNewestRankBooks();
+    RestResp<List<BookRankHomeItemRespDto>> listVisitRankBooksHome();
 
     /**
-     * 小说更新榜查询
-     * @return 小说更新排行列表
+     * 小说新书榜（排行榜页表格）
      */
-    RestResp<List<BookRankRespDto>> listUpdateRankBooks();
+    RestResp<List<BookRankTableRespDto>> listNewestRankBooks();
+
+    /**
+     * 小说新书榜（首页侧栏）
+     */
+    RestResp<List<BookRankHomeItemRespDto>> listNewestRankBooksHome();
+
+    /**
+     * 小说更新榜（排行榜页表格）
+     */
+    RestResp<List<BookRankTableRespDto>> listUpdateRankBooks();
+
+    /**
+     * 小说更新榜（首页侧栏）
+     */
+    RestResp<List<BookRankHomeItemRespDto>> listUpdateRankBooksHome();
+
+    /**
+     * 首页「最新更新」表格
+     */
+    RestResp<List<BookHomeLatestUpdateRespDto>> listHomeLatestUpdates();
 
 
     /**

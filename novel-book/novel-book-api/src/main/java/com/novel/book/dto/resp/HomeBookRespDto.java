@@ -43,9 +43,9 @@ public class HomeBookRespDto {
     private String authorName;
 
     /**
-     * 书籍描述
+     * 书籍简介预览（与榜单一致：去 HTML 后最多 40 字，超出以「…」结尾）
      */
-    @Schema(description = "书籍描述")
+    @Schema(description = "书籍简介预览（纯文本，最多40字）")
     private String bookDesc;
 
 }

@@ -76,30 +76,66 @@ public class FrontBookController {
     }
 
     /**
-     * 小说点击榜查询接口
+     * 小说点击榜（排行榜页表格）
      */
-    @Operation(summary = "小说点击榜查询接口")
+    @Operation(summary = "小说点击榜（排行榜页表格）")
     @GetMapping("visit_rank")
-    public RestResp<List<BookRankRespDto>> listVisitRankBooks() {
+    public RestResp<List<BookRankTableRespDto>> listVisitRankBooks() {
         return bookSearchService.listVisitRankBooks();
     }
 
     /**
-     * 小说新书榜查询接口
+     * 小说点击榜（首页侧栏，仅第一名含封面与简介预览）
      */
-    @Operation(summary = "小说新书榜查询接口")
+    @Operation(summary = "小说点击榜（首页侧栏）")
+    @GetMapping("visit_rank/home")
+    public RestResp<List<BookRankHomeItemRespDto>> listVisitRankBooksHome() {
+        return bookSearchService.listVisitRankBooksHome();
+    }
+
+    /**
+     * 小说新书榜（排行榜页表格）
+     */
+    @Operation(summary = "小说新书榜（排行榜页表格）")
     @GetMapping("newest_rank")
-    public RestResp<List<BookRankRespDto>> listNewestRankBooks() {
+    public RestResp<List<BookRankTableRespDto>> listNewestRankBooks() {
         return bookSearchService.listNewestRankBooks();
     }
 
     /**
-     * 小说更新榜查询接口
+     * 小说新书榜（首页侧栏）
      */
-    @Operation(summary = "小说更新榜查询接口")
+    @Operation(summary = "小说新书榜（首页侧栏）")
+    @GetMapping("newest_rank/home")
+    public RestResp<List<BookRankHomeItemRespDto>> listNewestRankBooksHome() {
+        return bookSearchService.listNewestRankBooksHome();
+    }
+
+    /**
+     * 小说更新榜（排行榜页表格）
+     */
+    @Operation(summary = "小说更新榜（排行榜页表格）")
     @GetMapping("update_rank")
-    public RestResp<List<BookRankRespDto>> listUpdateRankBooks() {
+    public RestResp<List<BookRankTableRespDto>> listUpdateRankBooks() {
         return bookSearchService.listUpdateRankBooks();
+    }
+
+    /**
+     * 小说更新榜（首页侧栏）
+     */
+    @Operation(summary = "小说更新榜（首页侧栏）")
+    @GetMapping("update_rank/home")
+    public RestResp<List<BookRankHomeItemRespDto>> listUpdateRankBooksHome() {
+        return bookSearchService.listUpdateRankBooksHome();
+    }
+
+    /**
+     * 首页「最新更新」表格
+     */
+    @Operation(summary = "首页最新更新列表")
+    @GetMapping("home/latest_updates")
+    public RestResp<List<BookHomeLatestUpdateRespDto>> listHomeLatestUpdates() {
+        return bookSearchService.listHomeLatestUpdates();
     }
 
     /**

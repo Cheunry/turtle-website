@@ -400,7 +400,7 @@ public class BookSearchServiceImpl implements BookSearchService {
                             homeBookRespDto.setBookName(bookInfo.getBookName());
                             homeBookRespDto.setPicUrl(bookInfo.getPicUrl());
                             homeBookRespDto.setAuthorName(bookInfo.getAuthorName());
-                            homeBookRespDto.setBookDesc(bookInfo.getBookDesc());
+                            homeBookRespDto.setBookDesc(RankBookDescUtils.toRankPreview(bookInfo.getBookDesc()));
                             return homeBookRespDto;
                         }).toList();
             }
@@ -483,85 +483,261 @@ public class BookSearchServiceImpl implements BookSearchService {
     }
 
 
-    /**
-     * 获取最多访问的书籍列表
-     * @return 最多访问的书籍列表
-     */
+    private static final int RANK_PAGE_LIMIT = 30;
+    private static final int RANK_HOME_LIMIT = 10;
+
     @Override
-    public RestResp<List<BookRankRespDto>> listVisitRankBooks() {
-        // 1. 从 Redis ZSet 获取点击榜前 30 名 ID
-        Set<String> bookIdSet = stringRedisTemplate.opsForZSet().reverseRange(CacheConsts.BOOK_VISIT_RANK_ZSET, 0, 29);
-
-        // 2. 如果 Redis 中没有数据，降级为直接查询数据库
+    public RestResp<List<BookRankTableRespDto>> listVisitRankBooks() {
+        Set<String> bookIdSet = stringRedisTemplate.opsForZSet().reverseRange(
+                CacheConsts.BOOK_VISIT_RANK_ZSET, 0, RANK_PAGE_LIMIT - 1);
         if (CollectionUtils.isEmpty(bookIdSet)) {
-            QueryWrapper<BookInfo> bookInfoQueryWrapper = new QueryWrapper<>();
-            bookInfoQueryWrapper.orderByDesc(DatabaseConsts.BookTable.COLUMN_VISIT_COUNT);
-            return RestResp.ok(listRankBooks(bookInfoQueryWrapper));
+            QueryWrapper<BookInfo> qw = new QueryWrapper<>();
+            qw.orderByDesc(DatabaseConsts.BookTable.COLUMN_VISIT_COUNT);
+            return RestResp.ok(listRankTableFromDb(qw, RANK_PAGE_LIMIT));
         }
+        return RestResp.ok(loadVisitRankTableFromRedis(new ArrayList<>(bookIdSet)));
+    }
 
-        // 3. 使用 Pipeline 批量获取书籍详情 (将 30 次 IO 优化为 1 次)
-        List<Object> results = stringRedisTemplate.executePipelined((RedisCallback<Object>) connection -> {
-            RedisSerializer<String> serializer = stringRedisTemplate.getStringSerializer();
-            for (String bookIdStr : bookIdSet) {
-                String key = CacheConsts.BOOK_INFO_HASH_PREFIX + bookIdStr;
-                // 使用新的命令接口
-                connection.hashCommands().hGetAll(serializer.serialize(key));
+    @Override
+    public RestResp<List<BookRankHomeItemRespDto>> listVisitRankBooksHome() {
+        Set<String> bookIdSet = stringRedisTemplate.opsForZSet().reverseRange(
+                CacheConsts.BOOK_VISIT_RANK_ZSET, 0, RANK_HOME_LIMIT - 1);
+        if (CollectionUtils.isEmpty(bookIdSet)) {
+            QueryWrapper<BookInfo> qw = new QueryWrapper<>();
+            qw.orderByDesc(DatabaseConsts.BookTable.COLUMN_VISIT_COUNT);
+            return RestResp.ok(listRankHomeFromDb(qw, RANK_HOME_LIMIT));
+        }
+        return RestResp.ok(loadVisitRankHomeFromRedis(new ArrayList<>(bookIdSet)));
+    }
+
+    @Override
+    public RestResp<List<BookRankTableRespDto>> listNewestRankBooks() {
+        QueryWrapper<BookInfo> qw = new QueryWrapper<>();
+        qw.gt(DatabaseConsts.BookTable.COLUMN_WORD_COUNT, 0)
+                .orderByDesc(DatabaseConsts.CommonColumnEnum.CREATE_TIME.getName());
+        return RestResp.ok(listRankTableFromDb(qw, RANK_PAGE_LIMIT));
+    }
+
+    @Override
+    public RestResp<List<BookRankHomeItemRespDto>> listNewestRankBooksHome() {
+        QueryWrapper<BookInfo> qw = new QueryWrapper<>();
+        qw.gt(DatabaseConsts.BookTable.COLUMN_WORD_COUNT, 0)
+                .orderByDesc(DatabaseConsts.CommonColumnEnum.CREATE_TIME.getName());
+        return RestResp.ok(listRankHomeFromDb(qw, RANK_HOME_LIMIT));
+    }
+
+    @Override
+    public RestResp<List<BookRankTableRespDto>> listUpdateRankBooks() {
+        QueryWrapper<BookInfo> qw = new QueryWrapper<>();
+        qw.gt(DatabaseConsts.BookTable.COLUMN_WORD_COUNT, 0)
+                .orderByDesc(DatabaseConsts.CommonColumnEnum.UPDATE_TIME.getName());
+        return RestResp.ok(listRankTableFromDb(qw, RANK_PAGE_LIMIT));
+    }
+
+    @Override
+    public RestResp<List<BookRankHomeItemRespDto>> listUpdateRankBooksHome() {
+        QueryWrapper<BookInfo> qw = new QueryWrapper<>();
+        qw.gt(DatabaseConsts.BookTable.COLUMN_WORD_COUNT, 0)
+                .orderByDesc(DatabaseConsts.CommonColumnEnum.UPDATE_TIME.getName());
+        return RestResp.ok(listRankHomeFromDb(qw, RANK_HOME_LIMIT));
+    }
+
+    @Override
+    public RestResp<List<BookHomeLatestUpdateRespDto>> listHomeLatestUpdates() {
+        QueryWrapper<BookInfo> qw = new QueryWrapper<>();
+        qw.gt(DatabaseConsts.BookTable.COLUMN_WORD_COUNT, 0)
+                .eq("audit_status", 1)
+                .orderByDesc(DatabaseConsts.CommonColumnEnum.UPDATE_TIME.getName())
+                .last(DatabaseConsts.SqlEnum.LIMIT_30.getSql());
+        List<BookInfo> rows = bookInfoMapper.selectList(qw);
+        return RestResp.ok(rows.stream().map(this::toHomeLatestUpdateDto).toList());
+    }
+
+    private BookHomeLatestUpdateRespDto toHomeLatestUpdateDto(BookInfo b) {
+        BookHomeLatestUpdateRespDto dto = new BookHomeLatestUpdateRespDto();
+        dto.setId(b.getId());
+        dto.setCategoryName(b.getCategoryName());
+        dto.setBookName(b.getBookName());
+        dto.setLastChapterName(b.getLastChapterName());
+        dto.setAuthorName(b.getAuthorName());
+        dto.setLastChapterUpdateTime(b.getLastChapterUpdateTime());
+        return dto;
+    }
+
+    private List<BookRankTableRespDto> listRankTableFromDb(QueryWrapper<BookInfo> qw, int limit) {
+        qw.gt(DatabaseConsts.BookTable.COLUMN_WORD_COUNT, 0)
+                .eq("audit_status", 1)
+                .last("limit " + limit);
+        List<BookInfo> rows = bookInfoMapper.selectList(qw);
+        List<BookRankTableRespDto> out = new ArrayList<>();
+        int rank = 1;
+        for (BookInfo b : rows) {
+            out.add(toRankTableDto(b, rank++));
+        }
+        return out;
+    }
+
+    private List<BookRankHomeItemRespDto> listRankHomeFromDb(QueryWrapper<BookInfo> qw, int limit) {
+        qw.gt(DatabaseConsts.BookTable.COLUMN_WORD_COUNT, 0)
+                .eq("audit_status", 1)
+                .last("limit " + limit);
+        List<BookInfo> rows = bookInfoMapper.selectList(qw);
+        return mapDbBooksToHomeRankItems(rows);
+    }
+
+    private List<BookRankHomeItemRespDto> mapDbBooksToHomeRankItems(List<BookInfo> rows) {
+        List<BookRankHomeItemRespDto> out = new ArrayList<>();
+        for (int i = 0; i < rows.size(); i++) {
+            BookInfo b = rows.get(i);
+            BookRankHomeItemRespDto dto = new BookRankHomeItemRespDto();
+            dto.setRank(i + 1);
+            dto.setId(b.getId());
+            dto.setBookName(b.getBookName());
+            if (i == 0) {
+                dto.setPicUrl(b.getPicUrl());
+                dto.setBookDesc(RankBookDescUtils.toRankPreview(b.getBookDesc()));
+            }
+            out.add(dto);
+        }
+        return out;
+    }
+
+    private BookRankTableRespDto toRankTableDto(BookInfo b, int rank) {
+        BookRankTableRespDto dto = new BookRankTableRespDto();
+        dto.setRank(rank);
+        dto.setId(b.getId());
+        dto.setCategoryName(b.getCategoryName());
+        dto.setBookName(b.getBookName());
+        dto.setLastChapterName(b.getLastChapterName());
+        dto.setAuthorName(b.getAuthorName());
+        dto.setWordCount(b.getWordCount());
+        return dto;
+    }
+
+    private List<BookRankTableRespDto> loadVisitRankTableFromRedis(List<String> bookIdStrList) {
+        List<Object> pipelineResults = stringRedisTemplate.executePipelined((RedisCallback<Object>) connection -> {
+            RedisSerializer<String> ser = stringRedisTemplate.getStringSerializer();
+            for (String bookIdStr : bookIdStrList) {
+                byte[] key = ser.serialize(CacheConsts.BOOK_INFO_HASH_PREFIX + bookIdStr);
+                connection.hashCommands().hMGet(key,
+                        ser.serialize("categoryName"),
+                        ser.serialize("bookName"),
+                        ser.serialize("lastChapterName"),
+                        ser.serialize("authorName"),
+                        ser.serialize("wordCount"));
             }
             return null;
         });
-
-        List<BookRankRespDto> resultList = new ArrayList<>();
-        int i = 0;
-        for (String bookIdStr : bookIdSet) {
-            Long bookId = Long.valueOf(bookIdStr);
-            // 获取 Pipeline 结果
+        List<BookRankTableRespDto> out = new ArrayList<>();
+        for (int i = 0; i < bookIdStrList.size(); i++) {
+            long bookId = Long.parseLong(bookIdStrList.get(i));
+            int rank = i + 1;
             @SuppressWarnings("unchecked")
-            Map<Object, Object> bookInfoMap = (Map<Object, Object>) results.get(i++);
-
-            if (!CollectionUtils.isEmpty(bookInfoMap)) {
-                log.debug(">>> 点击榜详情命中 Redis Hash 缓存，bookId={}", bookId);
-                BookRankRespDto dto = convertMapToBookRankRespDto(bookId, bookInfoMap);
-                if (dto != null) {
-                    resultList.add(dto);
-                }
+            List<Object> vals = (List<Object>) pipelineResults.get(i);
+            BookRankTableRespDto row = parseTableRowFromHmget(bookId, rank, vals);
+            if (row != null && row.getBookName() != null) {
+                out.add(row);
             } else {
-                // 缓存未命中（说明该书不在 Top 50 预热范围内，或者缓存已失效），回源查询 DB
-                // 注意：这里仍然可能是循环查库，但通常 Top 榜单的数据都有预热，命中率较高
-                log.info(">>> 点击榜详情未命中缓存（或不在 Top 50），回源查询 DB，bookId={}", bookId);
-                BookInfo bookInfo = bookInfoMapper.selectById(bookId);
-                if (bookInfo != null) {
-                    resultList.add(convertToBookRankRespDto(bookInfo));
+                BookInfo b = bookInfoMapper.selectById(bookId);
+                if (b != null) {
+                    out.add(toRankTableDto(b, rank));
                 }
             }
         }
-        return RestResp.ok(resultList);
+        return out;
     }
 
-    /**
-     * 获取最近发布的书籍列表
-     * @return 最近发布的书籍列表
-     */
-    @Override
-    public RestResp<List<BookRankRespDto>> listNewestRankBooks() {
-
-        QueryWrapper<BookInfo> bookInfoQueryWrapper = new QueryWrapper<>();
-        bookInfoQueryWrapper
-                .gt(DatabaseConsts.BookTable.COLUMN_WORD_COUNT, 0)
-                .orderByDesc(DatabaseConsts.CommonColumnEnum.CREATE_TIME.getName());
-        return RestResp.ok(listRankBooks(bookInfoQueryWrapper));
+    private List<BookRankHomeItemRespDto> loadVisitRankHomeFromRedis(List<String> bookIdStrList) {
+        List<Object> pipelineResults = stringRedisTemplate.executePipelined((RedisCallback<Object>) connection -> {
+            RedisSerializer<String> ser = stringRedisTemplate.getStringSerializer();
+            for (int i = 0; i < bookIdStrList.size(); i++) {
+                String bookIdStr = bookIdStrList.get(i);
+                byte[] key = ser.serialize(CacheConsts.BOOK_INFO_HASH_PREFIX + bookIdStr);
+                if (i == 0) {
+                    connection.hashCommands().hMGet(key,
+                            ser.serialize("bookName"),
+                            ser.serialize("picUrl"),
+                            ser.serialize("bookDesc"));
+                } else {
+                    connection.hashCommands().hMGet(key, ser.serialize("bookName"));
+                }
+            }
+            return null;
+        });
+        List<BookRankHomeItemRespDto> out = new ArrayList<>();
+        for (int i = 0; i < bookIdStrList.size(); i++) {
+            long bookId = Long.parseLong(bookIdStrList.get(i));
+            int rank = i + 1;
+            @SuppressWarnings("unchecked")
+            List<Object> vals = (List<Object>) pipelineResults.get(i);
+            BookRankHomeItemRespDto row = parseHomeRowFromHmget(bookId, rank, vals, i == 0);
+            if (row != null && row.getBookName() != null) {
+                out.add(row);
+            } else {
+                BookInfo b = bookInfoMapper.selectById(bookId);
+                if (b != null) {
+                    out.add(singleDbBookToHomeItem(b, rank, i == 0));
+                }
+            }
+        }
+        return out;
     }
 
-    /**
-     * 获取最近更新的书籍列表
-     * @return 最近更新的书籍列表
-     */
-    @Override
-    public RestResp<List<BookRankRespDto>> listUpdateRankBooks() {
-        QueryWrapper<BookInfo> bookInfoQueryWrapper = new QueryWrapper<>();
-        bookInfoQueryWrapper
-                .gt(DatabaseConsts.BookTable.COLUMN_WORD_COUNT, 0)
-                .orderByDesc(DatabaseConsts.CommonColumnEnum.UPDATE_TIME.getName());
-        return RestResp.ok(listRankBooks(bookInfoQueryWrapper));
+    private BookRankHomeItemRespDto singleDbBookToHomeItem(BookInfo b, int rank, boolean top) {
+        BookRankHomeItemRespDto dto = new BookRankHomeItemRespDto();
+        dto.setRank(rank);
+        dto.setId(b.getId());
+        dto.setBookName(b.getBookName());
+        if (top) {
+            dto.setPicUrl(b.getPicUrl());
+            dto.setBookDesc(RankBookDescUtils.toRankPreview(b.getBookDesc()));
+        }
+        return dto;
+    }
+
+    private BookRankTableRespDto parseTableRowFromHmget(long bookId, int rank, List<Object> vals) {
+        if (vals == null || vals.size() < 5) {
+            return null;
+        }
+        BookRankTableRespDto dto = new BookRankTableRespDto();
+        dto.setRank(rank);
+        dto.setId(bookId);
+        dto.setCategoryName(stringVal(vals.get(0)));
+        dto.setBookName(stringVal(vals.get(1)));
+        dto.setLastChapterName(stringVal(vals.get(2)));
+        dto.setAuthorName(stringVal(vals.get(3)));
+        dto.setWordCount(parseIntWordCount(vals.get(4)));
+        return dto;
+    }
+
+    private BookRankHomeItemRespDto parseHomeRowFromHmget(long bookId, int rank, List<Object> vals, boolean top) {
+        if (vals == null || vals.isEmpty()) {
+            return null;
+        }
+        BookRankHomeItemRespDto dto = new BookRankHomeItemRespDto();
+        dto.setRank(rank);
+        dto.setId(bookId);
+        dto.setBookName(stringVal(vals.get(0)));
+        if (top && vals.size() >= 3) {
+            dto.setPicUrl(stringVal(vals.get(1)));
+            dto.setBookDesc(RankBookDescUtils.toRankPreview(stringVal(vals.get(2))));
+        }
+        return dto;
+    }
+
+    private static String stringVal(Object o) {
+        return o == null ? null : Objects.toString(o, null);
+    }
+
+    private static Integer parseIntWordCount(Object o) {
+        if (o == null) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(o.toString().trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
 
@@ -650,83 +826,6 @@ public class BookSearchServiceImpl implements BookSearchService {
     }
 
 
-
-    /**
-     * 书籍榜单列表
-     * @param bookInfoQueryWrapper 数据库获取的书籍榜单列表
-     * @return 排行榜列表
-     */
-    private List<BookRankRespDto> listRankBooks(QueryWrapper<BookInfo> bookInfoQueryWrapper) {
-        bookInfoQueryWrapper
-                .gt(DatabaseConsts.BookTable.COLUMN_WORD_COUNT, 0)
-                .eq("audit_status", 1) // 只查询审核通过的书籍
-                .last(DatabaseConsts.SqlEnum.LIMIT_30.getSql());
-        return bookInfoMapper.selectList(bookInfoQueryWrapper).stream()
-                .map(this::convertToBookRankRespDto)
-                .toList();
-    }
-
-    /**
-     * 将 BookInfo 转换为 BookRankRespDto
-     * @param bookInfo 书籍信息实体
-     * @return 排行榜 DTO
-     */
-    private BookRankRespDto convertToBookRankRespDto(BookInfo bookInfo) {
-        BookRankRespDto dto = new BookRankRespDto();
-        dto.setId(bookInfo.getId());
-        dto.setCategoryId(bookInfo.getCategoryId());
-        dto.setCategoryName(bookInfo.getCategoryName());
-        dto.setBookName(bookInfo.getBookName());
-        dto.setAuthorName(bookInfo.getAuthorName());
-        dto.setPicUrl(bookInfo.getPicUrl());
-        dto.setBookDesc(RankBookDescUtils.toRankPreview(bookInfo.getBookDesc()));
-        dto.setLastChapterName(bookInfo.getLastChapterName());
-        dto.setLastChapterUpdateTime(bookInfo.getLastChapterUpdateTime());
-        dto.setWordCount(bookInfo.getWordCount());
-        return dto;
-    }
-
-    /**
-     * 将 Redis Hash Map 转换为 BookRankRespDto
-     * @param bookId 书籍ID
-     * @param bookInfoMap Redis Hash Map
-     * @return 排行榜 DTO，如果转换失败返回 null
-     */
-    private BookRankRespDto convertMapToBookRankRespDto(Long bookId, Map<Object, Object> bookInfoMap) {
-        try {
-            BookRankRespDto dto = new BookRankRespDto();
-            dto.setId(bookId);
-            dto.setBookName((String) bookInfoMap.get("bookName"));
-            dto.setAuthorName((String) bookInfoMap.get("authorName"));
-            dto.setPicUrl((String) bookInfoMap.get("picUrl"));
-            dto.setBookDesc(RankBookDescUtils.toRankPreview((String) bookInfoMap.get("bookDesc")));
-            dto.setCategoryName((String) bookInfoMap.get("categoryName"));
-            dto.setLastChapterName((String) bookInfoMap.get("lastChapterName"));
-
-            String wordCountStr = (String) bookInfoMap.get("wordCount");
-            if (wordCountStr != null) {
-                dto.setWordCount(Integer.parseInt(wordCountStr));
-            }
-
-            String categoryIdStr = (String) bookInfoMap.get("categoryId");
-            if (categoryIdStr != null) {
-                dto.setCategoryId(Long.parseLong(categoryIdStr));
-            }
-
-            String updateTimeStr = (String) bookInfoMap.get("lastChapterUpdateTime");
-            if (updateTimeStr != null) {
-                try {
-                    dto.setLastChapterUpdateTime(LocalDateTime.parse(updateTimeStr, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
-                } catch (Exception e) {
-                    log.warn("解析更新时间失败，bookId={}, updateTimeStr={}", bookId, updateTimeStr);
-                }
-            }
-            return dto;
-        } catch (Exception e) {
-            log.error("转换 Redis Hash Map 为 BookRankRespDto 失败，bookId={}", bookId, e);
-            return null;
-        }
-    }
 
     /**
      * 将 BookInfo 转换为 BookEsRespDto
