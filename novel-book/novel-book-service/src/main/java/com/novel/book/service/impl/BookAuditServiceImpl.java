@@ -26,6 +26,8 @@ import org.apache.rocketmq.spring.core.RocketMQTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -94,6 +96,26 @@ public class BookAuditServiceImpl implements BookAuditService {
                 .orderByDesc("id")
                 .last("LIMIT 1");
         return contentAuditMapper.selectOne(queryWrapper);
+    }
+
+    /**
+     * 事务提交后再执行（避免 MQ/Redis/Feign 占用数据库连接）。无活跃事务时立即执行。
+     */
+    private void runAfterCommit(Runnable action) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    try {
+                        action.run();
+                    } catch (Exception e) {
+                        log.error("事务提交后回调执行失败", e);
+                    }
+                }
+            });
+        } else {
+            action.run();
+        }
     }
 
     @Override
@@ -202,42 +224,29 @@ public class BookAuditServiceImpl implements BookAuditService {
                 log.error("更新书籍最新章节信息失败，书籍ID: {}", bookChapter.getBookId(), e);
             }
 
-            // 审核通过后，清除章节目录缓存，使读者立即可见新章节
-            try {
-                String chapterCacheKey = CacheConsts.BOOK_CHAPTER_CACHE_NAME + "::" + bookChapter.getBookId();
-                stringRedisTemplate.delete(chapterCacheKey);
-                log.debug("已清除书籍章节目录缓存，bookId: {}, cacheKey: {}", bookChapter.getBookId(), chapterCacheKey);
-            } catch (Exception e) {
-                log.warn("清除章节目录缓存失败，bookId: {}, 不影响业务", bookChapter.getBookId(), e);
-            }
-
-            // 审核通过后，清除章节内容缓存，使读者立即看到更新后的内容
-            try {
-                String contentCacheKey = CacheConsts.BOOK_CONTENT_CACHE_NAME + "::content:" + bookChapter.getBookId() + ":" + bookChapter.getChapterNum();
-                stringRedisTemplate.delete(contentCacheKey);
-                log.debug("已清除章节内容缓存，bookId: {}, chapterNum: {}, cacheKey: {}", bookChapter.getBookId(), bookChapter.getChapterNum(), contentCacheKey);
-            } catch (Exception e) {
-                log.warn("清除章节内容缓存失败，bookId: {}, chapterNum: {}, 不影响业务", bookChapter.getBookId(), bookChapter.getChapterNum(), e);
-            }
-            
-            // 审核通过后发送ES消息
-            try {
-                sendBookChangeMsg(bookChapter.getBookId());
-                log.info("章节[{}]审核通过，已发送ES更新消息", chapterId);
-            } catch (Exception e) {
-                log.error("发送ES消息失败，书籍ID: {}", bookChapter.getBookId(), e);
-            }
-            
-            // 审核通过后发送消息给作者
-            try {
-                BookInfo bookInfo = bookInfoMapper.selectById(bookChapter.getBookId());
-                if (bookInfo != null) {
-                    sendAuditPassMessageToAuthor(bookChapter.getBookId(), 
-                            bookInfo.getBookName() + " - " + bookChapter.getChapterName(), false);
-                    log.info("章节[{}]审核通过，已发送消息给作者", chapterId);
+            final Long passBookId = bookChapter.getBookId();
+            final Integer passChapterNum = bookChapter.getChapterNum();
+            runAfterCommit(() -> {
+                try {
+                    stringRedisTemplate.delete(CacheConsts.BOOK_CHAPTER_CACHE_NAME + "::" + passBookId);
+                    log.debug("已清除书籍章节目录缓存，bookId: {}", passBookId);
+                } catch (Exception e) {
+                    log.warn("清除章节目录缓存失败，bookId: {}", passBookId, e);
                 }
-            } catch (Exception e) {
-                log.error("发送消息给作者失败，章节ID: {}", chapterId, e);
+                try {
+                    stringRedisTemplate.delete(CacheConsts.BOOK_CONTENT_CACHE_NAME + "::content:" + passBookId + ":" + passChapterNum);
+                    log.debug("已清除章节内容缓存，bookId: {}, chapterNum: {}", passBookId, passChapterNum);
+                } catch (Exception e) {
+                    log.warn("清除章节内容缓存失败，bookId: {}, chapterNum: {}", passBookId, passChapterNum, e);
+                }
+            });
+
+            sendBookChangeMsg(bookChapter.getBookId());
+
+            BookInfo bookInfo = bookInfoMapper.selectById(bookChapter.getBookId());
+            if (bookInfo != null) {
+                sendAuditPassMessageToAuthor(bookChapter.getBookId(),
+                        bookInfo.getBookName() + " - " + bookChapter.getChapterName(), false);
             }
             
             log.info("章节[{}]AI审核通过，置信度: {}，已更新审核表和章节表", chapterId, aiConfidence);
@@ -277,14 +286,16 @@ public class BookAuditServiceImpl implements BookAuditService {
                 log.error("更新章节表失败，章节ID: {}, 错误信息: {}", chapterId, e.getMessage(), e);
             }
 
-            // 审核不通过后，删除章节内容缓存，防止读者看到不应可见的内容
-            try {
-                String contentCacheKey = CacheConsts.BOOK_CONTENT_CACHE_NAME + "::content:" + bookChapter.getBookId() + ":" + bookChapter.getChapterNum();
-                stringRedisTemplate.delete(contentCacheKey);
-                log.info("AI审核不通过，已删除章节内容缓存，bookId: {}, chapterNum: {}", bookChapter.getBookId(), bookChapter.getChapterNum());
-            } catch (Exception e) {
-                log.warn("删除章节内容缓存失败，bookId: {}, chapterNum: {}, 不影响业务", bookChapter.getBookId(), bookChapter.getChapterNum(), e);
-            }
+            final Long rejectBookId = bookChapter.getBookId();
+            final Integer rejectChapterNum = bookChapter.getChapterNum();
+            runAfterCommit(() -> {
+                try {
+                    stringRedisTemplate.delete(CacheConsts.BOOK_CONTENT_CACHE_NAME + "::content:" + rejectBookId + ":" + rejectChapterNum);
+                    log.info("AI审核不通过，已删除章节内容缓存，bookId: {}, chapterNum: {}", rejectBookId, rejectChapterNum);
+                } catch (Exception e) {
+                    log.warn("删除章节内容缓存失败，bookId: {}, chapterNum: {}", rejectBookId, rejectChapterNum, e);
+                }
+            });
 
             log.warn("章节[{}]AI审核不通过，原因: {}，已更新审核表和章节表", chapterId, shortReason);
         }
@@ -388,24 +399,9 @@ public class BookAuditServiceImpl implements BookAuditService {
             }
             
             log.info("书籍[{}]AI审核通过，置信度: {}，已更新审核表和书籍表", bookId, aiConfidence);
-            
-            // 审核通过后发送ES消息（新增和更新都发送）
-            try {
-                sendBookChangeMsg(bookId);
-                log.info("书籍[{}]审核通过，已发送ES更新消息", bookId);
-            } catch (Exception e) {
-                log.error("发送ES消息失败，书籍ID: {}", bookId, e);
-                // ES消息发送失败不影响审核结果
-            }
-            
-            // 审核通过后发送消息给作者
-            try {
-                sendAuditPassMessageToAuthor(bookId, bookInfo.getBookName(), true);
-                log.info("书籍[{}]审核通过，已发送消息给作者", bookId);
-            } catch (Exception e) {
-                log.error("发送消息给作者失败，书籍ID: {}", bookId, e);
-                // 消息发送失败不影响审核结果
-            }
+
+            sendBookChangeMsg(bookId);
+            sendAuditPassMessageToAuthor(bookId, bookInfo.getBookName(), true);
 
         } else if (isPassed && !isHighConfidence) {
             // 情况2：AI审核通过但置信度低 -> 更新审核表为待人工审核，书籍表保持待审核状态
@@ -509,26 +505,11 @@ public class BookAuditServiceImpl implements BookAuditService {
             // 更新书籍表
             updateBookFromAudit(audit.getDataSourceId(), auditStatus, auditReason);
             
-            // 如果审核通过，发送ES消息（新增和更新都发送）
             if (AUDIT_STATUS_PASSED.equals(auditStatus)) {
-                try {
-                    sendBookChangeMsg(audit.getDataSourceId());
-                    log.info("人工审核通过，书籍[{}]已发送ES更新消息", audit.getDataSourceId());
-                } catch (Exception e) {
-                    log.error("发送ES消息失败，书籍ID: {}", audit.getDataSourceId(), e);
-                    // ES消息发送失败不影响审核结果
-                }
-                
-                // 审核通过后发送消息给作者
-                try {
-                    BookInfo bookInfo = bookInfoMapper.selectById(audit.getDataSourceId());
-                    if (bookInfo != null) {
-                        sendAuditPassMessageToAuthor(bookInfo.getId(), bookInfo.getBookName(), true);
-                        log.info("人工审核通过，书籍[{}]已发送消息给作者", audit.getDataSourceId());
-                    }
-                } catch (Exception e) {
-                    log.error("发送消息给作者失败，书籍ID: {}", audit.getDataSourceId(), e);
-                    // 消息发送失败不影响审核结果
+                sendBookChangeMsg(audit.getDataSourceId());
+                BookInfo bookInfoRow = bookInfoMapper.selectById(audit.getDataSourceId());
+                if (bookInfoRow != null) {
+                    sendAuditPassMessageToAuthor(bookInfoRow.getId(), bookInfoRow.getBookName(), true);
                 }
             }
         } else if (DATA_SOURCE_BOOK_CHAPTER.equals(audit.getDataSource())) {
@@ -546,55 +527,43 @@ public class BookAuditServiceImpl implements BookAuditService {
                         log.error("更新书籍最新章节信息失败，章节ID: {}", audit.getDataSourceId(), e);
                     }
 
-                    // 审核通过后，清除章节目录缓存，使读者立即可见新章节
-                    try {
-                        String chapterCacheKey = CacheConsts.BOOK_CHAPTER_CACHE_NAME + "::" + chapter.getBookId();
-                        stringRedisTemplate.delete(chapterCacheKey);
-                        log.info("人工审核通过，已清除书籍章节目录缓存，bookId: {}", chapter.getBookId());
-                    } catch (Exception e) {
-                        log.warn("清除章节目录缓存失败，bookId: {}, 不影响业务", chapter.getBookId(), e);
-                    }
-
-                    // 审核通过后，清除章节内容缓存，使读者立即看到更新后的内容
-                    try {
-                        String contentCacheKey = CacheConsts.BOOK_CONTENT_CACHE_NAME + "::content:" + chapter.getBookId() + ":" + chapter.getChapterNum();
-                        stringRedisTemplate.delete(contentCacheKey);
-                        log.info("人工审核通过，已清除章节内容缓存，bookId: {}, chapterNum: {}", chapter.getBookId(), chapter.getChapterNum());
-                    } catch (Exception e) {
-                        log.warn("清除章节内容缓存失败，bookId: {}, chapterNum: {}, 不影响业务", chapter.getBookId(), chapter.getChapterNum(), e);
-                    }
-
-                    try {
-                        sendBookChangeMsg(chapter.getBookId());
-                        log.info("人工审核通过，章节[{}]已发送ES更新消息", audit.getDataSourceId());
-                    } catch (Exception e) {
-                        log.error("发送ES消息失败，章节ID: {}", audit.getDataSourceId(), e);
-                        // ES消息发送失败不影响审核结果
-                    }
-                    
-                    // 审核通过后发送消息给作者
-                    try {
-                        BookInfo bookInfo = bookInfoMapper.selectById(chapter.getBookId());
-                        if (bookInfo != null) {
-                            sendAuditPassMessageToAuthor(chapter.getBookId(), 
-                                    bookInfo.getBookName() + " - " + chapter.getChapterName(), false);
-                            log.info("人工审核通过，章节[{}]已发送消息给作者", audit.getDataSourceId());
+                    final Long manBookId = chapter.getBookId();
+                    final Integer manChapterNum = chapter.getChapterNum();
+                    runAfterCommit(() -> {
+                        try {
+                            stringRedisTemplate.delete(CacheConsts.BOOK_CHAPTER_CACHE_NAME + "::" + manBookId);
+                            log.info("人工审核通过，已清除书籍章节目录缓存，bookId: {}", manBookId);
+                        } catch (Exception e) {
+                            log.warn("清除章节目录缓存失败，bookId: {}", manBookId, e);
                         }
-                    } catch (Exception e) {
-                        log.error("发送消息给作者失败，章节ID: {}", audit.getDataSourceId(), e);
-                        // 消息发送失败不影响审核结果
+                        try {
+                            stringRedisTemplate.delete(CacheConsts.BOOK_CONTENT_CACHE_NAME + "::content:" + manBookId + ":" + manChapterNum);
+                            log.info("人工审核通过，已清除章节内容缓存，bookId: {}, chapterNum: {}", manBookId, manChapterNum);
+                        } catch (Exception e) {
+                            log.warn("清除章节内容缓存失败，bookId: {}, chapterNum: {}", manBookId, manChapterNum, e);
+                        }
+                    });
+
+                    sendBookChangeMsg(chapter.getBookId());
+
+                    BookInfo bookInfo = bookInfoMapper.selectById(chapter.getBookId());
+                    if (bookInfo != null) {
+                        sendAuditPassMessageToAuthor(chapter.getBookId(),
+                                bookInfo.getBookName() + " - " + chapter.getChapterName(), false);
                     }
                 }
             } else {
-                // 审核不通过，删除章节内容缓存，防止读者看到不应可见的内容
                 if (chapter != null) {
-                    try {
-                        String contentCacheKey = CacheConsts.BOOK_CONTENT_CACHE_NAME + "::content:" + chapter.getBookId() + ":" + chapter.getChapterNum();
-                        stringRedisTemplate.delete(contentCacheKey);
-                        log.info("人工审核不通过，已删除章节内容缓存，bookId: {}, chapterNum: {}", chapter.getBookId(), chapter.getChapterNum());
-                    } catch (Exception e) {
-                        log.warn("删除章节内容缓存失败，bookId: {}, chapterNum: {}, 不影响业务", chapter.getBookId(), chapter.getChapterNum(), e);
-                    }
+                    final Long failBookId = chapter.getBookId();
+                    final Integer failChapterNum = chapter.getChapterNum();
+                    runAfterCommit(() -> {
+                        try {
+                            stringRedisTemplate.delete(CacheConsts.BOOK_CONTENT_CACHE_NAME + "::content:" + failBookId + ":" + failChapterNum);
+                            log.info("人工审核不通过，已删除章节内容缓存，bookId: {}, chapterNum: {}", failBookId, failChapterNum);
+                        } catch (Exception e) {
+                            log.warn("删除章节内容缓存失败，bookId: {}, chapterNum: {}", failBookId, failChapterNum, e);
+                        }
+                    });
                 }
             }
         }
@@ -674,15 +643,16 @@ public class BookAuditServiceImpl implements BookAuditService {
 
         updateBook.setUpdateTime(LocalDateTime.now());
         bookInfoMapper.updateById(updateBook);
-        
-        // 清除 Redis 缓存，确保下次查询时获取最新数据（包括审核状态）
-        try {
-            String cacheKey = CacheConsts.BOOK_INFO_HASH_PREFIX + bookId;
-            stringRedisTemplate.delete(cacheKey);
-            log.debug("已清除书籍信息缓存，bookId: {}, cacheKey: {}", bookId, cacheKey);
-        } catch (Exception e) {
-            log.warn("清除书籍信息缓存失败，bookId: {}, 不影响业务", bookId, e);
-        }
+
+        runAfterCommit(() -> {
+            try {
+                String cacheKey = CacheConsts.BOOK_INFO_HASH_PREFIX + bookId;
+                stringRedisTemplate.delete(cacheKey);
+                log.debug("已清除书籍信息缓存，bookId: {}", bookId);
+            } catch (Exception e) {
+                log.warn("清除书籍信息缓存失败，bookId: {}", bookId, e);
+            }
+        });
     }
 
     /**
@@ -745,15 +715,15 @@ public class BookAuditServiceImpl implements BookAuditService {
         if (bookId == null) {
             return;
         }
-        try {
-            // 构建 Destination: Topic:Tag
-            String destination = AmqpConsts.BookChangeMq.TOPIC + ":" + AmqpConsts.BookChangeMq.TAG_UPDATE;
-            // 发送消息，消息体就是 bookId
-            rocketMQTemplate.convertAndSend(destination, bookId);
-            log.debug("已发送书籍变更消息，书籍ID: {}", bookId);
-        } catch (Exception e) {
-            log.error("发送书籍变更消息失败，书籍ID: {}", bookId, e);
-        }
+        runAfterCommit(() -> {
+            try {
+                String destination = AmqpConsts.BookChangeMq.TOPIC + ":" + AmqpConsts.BookChangeMq.TAG_UPDATE;
+                rocketMQTemplate.convertAndSend(destination, bookId);
+                log.info("书籍变更 MQ 已投递（提交后），bookId: {}", bookId);
+            } catch (Exception e) {
+                log.error("发送书籍变更消息失败，书籍ID: {}", bookId, e);
+            }
+        });
     }
 
     private static String truncateForContentAuditAuditReason(String reason) {
@@ -795,52 +765,47 @@ public class BookAuditServiceImpl implements BookAuditService {
         if (bookId == null) {
             return;
         }
-        
-        try {
-            // 查询书籍信息获取作者ID
-            BookInfo bookInfo = bookInfoMapper.selectById(bookId);
-            if (bookInfo == null || bookInfo.getAuthorId() == null) {
-                log.warn("无法获取书籍信息或作者ID，书籍ID: {}", bookId);
-                return;
-            }
-            
-            // 构建消息内容
-            String title = isBook ? "您的作品审核通过" : "您的章节审核通过";
-            String content = String.format("恭喜！您的%s《%s》已通过审核，现已上线。", 
-                    isBook ? "作品" : "章节", contentName);
-            String link = isBook ? "/author/book/list" : "/author/chapter/list?bookId=" + bookId;
-            
-            // 构建消息发送DTO
-            MessageSendReqDto messageDto = MessageSendReqDto.builder()
-                    .receiverId(bookInfo.getAuthorId())
-                    .receiverType(DatabaseConsts.MessageReceiveTable.RECEIVER_TYPE_AUTHOR) // 1表示作者
-                    .title(title)
-                    .content(content)
-                    .type(2) // 2表示作家助手/审核消息
-                    .link(link)
-                    .busId(bookId)
-                    .busType(isBook ? "BOOK_AUDIT" : "CHAPTER_AUDIT")
-                    .build();
-            
-            // 发送消息到数据库
-            userFeignManager.sendMessage(messageDto);
-            log.debug("已发送审核通过消息给作者，作者ID: {}, 书籍ID: {}", bookInfo.getAuthorId(), bookId);
-            
-            // 通过SSE推送实时通知
+
+        runAfterCommit(() -> {
             try {
-                // 构建SSE推送的JSON数据
-                String sseData = String.format(
-                        "{\"title\":\"%s\",\"content\":\"%s\",\"link\":\"%s\",\"busId\":%d,\"busType\":\"%s\",\"timestamp\":%d}",
-                        title, content, link, bookId, isBook ? "BOOK_AUDIT" : "CHAPTER_AUDIT", System.currentTimeMillis()
-                );
-                userFeignManager.pushNotificationToAuthor(bookInfo.getAuthorId(), "audit_pass", sseData);
+                BookInfo bookInfo = bookInfoMapper.selectById(bookId);
+                if (bookInfo == null || bookInfo.getAuthorId() == null) {
+                    log.warn("无法获取书籍信息或作者ID，书籍ID: {}", bookId);
+                    return;
+                }
+
+                String title = isBook ? "您的作品审核通过" : "您的章节审核通过";
+                String content = String.format("恭喜！您的%s《%s》已通过审核，现已上线。",
+                        isBook ? "作品" : "章节", contentName);
+                String link = isBook ? "/author/book/list" : "/author/chapter/list?bookId=" + bookId;
+
+                MessageSendReqDto messageDto = MessageSendReqDto.builder()
+                        .receiverId(bookInfo.getAuthorId())
+                        .receiverType(DatabaseConsts.MessageReceiveTable.RECEIVER_TYPE_AUTHOR)
+                        .title(title)
+                        .content(content)
+                        .type(2)
+                        .link(link)
+                        .busId(bookId)
+                        .busType(isBook ? "BOOK_AUDIT" : "CHAPTER_AUDIT")
+                        .build();
+
+                userFeignManager.sendMessage(messageDto);
+                log.info("审核通过通知已发送（提交后），作者ID: {}, 书籍ID: {}", bookInfo.getAuthorId(), bookId);
+
+                try {
+                    String sseData = String.format(
+                            "{\"title\":\"%s\",\"content\":\"%s\",\"link\":\"%s\",\"busId\":%d,\"busType\":\"%s\",\"timestamp\":%d}",
+                            title, content, link, bookId, isBook ? "BOOK_AUDIT" : "CHAPTER_AUDIT", System.currentTimeMillis()
+                    );
+                    userFeignManager.pushNotificationToAuthor(bookInfo.getAuthorId(), "audit_pass", sseData);
+                } catch (Exception e) {
+                    log.warn("推送SSE实时通知失败，作者ID: {}", bookInfo.getAuthorId(), e);
+                }
             } catch (Exception e) {
-                log.warn("推送SSE实时通知失败，但不影响消息保存，作者ID: {}", bookInfo.getAuthorId(), e);
+                log.error("发送审核通过消息给作者失败，书籍ID: {}", bookId, e);
             }
-        } catch (Exception e) {
-            log.error("发送审核通过消息给作者失败，书籍ID: {}", bookId, e);
-            // 不抛出异常，避免影响审核流程
-        }
+        });
     }
 
     @Override

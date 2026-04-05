@@ -8,11 +8,18 @@ import com.novel.user.dto.resp.MessageRespDto;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.util.List;
+
 /**
  * 消息接收 Mapper
  */
 @Mapper
 public interface MessageReceiveMapper extends BaseMapper<MessageReceive> {
+
+    /**
+     * 批量插入接收记录（减少往返，缩短事务持有时长）
+     */
+    void insertBatch(@Param("list") List<MessageReceive> list);
 
     /**
      * 查询消息列表（联表查询）

@@ -16,6 +16,8 @@ import org.apache.rocketmq.spring.core.RocketMQListener;
 import org.apache.rocketmq.spring.core.RocketMQTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
 import java.util.Objects;
@@ -216,15 +218,31 @@ public class ChapterSubmitListener implements RocketMQListener<ChapterSubmitMqDt
         bookInfoMapper.updateById(updateBook);
         log.debug("书籍信息更新完成，bookId: {}, 新字数: {}", bookId, updateBook.getWordCount());
 
-        // 3. 如果书籍已审核通过，发送ES同步消息
-        // 注意：只有审核通过的书籍才需要同步到ES
         if (bookInfo.getAuditStatus() != null && bookInfo.getAuditStatus() == 1) {
+            String destination = AmqpConsts.BookChangeMq.TOPIC + ":" + AmqpConsts.BookChangeMq.TAG_UPDATE;
+            sendRocketMqAfterCommit(destination, bookId, "ES同步 bookId=" + bookId);
+        }
+    }
+
+    private void sendRocketMqAfterCommit(String destination, Object payload, String logLabel) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    try {
+                        rocketMQTemplate.convertAndSend(destination, payload);
+                        log.debug("MQ 已投递（提交后）: {}", logLabel);
+                    } catch (Exception e) {
+                        log.error("发送 MQ 失败: {}", logLabel, e);
+                    }
+                }
+            });
+        } else {
             try {
-                String destination = AmqpConsts.BookChangeMq.TOPIC + ":" + AmqpConsts.BookChangeMq.TAG_UPDATE;
-                rocketMQTemplate.convertAndSend(destination, bookId);
-                log.debug("书籍信息更新完成，已发送ES同步消息，bookId: {}", bookId);
+                rocketMQTemplate.convertAndSend(destination, payload);
+                log.debug("MQ 已投递（无事务）: {}", logLabel);
             } catch (Exception e) {
-                log.error("发送ES同步消息失败，bookId: {}", bookId, e);
+                log.error("发送 MQ 失败: {}", logLabel, e);
             }
         }
     }
@@ -233,33 +251,29 @@ public class ChapterSubmitListener implements RocketMQListener<ChapterSubmitMqDt
      * 发送审核请求MQ
      */
     private void sendAuditRequest(BookChapter chapter) {
-        try {
-            String taskId = generateTaskId(chapter.getId());
-            ChapterAuditRequestMqDto auditRequest = ChapterAuditRequestMqDto.builder()
-                    .taskId(taskId)
-                    .chapterId(chapter.getId())
-                    .bookId(chapter.getBookId())
-                    .chapterNum(chapter.getChapterNum())
-                    .chapterName(chapter.getChapterName())
-                    .content(chapter.getContent())
-                    .build();
-            String destination = AmqpConsts.BookAuditRequestMq.TOPIC + ":" 
-                    + AmqpConsts.BookAuditRequestMq.TAG_AUDIT_CHAPTER_REQUEST;
-            rocketMQTemplate.convertAndSend(destination, auditRequest);
-            log.debug("章节[{}]审核请求已发送到MQ，taskId: {}", chapter.getId(), taskId);
-        } catch (Exception e) {
-            log.error("发送章节审核请求MQ失败，chapterId: {}", chapter.getId(), e);
-        }
+        String taskId = generateTaskId(chapter.getId());
+        ChapterAuditRequestMqDto auditRequest = ChapterAuditRequestMqDto.builder()
+                .taskId(taskId)
+                .chapterId(chapter.getId())
+                .bookId(chapter.getBookId())
+                .chapterNum(chapter.getChapterNum())
+                .chapterName(chapter.getChapterName())
+                .content(chapter.getContent())
+                .build();
+        String destination = AmqpConsts.BookAuditRequestMq.TOPIC + ":"
+                + AmqpConsts.BookAuditRequestMq.TAG_AUDIT_CHAPTER_REQUEST;
+        sendRocketMqAfterCommit(destination, auditRequest, "章节审核请求 chapterId=" + chapter.getId() + ", taskId=" + taskId);
     }
 
     /**
      * 发送书籍章节更新通知消息
      */
     private void sendBookChapterUpdateNotice(BookInfo bookInfo, BookChapter chapter) {
-        try {
-            if (bookInfo != null) {
-                com.novel.book.dto.mq.BookChapterUpdateDto updateDto = 
-                        com.novel.book.dto.mq.BookChapterUpdateDto.builder()
+        if (bookInfo == null) {
+            return;
+        }
+        com.novel.book.dto.mq.BookChapterUpdateDto updateDto =
+                com.novel.book.dto.mq.BookChapterUpdateDto.builder()
                         .bookId(bookInfo.getId())
                         .bookName(bookInfo.getBookName())
                         .authorId(bookInfo.getAuthorId())
@@ -269,14 +283,8 @@ public class ChapterSubmitListener implements RocketMQListener<ChapterSubmitMqDt
                         .chapterNum(chapter.getChapterNum())
                         .updateTime(LocalDateTime.now())
                         .build();
-                rocketMQTemplate.convertAndSend(
-                        AmqpConsts.BookChangeMq.TOPIC + ":" + AmqpConsts.BookChangeMq.TAG_CHAPTER_UPDATE, 
-                        updateDto);
-                log.debug("章节更新通知消息已发送到MQ，chapterId: {}", chapter.getId());
-            }
-        } catch (Exception e) {
-            log.error("发送章节更新通知MQ失败，chapterId: {}", chapter.getId(), e);
-        }
+        String destination = AmqpConsts.BookChangeMq.TOPIC + ":" + AmqpConsts.BookChangeMq.TAG_CHAPTER_UPDATE;
+        sendRocketMqAfterCommit(destination, updateDto, "章节更新通知 chapterId=" + chapter.getId());
     }
 
     /**

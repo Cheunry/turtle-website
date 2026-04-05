@@ -52,6 +52,13 @@
         ORDER BY r.id DESC
     </select>
 
+    <insert id="insertBatch">
+        INSERT INTO message_receive (message_id, receiver_id, receiver_type, is_read, read_time, is_deleted) VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.messageId}, #{item.receiverId}, #{item.receiverType}, #{item.isRead}, #{item.readTime}, #{item.isDeleted})
+        </foreach>
+    </insert>
+
     <!-- 统计未读数量 -->
     <select id="countUnRead" resultType="java.lang.Long">
         SELECT count(1)

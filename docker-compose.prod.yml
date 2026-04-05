@@ -1,4 +1,17 @@
+# -----------------------------------------------------------------------------
+# Nacos：容器名 novel-nacos-server（如 nacos/nacos-server:v2.2.1）
+#   宿主机映射：52582 -> 容器 8848（HTTP/API），53582 -> 容器 9848（2.x gRPC）
+# 业务容器与 Nacos 必须在同一 Docker 网络；容器内请使用 novel-nacos-server:8848，
+# 不要使用宿主机 52582（其它容器访问不到宿主机映射端口语义）。
+# Java 客户端对 2.x 默认按「主端口 + 1000」推导 gRPC：52582 -> 53582，与上述映射一致。
+# -----------------------------------------------------------------------------
 version: '3.8'
+
+x-nacos-client-env: &nacos-client-env
+  SPRING_PROFILES_ACTIVE: prod
+  NACOS_SERVER_ADDR: novel-nacos-server:8848
+  NACOS_NAMESPACE_ID: prod_namespace
+  TZ: Asia/Shanghai
 
 services:
   # 网关服务
@@ -8,16 +21,19 @@ services:
     restart: always
     ports:
       - "8080:8888"
+    # 使用 entrypoint 强制注入探针参数
+    entrypoint: [
+      "java",
+      "-javaagent:/skywalking/agent/skywalking-agent.jar",
+      "-Dskywalking.agent.service_name=novel-gateway",
+      "-Dskywalking.collector.backend_service=10.2.24.4:11800",
+      "-Xms512m", "-Xmx512m",
+      "-jar", "app.jar"
+    ]
     environment:
-      - SPRING_PROFILES_ACTIVE=prod
-      - NACOS_SERVER_ADDR=novel-nacos-server:8848
-      - TZ=Asia/Shanghai
-      # --- 新增 SkyWalking 配置 ---
-      - SW_AGENT_NAME=novel-gateway
-      - SW_AGENT_COLLECTOR_BACKEND_SERVICES=10.2.24.4:11800
-      - JAVA_OPTS=-javaagent:/skywalking/agent/skywalking-agent.jar
+      <<: *nacos-client-env
     volumes:
-      - /home/ubuntu/dependence/skywalking-agent:/skywalking/agent # 将宿主机探针目录挂载到容器
+      - /home/ubuntu/dependence/skywalking-agent:/skywalking/agent
     networks:
       - common-network
 
@@ -26,16 +42,17 @@ services:
     image: novel-user-service:latest
     container_name: novel-user-service
     restart: always
+    entrypoint: [
+      "java",
+      "-javaagent:/skywalking/agent/skywalking-agent.jar",
+      "-Dskywalking.agent.service_name=novel-user-service",
+      "-Dskywalking.collector.backend_service=10.2.24.4:11800",
+      "-jar", "app.jar"
+    ]
     environment:
-      - SPRING_PROFILES_ACTIVE=prod
-      - NACOS_SERVER_ADDR=novel-nacos-server:8848
-      - TZ=Asia/Shanghai
-      # --- 新增 SkyWalking 配置 ---
-      - SW_AGENT_NAME=novel-user-service
-      - SW_AGENT_COLLECTOR_BACKEND_SERVICES=10.2.24.4:11800
-      - JAVA_OPTS=-javaagent:/skywalking/agent/skywalking-agent.jar
+      <<: *nacos-client-env
     volumes:
-      - /home/ubuntu/dependence/skywalking-agent:/skywalking/agent # 将宿主机探针目录挂载到容器
+      - /home/ubuntu/dependence/skywalking-agent:/skywalking/agent
     networks:
       - common-network
 
@@ -44,16 +61,17 @@ services:
     image: novel-book-service:latest
     container_name: novel-book-service
     restart: always
+    entrypoint: [
+      "java",
+      "-javaagent:/skywalking/agent/skywalking-agent.jar",
+      "-Dskywalking.agent.service_name=novel-book-service",
+      "-Dskywalking.collector.backend_service=10.2.24.4:11800",
+      "-jar", "app.jar"
+    ]
     environment:
-      - SPRING_PROFILES_ACTIVE=prod
-      - NACOS_SERVER_ADDR=novel-nacos-server:8848
-      - TZ=Asia/Shanghai
-      # --- 新增 SkyWalking 配置 ---
-      - SW_AGENT_NAME=novel-book-service
-      - SW_AGENT_COLLECTOR_BACKEND_SERVICES=10.2.24.4:11800
-      - JAVA_OPTS=-javaagent:/skywalking/agent/skywalking-agent.jar
+      <<: *nacos-client-env
     volumes:
-      - /home/ubuntu/dependence/skywalking-agent:/skywalking/agent # 将宿主机探针目录挂载到容器
+      - /home/ubuntu/dependence/skywalking-agent:/skywalking/agent
     networks:
       - common-network
 
@@ -62,16 +80,17 @@ services:
     image: novel-search-service:latest
     container_name: novel-search-service
     restart: always
+    entrypoint: [
+      "java",
+      "-javaagent:/skywalking/agent/skywalking-agent.jar",
+      "-Dskywalking.agent.service_name=novel-search-service",
+      "-Dskywalking.collector.backend_service=10.2.24.4:11800",
+      "-jar", "app.jar"
+    ]
     environment:
-      - SPRING_PROFILES_ACTIVE=prod
-      - NACOS_SERVER_ADDR=novel-nacos-server:8848
-      - TZ=Asia/Shanghai
-      # --- 新增 SkyWalking 配置 ---
-      - SW_AGENT_NAME=novel-search-service
-      - SW_AGENT_COLLECTOR_BACKEND_SERVICES=10.2.24.4:11800
-      - JAVA_OPTS=-javaagent:/skywalking/agent/skywalking-agent.jar
+      <<: *nacos-client-env
     volumes:
-      - /home/ubuntu/dependence/skywalking-agent:/skywalking/agent # 将宿主机探针目录挂载到容器
+      - /home/ubuntu/dependence/skywalking-agent:/skywalking/agent
     networks:
       - common-network
 
@@ -80,16 +99,17 @@ services:
     image: novel-ai-service:latest
     container_name: novel-ai-service
     restart: always
+    entrypoint: [
+      "java",
+      "-javaagent:/skywalking/agent/skywalking-agent.jar",
+      "-Dskywalking.agent.service_name=novel-ai-service",
+      "-Dskywalking.collector.backend_service=10.2.24.4:11800",
+      "-jar", "app.jar"
+    ]
     environment:
-      - SPRING_PROFILES_ACTIVE=prod
-      - NACOS_SERVER_ADDR=novel-nacos-server:8848
-      - TZ=Asia/Shanghai
-      # --- 新增 SkyWalking 配置 ---
-      - SW_AGENT_NAME=novel-ai-service
-      - SW_AGENT_COLLECTOR_BACKEND_SERVICES=10.2.24.4:11800
-      - JAVA_OPTS=-javaagent:/skywalking/agent/skywalking-agent.jar
+      <<: *nacos-client-env
     volumes:
-      - /home/ubuntu/dependence/skywalking-agent:/skywalking/agent # 将宿主机探针目录挂载到容器
+      - /home/ubuntu/dependence/skywalking-agent:/skywalking/agent
     networks:
       - common-network
 
@@ -102,7 +122,6 @@ services:
     networks:
       - common-network
 
-# 外部网络配置
 networks:
   common-network:
     external: true

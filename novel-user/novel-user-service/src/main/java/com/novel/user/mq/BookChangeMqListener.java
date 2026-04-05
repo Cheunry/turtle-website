@@ -18,6 +18,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -63,17 +64,17 @@ public class BookChangeMqListener implements RocketMQListener<BookChapterUpdateD
         
         messageContentMapper.insert(content);
 
-        // 3. 批量插入接收记录
-        // 如果订阅量大，应考虑使用 Batch Insert
+        List<MessageReceive> receives = new ArrayList<>(subscriptions.size());
         for (UserBookshelf sub : subscriptions) {
             MessageReceive receive = new MessageReceive();
             receive.setMessageId(content.getId());
             receive.setReceiverId(sub.getUserId());
-            receive.setReceiverType(DatabaseConsts.MessageReceiveTable.RECEIVER_TYPE_USER); // 普通用户
+            receive.setReceiverType(DatabaseConsts.MessageReceiveTable.RECEIVER_TYPE_USER);
             receive.setIsRead(0);
             receive.setIsDeleted(0);
-            messageReceiveMapper.insert(receive);
+            receives.add(receive);
         }
+        messageReceiveMapper.insertBatch(receives);
         
         log.info("书籍更新通知发送完成，涉及用户数: {}", subscriptions.size());
     }

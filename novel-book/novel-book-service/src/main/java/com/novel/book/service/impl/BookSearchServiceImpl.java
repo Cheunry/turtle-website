@@ -11,6 +11,7 @@ import com.novel.book.dao.mapper.BookInfoMapper;
 import com.novel.book.dao.mapper.HomeBookMapper;
 import com.novel.book.dto.resp.*;
 import com.novel.common.constant.DatabaseConsts;
+import com.novel.common.util.RankBookDescUtils;
 import com.novel.common.resp.RestResp;
 import com.novel.book.service.BookSearchService;
 import lombok.RequiredArgsConstructor;
@@ -678,7 +679,7 @@ public class BookSearchServiceImpl implements BookSearchService {
         dto.setBookName(bookInfo.getBookName());
         dto.setAuthorName(bookInfo.getAuthorName());
         dto.setPicUrl(bookInfo.getPicUrl());
-        dto.setBookDesc(bookInfo.getBookDesc());
+        dto.setBookDesc(RankBookDescUtils.toRankPreview(bookInfo.getBookDesc()));
         dto.setLastChapterName(bookInfo.getLastChapterName());
         dto.setLastChapterUpdateTime(bookInfo.getLastChapterUpdateTime());
         dto.setWordCount(bookInfo.getWordCount());
@@ -698,7 +699,7 @@ public class BookSearchServiceImpl implements BookSearchService {
             dto.setBookName((String) bookInfoMap.get("bookName"));
             dto.setAuthorName((String) bookInfoMap.get("authorName"));
             dto.setPicUrl((String) bookInfoMap.get("picUrl"));
-            dto.setBookDesc((String) bookInfoMap.get("bookDesc"));
+            dto.setBookDesc(RankBookDescUtils.toRankPreview((String) bookInfoMap.get("bookDesc")));
             dto.setCategoryName((String) bookInfoMap.get("categoryName"));
             dto.setLastChapterName((String) bookInfoMap.get("lastChapterName"));
 

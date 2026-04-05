@@ -25,7 +25,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -45,6 +45,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final AuthorPointsRechargeLogMapper rechargeLogMapper;
     private final AuthorInfoMapper authorInfoMapper;
     private final StringRedisTemplate stringRedisTemplate;
+    private final TransactionTemplate transactionTemplate;
 
     /**
      * 积分兑换比例：1元 = 100积分（1分 = 1积分）
@@ -52,58 +53,50 @@ public class PaymentServiceImpl implements PaymentService {
     private static final int POINTS_PER_YUAN = 100;
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public RestResp<AuthorPointsRechargeRespDto> createRechargeOrder(Long authorId, AuthorPointsRechargeReqDto dto) {
         try {
-            // 1. 校验作者是否存在
             AuthorInfo authorInfo = authorInfoMapper.selectById(authorId);
             if (authorInfo == null) {
                 return RestResp.fail(ErrorCodeEnum.USER_UN_AUTH);
             }
 
-            // 2. 生成商户订单号
-            String outTradeNo = generateOutTradeNo(authorId);
-
-            // 3. 计算充值获得的积分（1元 = 100积分）
-            Integer rechargeAmount = dto.getRechargeAmount(); // 单位：分
-            Integer rechargePoints = (rechargeAmount / 100) * POINTS_PER_YUAN; // 转换为元后计算积分
-
-            // 4. 保存充值记录（待支付状态）
-            AuthorPointsRechargeLog rechargeLog = new AuthorPointsRechargeLog();
-            rechargeLog.setAuthorId(authorId);
-            rechargeLog.setRechargeAmount(rechargeAmount);
-            rechargeLog.setRechargePoints(rechargePoints);
-            rechargeLog.setPayChannel(dto.getPayChannel());
-            rechargeLog.setOutTradeNo(outTradeNo);
-            rechargeLog.setRechargeStatus(0); // 0-待支付
-            rechargeLog.setCreateTime(LocalDateTime.now());
-            rechargeLog.setUpdateTime(LocalDateTime.now());
-            rechargeLogMapper.insert(rechargeLog);
-
-            // 5. 调用支付宝接口创建订单
-            String payFormHtml = null;
-            String payUrl = null;
-
-            if (dto.getPayChannel() == 0) { // 支付宝
-                // 判断是PC网站支付还是手机网站支付（根据金额或其他条件判断）
-                // 这里默认使用手机网站支付（H5支付）
-                payUrl = createAlipayWapPayOrder(outTradeNo, rechargeAmount, "作者积分充值");
-                // 如果需要PC网站支付，可以使用 createAlipayPagePayOrder 方法
-            } else {
+            if (dto.getPayChannel() == null || dto.getPayChannel() != 0) {
                 return RestResp.fail(ErrorCodeEnum.USER_REQUEST_PARAM_ERROR, "暂不支持该支付方式");
             }
 
-            // 6. 返回支付信息
+            String outTradeNo = generateOutTradeNo(authorId);
+            Integer rechargeAmount = dto.getRechargeAmount();
+            Integer rechargePoints = (rechargeAmount / 100) * POINTS_PER_YUAN;
+
+            // 仅包裹写库，尽快提交释放连接；支付宝 HTTP 在事务外执行
+            transactionTemplate.executeWithoutResult(status -> {
+                AuthorPointsRechargeLog rechargeLog = new AuthorPointsRechargeLog();
+                rechargeLog.setAuthorId(authorId);
+                rechargeLog.setRechargeAmount(rechargeAmount);
+                rechargeLog.setRechargePoints(rechargePoints);
+                rechargeLog.setPayChannel(dto.getPayChannel());
+                rechargeLog.setOutTradeNo(outTradeNo);
+                rechargeLog.setRechargeStatus(0);
+                rechargeLog.setCreateTime(LocalDateTime.now());
+                rechargeLog.setUpdateTime(LocalDateTime.now());
+                rechargeLogMapper.insert(rechargeLog);
+            });
+
+            String payUrl = createAlipayWapPayOrder(outTradeNo, rechargeAmount, "作者积分充值");
+
             AuthorPointsRechargeRespDto respDto = new AuthorPointsRechargeRespDto();
             respDto.setOutTradeNo(outTradeNo);
-            respDto.setPayFormHtml(payFormHtml);
+            respDto.setPayFormHtml(null);
             respDto.setPayUrl(payUrl);
 
-            log.info("作者[{}]创建充值订单成功，订单号：{}，充值金额：{}分，获得积分：{}", 
+            log.info("作者[{}]创建充值订单成功，订单号：{}，充值金额：{}分，获得积分：{}",
                     authorId, outTradeNo, rechargeAmount, rechargePoints);
 
             return RestResp.ok(respDto);
 
+        } catch (AlipayApiException e) {
+            log.error("创建充值订单失败（支付宝），作者ID：{}", authorId, e);
+            return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR, "创建订单失败：" + e.getMessage());
         } catch (Exception e) {
             log.error("创建充值订单失败，作者ID：{}", authorId, e);
             return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR, "创建订单失败：" + e.getMessage());
