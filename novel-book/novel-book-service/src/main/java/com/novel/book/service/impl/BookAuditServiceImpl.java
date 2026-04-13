@@ -14,6 +14,7 @@ import com.novel.book.dto.resp.BookAuditRespDto;
 import com.novel.book.dto.resp.ChapterAuditRespDto;
 import com.novel.book.feign.UserFeignManager;
 import com.novel.book.service.BookAuditService;
+import com.novel.book.service.BookExistBloomService;
 import com.novel.common.constant.AmqpConsts;
 import com.novel.common.constant.CacheConsts;
 import com.novel.common.constant.DatabaseConsts;
@@ -28,6 +29,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -52,6 +54,7 @@ public class BookAuditServiceImpl implements BookAuditService {
     private final UserFeignManager userFeignManager; // 添加用户服务依赖，用于发送消息
     private final StringRedisTemplate stringRedisTemplate; // 添加Redis依赖，用于清除缓存
     private final AiFeign aiFeign; // 添加AI服务依赖，用于提取审核规则
+    private final BookExistBloomService bookExistBloomService;
 
     /**
      * AI审核置信度阈值，低于此值需要人工审核
@@ -220,6 +223,7 @@ public class BookAuditServiceImpl implements BookAuditService {
             try {
                 updateBookInfoLastChapter(bookChapter.getBookId());
                 log.debug("书籍[{}]最新章节信息已更新", bookChapter.getBookId());
+                addBookToBloomIfEligible(bookChapter.getBookId());
             } catch (Exception e) {
                 log.error("更新书籍最新章节信息失败，书籍ID: {}", bookChapter.getBookId(), e);
             }
@@ -402,6 +406,7 @@ public class BookAuditServiceImpl implements BookAuditService {
 
             sendBookChangeMsg(bookId);
             sendAuditPassMessageToAuthor(bookId, bookInfo.getBookName(), true);
+            addBookToBloomIfEligible(bookId);
 
         } else if (isPassed && !isHighConfidence) {
             // 情况2：AI审核通过但置信度低 -> 更新审核表为待人工审核，书籍表保持待审核状态
@@ -511,6 +516,7 @@ public class BookAuditServiceImpl implements BookAuditService {
                 if (bookInfoRow != null) {
                     sendAuditPassMessageToAuthor(bookInfoRow.getId(), bookInfoRow.getBookName(), true);
                 }
+                addBookToBloomIfEligible(audit.getDataSourceId());
             }
         } else if (DATA_SOURCE_BOOK_CHAPTER.equals(audit.getDataSource())) {
             // 更新章节表
@@ -523,6 +529,7 @@ public class BookAuditServiceImpl implements BookAuditService {
                     try {
                         updateBookInfoLastChapter(chapter.getBookId());
                         log.info("人工审核通过，章节[{}]已更新书籍最新章节信息", audit.getDataSourceId());
+                        addBookToBloomIfEligible(chapter.getBookId());
                     } catch (Exception e) {
                         log.error("更新书籍最新章节信息失败，章节ID: {}", audit.getDataSourceId(), e);
                     }
@@ -806,6 +813,32 @@ public class BookAuditServiceImpl implements BookAuditService {
                 log.error("发送审核通过消息给作者失败，书籍ID: {}", bookId, e);
             }
         });
+    }
+
+    /**
+     * 仅当书籍审核通过且最新章节字段不为空时，增量加入布隆过滤器
+     */
+    private void addBookToBloomIfEligible(Long bookId) {
+        if (bookId == null) {
+            return;
+        }
+        try {
+            BookInfo latestBookInfo = bookInfoMapper.selectById(bookId);
+            if (latestBookInfo == null) {
+                return;
+            }
+            boolean isAuditPassed = AUDIT_STATUS_PASSED.equals(latestBookInfo.getAuditStatus());
+            boolean hasLastChapter = StringUtils.hasText(latestBookInfo.getLastChapterName());
+            if (isAuditPassed && hasLastChapter) {
+                bookExistBloomService.add(bookId);
+                log.info("书籍满足布隆增量条件，已加入布隆过滤器，bookId={}", bookId);
+            } else {
+                log.debug("书籍暂不满足布隆增量条件，bookId={}, auditStatus={}, lastChapterName={}",
+                        bookId, latestBookInfo.getAuditStatus(), latestBookInfo.getLastChapterName());
+            }
+        } catch (Exception e) {
+            log.warn("书籍布隆增量写入失败，bookId={}", bookId, e);
+        }
     }
 
     @Override

@@ -145,16 +145,100 @@ public class CacheConsts {
      * 小说点击榜 ZSet 缓存 Key
      */
     public static final String BOOK_VISIT_RANK_ZSET = REDIS_CACHE_PREFIX + "visit_rank";
+    /**
+     * 小说点击榜构建中 ZSet Key 前缀（用于全量校准）
+     */
+    public static final String BOOK_VISIT_RANK_BUILD_ZSET_PREFIX = REDIS_CACHE_PREFIX + "visit_rank:build:";
+    /**
+     * 小说点击榜全量扫描任务锁 Key
+     */
+    public static final String BOOK_VISIT_RANK_SCAN_LOCK_KEY = REDIS_CACHE_PREFIX + "visit_rank:scan:lock";
+    /**
+     * 小说点击榜全量扫描游标（最近扫描到的 bookId）
+     */
+    public static final String BOOK_VISIT_RANK_SCAN_LAST_ID_KEY = REDIS_CACHE_PREFIX + "visit_rank:scan:last_id";
+    /**
+     * 小说点击榜全量扫描轮次标识
+     */
+    public static final String BOOK_VISIT_RANK_SCAN_ROUND_ID_KEY = REDIS_CACHE_PREFIX + "visit_rank:scan:round_id";
+    /**
+     * 点击榜全量扫描锁过期时间（秒）
+     */
+    public static final long BOOK_VISIT_RANK_SCAN_LOCK_TTL_SECONDS = 10 * 60;
+    /**
+     * 点击榜全量扫描锁看门狗续约间隔（秒）
+     */
+    public static final long BOOK_VISIT_RANK_SCAN_LOCK_WATCHDOG_INTERVAL_SECONDS = 30;
+    /**
+     * 点击榜全量扫描锁看门狗连续续约失败阈值
+     */
+    public static final int BOOK_VISIT_RANK_SCAN_LOCK_WATCHDOG_MAX_FAIL_COUNT = 3;
+    /**
+     * 点击榜候选池容量（前台展示Top30，这里保留更大缓冲）
+     */
+    public static final int BOOK_VISIT_RANK_CANDIDATE_SIZE = 200;
+    /**
+     * 点击榜全量扫描单批次大小
+     */
+    public static final int BOOK_VISIT_RANK_SCAN_BATCH_SIZE = 50;
 
     /**
      * 小说信息 Hash 缓存 Key 前缀
      */
     public static final String BOOK_INFO_HASH_PREFIX = REDIS_CACHE_PREFIX + "book_info:";
+    /**
+     * 书籍不存在空值缓存 Key 前缀
+     */
+    public static final String BOOK_INFO_NULL_CACHE_PREFIX = REDIS_CACHE_PREFIX + "book_info_null:";
+    /**
+     * 书籍不存在空值缓存 TTL 秒数（短TTL，防止长时间误伤新增书籍）
+     */
+    public static final long BOOK_INFO_NULL_CACHE_TTL_SECONDS = 120;
 
     /**
      * 小说点击量缓冲 Hash Key (用于批量更新 DB)
      */
     public static final String BOOK_VISIT_COUNT_HASH = REDIS_CACHE_PREFIX + "book_visit_buffer";
+    /**
+     * 书籍存在性布隆过滤器 Key（线上生效）
+     */
+    public static final String BOOK_EXIST_BLOOM_KEY = REDIS_CACHE_PREFIX + "book_exist_bloom";
+    /**
+     * 书籍存在性布隆过滤器构建 Key（临时）
+     */
+    public static final String BOOK_EXIST_BLOOM_BUILD_KEY = REDIS_CACHE_PREFIX + "book_exist_bloom:build";
+    /**
+     * 布隆过滤器位图大小（bit），约 16MB 内存
+     */
+    public static final long BOOK_EXIST_BLOOM_BITMAP_SIZE = 1L << 27;
+    /**
+     * 布隆过滤器哈希函数数量
+     */
+    public static final int BOOK_EXIST_BLOOM_HASH_NUM = 3;
+    /**
+     * 小说访问 UV 去重集合 Key 前缀
+     */
+    public static final String BOOK_VISIT_UV_SET_PREFIX = REDIS_CACHE_PREFIX + "book_visit_uv:";
+    /**
+     * 小说访问 UV 去重窗口秒数（按窗口去重）
+     */
+    public static final long BOOK_VISIT_UV_WINDOW_SECONDS = 120;
+    /**
+     * 小说访问 UV 去重集合 TTL 秒数（略大于窗口，避免边界丢计数）
+     */
+    public static final long BOOK_VISIT_UV_SET_TTL_SECONDS = 300;
+    /**
+     * UV 去重集合总 key 数告警阈值
+     */
+    public static final long BOOK_VISIT_UV_KEY_COUNT_ALERT_THRESHOLD = 200000L;
+    /**
+     * UV 去重集合热点基数（SCARD）告警阈值
+     */
+    public static final long BOOK_VISIT_UV_SCARD_HOT_ALERT_THRESHOLD = 10000L;
+    /**
+     * UV 热点监控采样书籍数（按实时榜单TopN）
+     */
+    public static final long BOOK_VISIT_UV_MONITOR_SAMPLE_SIZE = 30L;
 
     /**
      * Token 黑名单 Redis Key 前缀

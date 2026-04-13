@@ -12,30 +12,45 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import org.springframework.data.redis.core.DefaultTypedTuple;
 import org.springframework.data.redis.core.ZSetOperations;
+import org.springframework.util.CollectionUtils;
 
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
 @Slf4j
 public class BookRankCacheJob {
+    private static final String MONITOR_ALERT_PREFIX = "[MONITOR_ALERT][VISIT_RANK_SCAN_ABORT]";
 
     private final BookInfoMapper bookInfoMapper;
     private final BookChapterMapper bookChapterMapper;
     private final StringRedisTemplate stringRedisTemplate;
+    private final ScheduledExecutorService lockWatchdogExecutor = Executors.newSingleThreadScheduledExecutor(
+            r -> new Thread(r, "visit-rank-lock-watchdog"));
 
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final DefaultRedisScript<Long> RELEASE_LOCK_SCRIPT = buildReleaseLockScript();
+    private static final DefaultRedisScript<Long> RENEW_LOCK_SCRIPT = buildRenewLockScript();
 
     /**
      * 应用启动完成后初始化缓存
@@ -58,154 +73,285 @@ public class BookRankCacheJob {
     }
 
     /**
-     * 刷新小说点击榜缓存（兜底策略）
-     * 说明：
-     * 1. ZSet 排行榜：用户访问时已通过 Lua 脚本实时更新，这里只做兜底（如果 ZSet 不存在或数据异常才重建）
-     * 2. 详情 Hash：更新时保留 visitCount 字段，不覆盖实时更新的访问量
-     * 3. 频率：改为每30分钟执行一次（因为主要是兜底，不需要太频繁）
+     * 点击榜全量校准任务：
+     * 1. 按主键游标分批扫描 MySQL（避免 visit_count 排序压力）
+     * 2. 在 Redis 构建候选 TopK（默认200）
+     * 3. 扫描完成后合并到实时榜单并裁剪
      */
-    @Scheduled(cron = "0 0/30 * * * ?")
+    @Scheduled(cron = "0 */15 * * * ?")
     public void refreshVisitRankCache() {
-        log.info("开始刷新小说点击榜缓存（兜底策略）...");
-
-        // 1. 检查 ZSet 是否存在，如果存在且数据正常，则跳过 ZSet 重建
-        // 修复：不仅检查是否为空，还要检查数据量是否足够（少于100本认为数据不完整，需要重建）
-        Long zsetSize = stringRedisTemplate.opsForZSet().size(CacheConsts.BOOK_VISIT_RANK_ZSET);
-        boolean needRebuildZSet = (zsetSize == null || zsetSize == 0 || zsetSize < 100);
-        
-        if (needRebuildZSet) {
-            if (zsetSize == null || zsetSize == 0) {
-                log.warn("ZSet 排行榜不存在或为空，从数据库重建...");
-            } else {
-                log.warn("ZSet 排行榜数据不完整（当前大小：{}，期望至少100本），从数据库重建...", zsetSize);
-            }
-        } else {
-            log.info("ZSet 排行榜存在且正常（大小：{}），跳过重建，保留实时更新的数据", zsetSize);
-        }
-
-        // 2. 查询数据库 Top 100 书籍（用于更新详情 Hash 缓存）
-        // 注意：只查询审核通过的书籍，且字数大于0
-        List<BookInfo> bookInfos = bookInfoMapper.selectList(new QueryWrapper<BookInfo>()
-                .eq("audit_status", 1)
-                .gt(DatabaseConsts.BookTable.COLUMN_WORD_COUNT, 0)
-                .orderByDesc(DatabaseConsts.BookTable.COLUMN_VISIT_COUNT)
-                .last("limit 100"));
-        if (bookInfos.isEmpty()) {
-            log.warn("数据库中没有书籍数据，跳过缓存刷新");
+        String lockToken = UUID.randomUUID().toString();
+        Boolean lockSuccess = stringRedisTemplate.opsForValue().setIfAbsent(
+                CacheConsts.BOOK_VISIT_RANK_SCAN_LOCK_KEY,
+                lockToken,
+                CacheConsts.BOOK_VISIT_RANK_SCAN_LOCK_TTL_SECONDS,
+                TimeUnit.SECONDS);
+        if (Boolean.FALSE.equals(lockSuccess)) {
+            log.info("点击榜校准任务正在执行中，跳过本轮");
             return;
         }
-        log.info("查询到 {} 本书籍，准备写入详情Hash缓存", bookInfos.size());
+        AtomicBoolean lockLost = new AtomicBoolean(false);
+        AtomicInteger renewFailCount = new AtomicInteger(0);
+        ScheduledFuture<?> watchdogFuture = startLockWatchdog(lockToken, lockLost, renewFailCount);
+        String roundId = String.valueOf(System.currentTimeMillis());
+        String buildKey = CacheConsts.BOOK_VISIT_RANK_BUILD_ZSET_PREFIX + roundId;
+        try {
+            log.info("开始点击榜全量校准，roundId={}", roundId);
+            stringRedisTemplate.opsForValue().set(CacheConsts.BOOK_VISIT_RANK_SCAN_ROUND_ID_KEY, roundId);
+            stringRedisTemplate.opsForValue().set(CacheConsts.BOOK_VISIT_RANK_SCAN_LAST_ID_KEY, "0");
+            stringRedisTemplate.delete(buildKey);
 
-        // 3. 批量查询首章
-        List<Long> bookIds = bookInfos.stream().map(BookInfo::getId).collect(Collectors.toList());
-        Map<Long, Integer> firstChapterMap = bookChapterMapper.selectFirstChapterNums(bookIds)
+            long lastId = 0L;
+            int scanned = 0;
+            while (true) {
+                if (lockLost.get()) {
+                    log.error("点击榜校准任务中止：看门狗连续续约失败，roundId={}, scanned={}", roundId, scanned);
+                    emitScanAbortAlert(roundId, scanned, renewFailCount.get(), lockToken);
+                    return;
+                }
+                List<BookInfo> batch = loadVisitScanBatch(lastId, CacheConsts.BOOK_VISIT_RANK_SCAN_BATCH_SIZE);
+                if (CollectionUtils.isEmpty(batch)) {
+                    break;
+                }
+                scanned += batch.size();
+                appendBatchToBuildRank(buildKey, batch);
+                trimRankZSet(buildKey, CacheConsts.BOOK_VISIT_RANK_CANDIDATE_SIZE);
+                lastId = batch.get(batch.size() - 1).getId();
+                stringRedisTemplate.opsForValue().set(CacheConsts.BOOK_VISIT_RANK_SCAN_LAST_ID_KEY, String.valueOf(lastId));
+
+                if (batch.size() < CacheConsts.BOOK_VISIT_RANK_SCAN_BATCH_SIZE) {
+                    break;
+                }
+            }
+
+            mergeBuildRankToLive(buildKey);
+            trimRankZSet(CacheConsts.BOOK_VISIT_RANK_ZSET, CacheConsts.BOOK_VISIT_RANK_CANDIDATE_SIZE);
+            refreshVisitRankBookDetailCache();
+            log.info("点击榜全量校准完成，roundId={}, 扫描书籍数={}", roundId, scanned);
+        } catch (Exception e) {
+            log.error("点击榜全量校准失败，roundId={}", roundId, e);
+        } finally {
+            if (watchdogFuture != null) {
+                watchdogFuture.cancel(true);
+            }
+            stringRedisTemplate.delete(buildKey);
+            releaseLock(lockToken);
+            stringRedisTemplate.delete(CacheConsts.BOOK_VISIT_RANK_SCAN_LAST_ID_KEY);
+            stringRedisTemplate.delete(CacheConsts.BOOK_VISIT_RANK_SCAN_ROUND_ID_KEY);
+        }
+    }
+
+    private ScheduledFuture<?> startLockWatchdog(String lockToken, AtomicBoolean lockLost, AtomicInteger renewFailCount) {
+        long interval = CacheConsts.BOOK_VISIT_RANK_SCAN_LOCK_WATCHDOG_INTERVAL_SECONDS;
+        return lockWatchdogExecutor.scheduleAtFixedRate(
+                () -> renewLock(lockToken, lockLost, renewFailCount), interval, interval, TimeUnit.SECONDS);
+    }
+
+    private void renewLock(String lockToken, AtomicBoolean lockLost, AtomicInteger renewFailCount) {
+        try {
+            Long result = stringRedisTemplate.execute(
+                    RENEW_LOCK_SCRIPT,
+                    List.of(CacheConsts.BOOK_VISIT_RANK_SCAN_LOCK_KEY),
+                    lockToken,
+                    String.valueOf(CacheConsts.BOOK_VISIT_RANK_SCAN_LOCK_TTL_SECONDS)
+            );
+            if (result == null || result == 0L) {
+                int failCount = renewFailCount.incrementAndGet();
+                log.warn("点击榜扫描锁续约失败，token={}, failCount={}", lockToken, failCount);
+                if (failCount >= CacheConsts.BOOK_VISIT_RANK_SCAN_LOCK_WATCHDOG_MAX_FAIL_COUNT) {
+                    lockLost.set(true);
+                }
+                return;
+            }
+            renewFailCount.set(0);
+        } catch (Exception e) {
+            int failCount = renewFailCount.incrementAndGet();
+            log.warn("点击榜扫描锁续约异常，token={}, failCount={}", lockToken, failCount, e);
+            if (failCount >= CacheConsts.BOOK_VISIT_RANK_SCAN_LOCK_WATCHDOG_MAX_FAIL_COUNT) {
+                lockLost.set(true);
+            }
+        }
+    }
+
+    private void releaseLock(String lockToken) {
+        try {
+            stringRedisTemplate.execute(
+                    RELEASE_LOCK_SCRIPT,
+                    List.of(CacheConsts.BOOK_VISIT_RANK_SCAN_LOCK_KEY),
+                    lockToken
+            );
+        } catch (Exception e) {
+            log.warn("释放点击榜扫描锁失败，token={}", lockToken, e);
+        }
+    }
+
+    private void emitScanAbortAlert(String roundId, int scanned, int renewFailCount, String lockToken) {
+        // 结构化告警日志，方便日志平台按固定前缀和字段建立告警规则
+        log.error("{} roundId={}, scanned={}, renewFailCount={}, lockKey={}, lockToken={}",
+                MONITOR_ALERT_PREFIX,
+                roundId,
+                scanned,
+                renewFailCount,
+                CacheConsts.BOOK_VISIT_RANK_SCAN_LOCK_KEY,
+                lockToken);
+    }
+
+    private static DefaultRedisScript<Long> buildReleaseLockScript() {
+        DefaultRedisScript<Long> script = new DefaultRedisScript<>();
+        script.setResultType(Long.class);
+        script.setScriptText(
+                "if redis.call('GET', KEYS[1]) == ARGV[1] then " +
+                        "return redis.call('DEL', KEYS[1]) " +
+                        "else return 0 end");
+        return script;
+    }
+
+    private static DefaultRedisScript<Long> buildRenewLockScript() {
+        DefaultRedisScript<Long> script = new DefaultRedisScript<>();
+        script.setResultType(Long.class);
+        script.setScriptText(
+                "if redis.call('GET', KEYS[1]) == ARGV[1] then " +
+                        "return redis.call('EXPIRE', KEYS[1], ARGV[2]) " +
+                        "else return 0 end");
+        return script;
+    }
+
+    private List<BookInfo> loadVisitScanBatch(long lastId, int batchSize) {
+        QueryWrapper<BookInfo> queryWrapper = new QueryWrapper<>();
+        queryWrapper.select(DatabaseConsts.CommonColumnEnum.ID.getName(), DatabaseConsts.BookTable.COLUMN_VISIT_COUNT)
+                .eq("audit_status", 1)
+                .gt(DatabaseConsts.BookTable.COLUMN_WORD_COUNT, 0)
+                .gt(DatabaseConsts.CommonColumnEnum.ID.getName(), lastId)
+                .orderByAsc(DatabaseConsts.CommonColumnEnum.ID.getName())
+                .last("limit " + batchSize);
+        return bookInfoMapper.selectList(queryWrapper);
+    }
+
+    private void appendBatchToBuildRank(String buildKey, List<BookInfo> batch) {
+        List<Object> hashFields = batch.stream().map(v -> String.valueOf(v.getId())).collect(Collectors.toList());
+        List<Object> bufferValues = stringRedisTemplate.opsForHash().multiGet(CacheConsts.BOOK_VISIT_COUNT_HASH, hashFields);
+        List<Object> retryValues = stringRedisTemplate.opsForHash().multiGet(CacheConsts.BOOK_VISIT_COUNT_HASH + ":retry", hashFields);
+
+        Set<ZSetOperations.TypedTuple<String>> tuples = new HashSet<>();
+        for (int i = 0; i < batch.size(); i++) {
+            BookInfo bookInfo = batch.get(i);
+            long dbVisitCount = Objects.requireNonNullElse(bookInfo.getVisitCount(), 0L);
+            long bufferIncrement = parseLongValue(bufferValues, i);
+            long retryIncrement = parseLongValue(retryValues, i);
+            double score = (double) (dbVisitCount + bufferIncrement + retryIncrement);
+            if (score > 0) {
+                tuples.add(new DefaultTypedTuple<>(String.valueOf(bookInfo.getId()), score));
+            }
+        }
+        if (!tuples.isEmpty()) {
+            stringRedisTemplate.opsForZSet().add(buildKey, tuples);
+        }
+    }
+
+    private long parseLongValue(List<Object> values, int index) {
+        if (CollectionUtils.isEmpty(values) || index >= values.size()) {
+            return 0L;
+        }
+        Object value = values.get(index);
+        if (value == null) {
+            return 0L;
+        }
+        try {
+            return Long.parseLong(value.toString());
+        } catch (NumberFormatException e) {
+            return 0L;
+        }
+    }
+
+    private void mergeBuildRankToLive(String buildKey) {
+        Set<ZSetOperations.TypedTuple<String>> buildTopSet = stringRedisTemplate.opsForZSet()
+                .reverseRangeWithScores(buildKey, 0, CacheConsts.BOOK_VISIT_RANK_CANDIDATE_SIZE - 1);
+        if (CollectionUtils.isEmpty(buildTopSet)) {
+            return;
+        }
+        Set<ZSetOperations.TypedTuple<String>> mergedTuples = new HashSet<>();
+        for (ZSetOperations.TypedTuple<String> tuple : buildTopSet) {
+            String member = tuple.getValue();
+            Double buildScore = tuple.getScore();
+            if (member == null || buildScore == null) {
+                continue;
+            }
+            Double liveScore = stringRedisTemplate.opsForZSet().score(CacheConsts.BOOK_VISIT_RANK_ZSET, member);
+            double mergedScore = liveScore == null ? buildScore : Math.max(liveScore, buildScore);
+            mergedTuples.add(new DefaultTypedTuple<>(member, mergedScore));
+        }
+        if (!mergedTuples.isEmpty()) {
+            stringRedisTemplate.opsForZSet().add(CacheConsts.BOOK_VISIT_RANK_ZSET, mergedTuples);
+        }
+    }
+
+    private void trimRankZSet(String key, int keepSize) {
+        Long zsetSize = stringRedisTemplate.opsForZSet().size(key);
+        if (zsetSize == null || zsetSize <= keepSize) {
+            return;
+        }
+        long removeEnd = zsetSize - keepSize - 1;
+        stringRedisTemplate.opsForZSet().removeRange(key, 0, removeEnd);
+    }
+
+    private void refreshVisitRankBookDetailCache() {
+        Set<String> topBookIdSet = stringRedisTemplate.opsForZSet().reverseRange(
+                CacheConsts.BOOK_VISIT_RANK_ZSET, 0, CacheConsts.BOOK_VISIT_RANK_CANDIDATE_SIZE - 1);
+        if (CollectionUtils.isEmpty(topBookIdSet)) {
+            return;
+        }
+        List<Long> topBookIds = topBookIdSet.stream().map(Long::valueOf).toList();
+        List<BookInfo> bookInfos = bookInfoMapper.selectList(new QueryWrapper<BookInfo>()
+                .in(DatabaseConsts.CommonColumnEnum.ID.getName(), topBookIds)
+                .eq("audit_status", 1)
+                .gt(DatabaseConsts.BookTable.COLUMN_WORD_COUNT, 0));
+        if (CollectionUtils.isEmpty(bookInfos)) {
+            return;
+        }
+        Map<Long, Integer> firstChapterMap = bookChapterMapper.selectFirstChapterNums(topBookIds)
                 .stream().collect(Collectors.toMap(
                         m -> Long.valueOf(m.get("bookId").toString()),
                         m -> Integer.valueOf(m.get("firstChapterNum").toString()),
                         (v1, v2) -> v1));
-
-        // 4. 准备详情 Hash 数据（不包含 visitCount，避免覆盖实时更新的值）
         Map<String, Map<String, String>> allBookHashes = new HashMap<>();
         for (BookInfo book : bookInfos) {
             String hashKey = CacheConsts.BOOK_INFO_HASH_PREFIX + book.getId();
             allBookHashes.put(hashKey, buildBookInfoMap(book, firstChapterMap.getOrDefault(book.getId(), 1)));
         }
+        batchWriteBookDetailHashes(allBookHashes);
+    }
 
-        // 5. 如果需要重建 ZSet，按优先级读取实时访问量
-        // 优先级：ZSet本身（如果部分存在） > 数据库值 + 访问量缓冲Hash增量（最准确） > 详情Hash > 数据库
-        if (needRebuildZSet) {
-            Set<ZSetOperations.TypedTuple<String>> tuples = new HashSet<>();
-            // 批量读取访问量缓冲Hash（存储的是增量，需要与数据库值相加）
-            Map<Object, Object> visitCountHash = stringRedisTemplate.opsForHash().entries(CacheConsts.BOOK_VISIT_COUNT_HASH);
-            
-            for (BookInfo book : bookInfos) {
-                String bookIdStr = String.valueOf(book.getId());
-                Double score = null;
-                
-                // 优先级1：从ZSet本身读取（如果ZSet部分存在，说明是最实时的）
-                Double zsetScore = stringRedisTemplate.opsForZSet().score(CacheConsts.BOOK_VISIT_RANK_ZSET, bookIdStr);
-                if (zsetScore != null) {
-                    score = zsetScore;
-                    log.debug("从ZSet读取访问量，bookId={}, visitCount={}", bookIdStr, score);
-                } else {
-                    // 优先级2：计算总访问量 = 数据库值 + 访问量缓冲Hash中的增量（最准确）
-                    long dbVisitCount = book.getVisitCount();
-                    long bufferIncrement = 0;
-                    if (visitCountHash != null && visitCountHash.containsKey(bookIdStr)) {
-                        try {
-                            bufferIncrement = Long.parseLong(visitCountHash.get(bookIdStr).toString());
-                        } catch (NumberFormatException e) {
-                            log.warn("访问量缓冲Hash格式错误，bookId={}, value={}", bookIdStr, visitCountHash.get(bookIdStr));
+    private void batchWriteBookDetailHashes(Map<String, Map<String, String>> allBookHashes) {
+        if (CollectionUtils.isEmpty(allBookHashes)) {
+            return;
+        }
+        Set<String> existingHashes = new HashSet<>();
+        for (String hashKey : allBookHashes.keySet()) {
+            if (stringRedisTemplate.hasKey(hashKey)) {
+                existingHashes.add(hashKey);
+            }
+        }
+        stringRedisTemplate.executePipelined((RedisCallback<Object>) connection -> {
+            var serializer = stringRedisTemplate.getStringSerializer();
+            allBookHashes.forEach((hashKey, mapData) -> {
+                byte[] hashKeyBytes = serializer.serialize(hashKey);
+                boolean hashExists = existingHashes.contains(hashKey);
+                Map<byte[], byte[]> byteMap = new HashMap<>();
+                if (hashExists) {
+                    mapData.forEach((k, v) -> {
+                        if (!"visitCount".equals(k)) {
+                            byteMap.put(serializer.serialize(k), serializer.serialize(v));
                         }
-                    }
-                    long totalVisitCount = dbVisitCount + bufferIncrement;
-                    score = (double) totalVisitCount;
-                    log.debug("计算总访问量，bookId={}, dbVisitCount={}, bufferIncrement={}, total={}", 
-                            bookIdStr, dbVisitCount, bufferIncrement, totalVisitCount);
-                }
-                
-                if (score != null && score > 0) {
-                    tuples.add(new DefaultTypedTuple<>(bookIdStr, score));
+                    });
                 } else {
-                    log.warn("访问量为0或无效，跳过书籍 bookId={}, score={}", bookIdStr, score);
+                    mapData.forEach((k, v) -> byteMap.put(serializer.serialize(k), serializer.serialize(v)));
                 }
-            }
-            
-            if (!tuples.isEmpty()) {
-                // 删除旧的 ZSet 并重建（只在兜底时执行）
-                stringRedisTemplate.delete(CacheConsts.BOOK_VISIT_RANK_ZSET);
-                stringRedisTemplate.opsForZSet().add(CacheConsts.BOOK_VISIT_RANK_ZSET, tuples);
-                log.info("ZSet 排行榜重建完成，共 {} 本书", tuples.size());
-            }
-        }
-
-        // 6. Pipeline 批量更新详情 Hash（保留 visitCount 字段，不覆盖）
-        // 注意：无论ZSet是否需要重建，都要更新详情Hash，确保所有榜单书籍的详情都被缓存
-        log.info("开始批量写入 {} 本书籍的详情Hash缓存", allBookHashes.size());
-        try {
-            // 先批量检查哪些Hash已存在（在Pipeline外检查，避免Pipeline内检查不准确）
-            Set<String> existingHashes = new HashSet<>();
-            for (String hashKey : allBookHashes.keySet()) {
-                if (stringRedisTemplate.hasKey(hashKey)) {
-                    existingHashes.add(hashKey);
+                if (!byteMap.isEmpty()) {
+                    connection.hashCommands().hMSet(hashKeyBytes, byteMap);
                 }
-            }
-            log.debug("检查到 {} 个Hash已存在，{} 个Hash需要新建", existingHashes.size(), allBookHashes.size() - existingHashes.size());
-            
-            stringRedisTemplate.executePipelined((RedisCallback<Object>) connection -> {
-                var serializer = stringRedisTemplate.getStringSerializer();
-                allBookHashes.forEach((hashKey, mapData) -> {
-                    byte[] hashKeyBytes = serializer.serialize(hashKey);
-                    boolean hashExists = existingHashes.contains(hashKey);
-                    Map<byte[], byte[]> byteMap = new HashMap<>();
-                    
-                    if (hashExists) {
-                        // Hash 已存在，排除 visitCount 字段，避免覆盖实时更新的值
-                        mapData.forEach((k, v) -> {
-                            if (!"visitCount".equals(k)) {
-                                byteMap.put(serializer.serialize(k), serializer.serialize(v));
-                            }
-                        });
-                    } else {
-                        // Hash 不存在，包含所有字段（包括 visitCount）
-                        mapData.forEach((k, v) -> 
-                            byteMap.put(serializer.serialize(k), serializer.serialize(v))
-                        );
-                    }
-                    
-                    if (!byteMap.isEmpty()) {
-                        connection.hashCommands().hMSet(hashKeyBytes, byteMap);
-                    }
-                });
-                return null;
             });
-            log.info("详情Hash缓存写入完成，共写入 {} 本书籍的详情（已存在：{}，新建：{}）", 
-                    allBookHashes.size(), existingHashes.size(), allBookHashes.size() - existingHashes.size());
-        } catch (Exception e) {
-            log.error("批量写入详情Hash缓存失败", e);
-        }
-        
-        log.info("小说点击榜缓存刷新完成（ZSet重建：{}，详情Hash已更新：{}本）", needRebuildZSet ? "是" : "否", allBookHashes.size());
+            return null;
+        });
     }
 
     /**
@@ -280,44 +426,8 @@ public class BookRankCacheJob {
             // 4. Pipeline 批量更新详情 Hash（保留 visitCount 字段，不覆盖实时更新的值）
             log.info("开始批量写入 {} 本书籍的详情Hash缓存", allBookHashes.size());
             try {
-                // 先批量检查哪些Hash已存在（在Pipeline外检查，避免Pipeline内检查不准确）
-                Set<String> existingHashes = new HashSet<>();
-                for (String hashKey : allBookHashes.keySet()) {
-                    if (stringRedisTemplate.hasKey(hashKey)) {
-                        existingHashes.add(hashKey);
-                    }
-                }
-                log.debug("检查到 {} 个Hash已存在，{} 个Hash需要新建", existingHashes.size(), allBookHashes.size() - existingHashes.size());
-                
-                stringRedisTemplate.executePipelined((RedisCallback<Object>) connection -> {
-                    var serializer = stringRedisTemplate.getStringSerializer();
-                    allBookHashes.forEach((hashKey, mapData) -> {
-                        byte[] hashKeyBytes = serializer.serialize(hashKey);
-                        boolean hashExists = existingHashes.contains(hashKey);
-                        Map<byte[], byte[]> byteMap = new HashMap<>();
-                        
-                        if (hashExists) {
-                            // Hash 已存在，排除 visitCount 字段，避免覆盖实时更新的值
-                            mapData.forEach((k, v) -> {
-                                if (!"visitCount".equals(k)) {
-                                    byteMap.put(serializer.serialize(k), serializer.serialize(v));
-                                }
-                            });
-                        } else {
-                            // Hash 不存在，包含所有字段（包括 visitCount）
-                            mapData.forEach((k, v) -> 
-                                byteMap.put(serializer.serialize(k), serializer.serialize(v))
-                            );
-                        }
-                        
-                        if (!byteMap.isEmpty()) {
-                            connection.hashCommands().hMSet(hashKeyBytes, byteMap);
-                        }
-                    });
-                    return null;
-                });
-                log.info("{}缓存刷新完成，共 {} 本书籍详情已写入Redis（已存在：{}，新建：{}）", 
-                        rankName, allBookHashes.size(), existingHashes.size(), allBookHashes.size() - existingHashes.size());
+                batchWriteBookDetailHashes(allBookHashes);
+                log.info("{}缓存刷新完成，共 {} 本书籍详情已写入Redis", rankName, allBookHashes.size());
             } catch (Exception e) {
                 log.error("批量写入{}详情Hash缓存失败", rankName, e);
             }

@@ -5,6 +5,7 @@ import com.novel.book.dto.resp.*;
 import com.novel.book.dto.req.BookVisitReqDto;
 import com.novel.book.service.BookReadService;
 import com.novel.book.service.BookSearchService;
+import com.novel.common.auth.UserHolder;
 import com.novel.common.constant.ApiRouterConsts;
 import com.novel.common.constant.ErrorCodeEnum;
 import com.novel.common.resp.PageRespDto;
@@ -21,6 +22,7 @@ import java.util.concurrent.CompletableFuture;
 import com.novel.book.service.AuditExperienceExtractService;
 import com.novel.book.dto.req.BookCommentPageReqDto;
 import org.springdoc.core.annotations.ParameterObject;
+import jakarta.servlet.http.HttpServletRequest;
 
 
 import com.novel.book.job.BookRankCacheJob;
@@ -153,8 +155,24 @@ public class FrontBookController {
      */
     @Operation(summary = "增加小说点击量接口")
     @PostMapping("visit")
-    public RestResp<Void> addVisitCount(@Parameter(description = "小说ID") @RequestBody BookVisitReqDto dto) {
-        return bookSearchService.addVisitCount(dto.getBookId());
+    public RestResp<Void> addVisitCount(@Parameter(description = "小说ID") @RequestBody BookVisitReqDto dto,
+                                        HttpServletRequest request) {
+        Long userId = UserHolder.getUserId();
+        String userIdentity = userId != null ? "u:" + userId : "ip:" + resolveClientIp(request);
+        return bookSearchService.addVisitCount(dto.getBookId(), userIdentity);
+    }
+
+    private String resolveClientIp(HttpServletRequest request) {
+        String xForwardedFor = request.getHeader("X-Forwarded-For");
+        if (xForwardedFor != null && !xForwardedFor.isBlank() && !"unknown".equalsIgnoreCase(xForwardedFor)) {
+            return xForwardedFor.split(",")[0].trim();
+        }
+        String xRealIp = request.getHeader("X-Real-IP");
+        if (xRealIp != null && !xRealIp.isBlank() && !"unknown".equalsIgnoreCase(xRealIp)) {
+            return xRealIp.trim();
+        }
+        String remoteAddr = request.getRemoteAddr();
+        return (remoteAddr == null || remoteAddr.isBlank()) ? "unknown" : remoteAddr;
     }
 
     /**

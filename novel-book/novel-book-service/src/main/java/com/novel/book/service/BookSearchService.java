@@ -31,9 +31,10 @@ public interface BookSearchService {
     /**
      * 增加小说点击量
      * @param bookId 小说ID
+     * @param userIdentity 用户标识（用于窗口去重）
      * @return void
      */
-    RestResp<Void> addVisitCount(Long bookId);
+    RestResp<Void> addVisitCount(Long bookId, String userIdentity);
 
     /**
      * 小说最新章节相关信息查询

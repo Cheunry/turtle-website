@@ -10,6 +10,7 @@ import com.novel.book.dao.mapper.BookChapterMapper;
 import com.novel.book.dao.mapper.BookInfoMapper;
 import com.novel.book.dao.mapper.HomeBookMapper;
 import com.novel.book.dto.resp.*;
+import com.novel.book.service.BookExistBloomService;
 import com.novel.common.constant.DatabaseConsts;
 import com.novel.common.util.RankBookDescUtils;
 import com.novel.common.resp.RestResp;
@@ -39,9 +40,11 @@ import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.scheduling.annotation.Scheduled;
 
 import java.time.format.DateTimeFormatter;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.Collections;
 
 @Service
@@ -54,6 +57,7 @@ public class BookSearchServiceImpl implements BookSearchService {
     private final HomeBookMapper homeBookMapper;
     private final StringRedisTemplate stringRedisTemplate;
     private final RocketMQTemplate rocketMQTemplate;
+    private final BookExistBloomService bookExistBloomService;
 
     private final BookCategoryMapper bookCategoryMapper;
 
@@ -61,6 +65,8 @@ public class BookSearchServiceImpl implements BookSearchService {
     private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private final AtomicLong visitCountedCounter = new AtomicLong(0);
+    private final AtomicLong visitDedupBlockedCounter = new AtomicLong(0);
 
     // Lua 脚本：原子性地增加访问量
     @SuppressWarnings("rawtypes")
@@ -79,6 +85,21 @@ public class BookSearchServiceImpl implements BookSearchService {
      */
     @Override
     public RestResp<BookInfoRespDto> getBookById(Long bookId) {
+        String nullCacheKey = CacheConsts.BOOK_INFO_NULL_CACHE_PREFIX + bookId;
+        if (Boolean.TRUE.equals(stringRedisTemplate.hasKey(nullCacheKey))) {
+            return RestResp.fail(com.novel.common.constant.ErrorCodeEnum.USER_REQUEST_PARAM_ERROR);
+        }
+
+        if (!bookExistBloomService.mightContain(bookId)) {
+            stringRedisTemplate.opsForValue().set(
+                    nullCacheKey,
+                    "1",
+                    CacheConsts.BOOK_INFO_NULL_CACHE_TTL_SECONDS,
+                    TimeUnit.SECONDS
+            );
+            return RestResp.fail(com.novel.common.constant.ErrorCodeEnum.USER_REQUEST_PARAM_ERROR);
+        }
+
         // 1. 尝试从 Redis Hash 获取书籍详情 (Top 100 热门书)
         Map<Object, Object> bookInfoMap = stringRedisTemplate.opsForHash().entries(CacheConsts.BOOK_INFO_HASH_PREFIX + bookId);
         if (!CollectionUtils.isEmpty(bookInfoMap)) {
@@ -124,6 +145,12 @@ public class BookSearchServiceImpl implements BookSearchService {
         
         // 检查书籍审核状态：只有审核通过的书籍才能被读者查看
         if (bookInfo == null || bookInfo.getAuditStatus() == null || bookInfo.getAuditStatus() != 1) {
+            stringRedisTemplate.opsForValue().set(
+                    nullCacheKey,
+                    "1",
+                    CacheConsts.BOOK_INFO_NULL_CACHE_TTL_SECONDS,
+                    TimeUnit.SECONDS
+            );
             // 书籍不存在或未审核通过，返回错误
             return RestResp.fail(com.novel.common.constant.ErrorCodeEnum.USER_REQUEST_PARAM_ERROR);
         }
@@ -138,37 +165,38 @@ public class BookSearchServiceImpl implements BookSearchService {
         BookChapter firstBookChapter = bookChapterMapper.selectOne(queryWrapper);
 
         // --- 开始回写 Redis (使用 Pipeline 减少 RTT) ---
-        // 注意：只缓存榜单中的热门书籍，其他书籍不缓存（避免Redis内存占用过大）
-        // 判断是否在榜单中：检查ZSet中是否存在该书籍ID
+        // 所有书籍都缓存：热门书籍使用较长TTL，非热门书籍使用较短TTL
         try {
             Double zsetScore = stringRedisTemplate.opsForZSet().score(CacheConsts.BOOK_VISIT_RANK_ZSET, String.valueOf(bookId));
             boolean isInRank = (zsetScore != null && zsetScore > 0);
-            
-            if (isInRank) {
-                // 在榜单中，写入缓存（1小时过期）
-                Map<String, String> cacheMap = buildBookInfoMap(bookInfo, firstBookChapter != null ? firstBookChapter.getChapterNum() : 1);
-                String redisKey = CacheConsts.BOOK_INFO_HASH_PREFIX + bookId;
-                
-                stringRedisTemplate.executePipelined((RedisCallback<Object>) connection -> {
-                    RedisSerializer<String> serializer = stringRedisTemplate.getStringSerializer();
-                    byte[] keyBytes = serializer.serialize(redisKey);
-                    
-                    // 1. HMSET 批量设置字段（使用新的命令接口）
-                    Map<byte[], byte[]> byteMap = new HashMap<>();
-                    cacheMap.forEach((k, v) -> byteMap.put(serializer.serialize(k), serializer.serialize(v)));
-                    connection.hashCommands().hMSet(keyBytes, byteMap);
-                    
-                    // 2. EXPIRE 设置过期时间 (1小时 = 3600秒)（使用新的命令接口）
-                    connection.keyCommands().expire(keyBytes, 3600);
-                    
-                    return null;
-                });
-                
-                log.info(">>> 详情页回写 Redis Hash 成功 (Pipeline), bookId={} (榜单书籍)", bookId);
+
+            // 热门：连载 2 小时，完结 12 小时；非热门：连载 15 分钟，完结 1 小时
+            long ttlSeconds;
+            if (Integer.valueOf(1).equals(bookInfo.getBookStatus())) {
+                ttlSeconds = isInRank ? 43200L : 3600L;
             } else {
-                // 不在榜单中，不缓存（避免Redis内存占用过大）
-                log.debug(">>> 书籍不在榜单中，不缓存到Redis，bookId={}", bookId);
+                ttlSeconds = isInRank ? 7200L : 900L;
             }
+
+            Map<String, String> cacheMap = buildBookInfoMap(bookInfo, firstBookChapter != null ? firstBookChapter.getChapterNum() : 1);
+            String redisKey = CacheConsts.BOOK_INFO_HASH_PREFIX + bookId;
+
+            stringRedisTemplate.executePipelined((RedisCallback<Object>) connection -> {
+                RedisSerializer<String> serializer = stringRedisTemplate.getStringSerializer();
+                byte[] keyBytes = serializer.serialize(redisKey);
+
+                // 1. HMSET 批量设置字段
+                Map<byte[], byte[]> byteMap = new HashMap<>();
+                cacheMap.forEach((k, v) -> byteMap.put(serializer.serialize(k), serializer.serialize(v)));
+                connection.hashCommands().hMSet(keyBytes, byteMap);
+
+                // 2. EXPIRE 设置过期时间
+                connection.keyCommands().expire(keyBytes, ttlSeconds);
+
+                return null;
+            });
+
+            log.info(">>> 详情页回写 Redis Hash 成功 (Pipeline), bookId={}, ttl={}s, inRank={}", bookId, ttlSeconds, isInRank);
         } catch (Exception e) {
             log.error(">>> 详情页回写 Redis 失败，bookId={}", bookId, e);
         }
@@ -250,29 +278,45 @@ public class BookSearchServiceImpl implements BookSearchService {
     /**
      * 增加书籍访问量
      * @param bookId 小说ID
+     * @param userIdentity 用户标识（用于窗口去重）
      * @return void
      */
     @Override
-    public RestResp<Void> addVisitCount(Long bookId) {
+    public RestResp<Void> addVisitCount(Long bookId, String userIdentity) {
         try {
-            // 使用 Lua 脚本原子性地增加访问量（保证 ZSet、Hash 和书籍详情缓存的原子性）
+            // 使用 Lua 脚本原子性地执行：窗口去重 + 访问量更新
             String bookIdStr = String.valueOf(bookId);
+            String safeUserIdentity = (userIdentity == null || userIdentity.isBlank())
+                    ? "anonymous"
+                    : userIdentity;
+            long currentEpochSeconds = System.currentTimeMillis() / 1000;
+            long bucket = currentEpochSeconds / CacheConsts.BOOK_VISIT_UV_WINDOW_SECONDS;
+            String uvSetKey = CacheConsts.BOOK_VISIT_UV_SET_PREFIX + bookId + ":" + bucket;
             List<String> keys = Arrays.asList(
                     CacheConsts.BOOK_VISIT_RANK_ZSET,
                     CacheConsts.BOOK_VISIT_COUNT_HASH,
-                    CacheConsts.BOOK_INFO_HASH_PREFIX + bookId  // 书籍详情 Hash key
+                    CacheConsts.BOOK_INFO_HASH_PREFIX + bookId,
+                    uvSetKey
             );
             @SuppressWarnings("unchecked")
             List<Long> result = stringRedisTemplate.execute(
                     INCREMENT_VISIT_COUNT_SCRIPT,
                     keys,
                     bookIdStr,
-                    "1"
+                    safeUserIdentity,
+                    String.valueOf(CacheConsts.BOOK_VISIT_UV_SET_TTL_SECONDS)
             );
             
-            if (result != null && !result.isEmpty()) {
-                log.debug(">>> 访问量更新成功（Lua脚本原子操作）, bookId={}, zsetScore={}, hashValue={}, 已同步更新书籍详情Hash缓存", 
-                        bookId, result.get(0), result.size() > 1 ? result.get(1) : "N/A");
+            if (result != null && result.size() >= 3) {
+                Long countedFlag = result.get(0);
+                if (Objects.equals(countedFlag, 1L)) {
+                    visitCountedCounter.incrementAndGet();
+                    log.debug(">>> 访问量更新成功（UV去重后计数）, bookId={}, zsetScore={}, hashValue={}",
+                            bookId, result.get(1), result.get(2));
+                } else {
+                    visitDedupBlockedCounter.incrementAndGet();
+                    log.debug(">>> 访问量去重命中（本窗口不重复计数）, bookId={}, userIdentity={}", bookId, safeUserIdentity);
+                }
             } else {
                 log.warn(">>> Lua脚本执行返回null或空, bookId={}", bookId);
             }
@@ -283,6 +327,22 @@ public class BookSearchServiceImpl implements BookSearchService {
             sendUpdateMq(bookId);
         }
         return RestResp.ok();
+    }
+
+    /**
+     * 每分钟输出一次访问去重指标，便于监控 counted / dedup_blocked 比例
+     */
+    @Scheduled(cron = "0 * * * * ?")
+    public void logVisitDedupMetrics() {
+        long counted = visitCountedCounter.getAndSet(0);
+        long dedupBlocked = visitDedupBlockedCounter.getAndSet(0);
+        long total = counted + dedupBlocked;
+        if (total <= 0) {
+            return;
+        }
+        double blockedRatio = (dedupBlocked * 100.0d) / total;
+        log.info("[METRIC][VISIT_UV_DEDUP] window=1m counted={}, dedupBlocked={}, total={}, blockedRatio={}%",
+                counted, dedupBlocked, total, String.format("%.2f", blockedRatio));
     }
 
     private void sendUpdateMq(Long bookId) {
