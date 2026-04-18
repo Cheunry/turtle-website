@@ -1,1152 +1,211 @@
 package com.novel.ai.service.impl;
 
-import com.novel.ai.feign.SearchFeign;
-import com.novel.ai.dto.req.AuditExperienceSearchReqDto;
-import com.novel.ai.dto.resp.AuditExperienceSearchRespDto;
+import com.novel.ai.agent.book.BookAuditContext;
+import com.novel.ai.agent.chapter.ChapterAuditContext;
+import com.novel.ai.agent.core.AuditPipeline;
+import com.novel.ai.dto.req.AuditRuleReqDto;
 import com.novel.ai.dto.req.TextPolishReqDto;
+import com.novel.ai.dto.resp.AuditRuleRespDto;
 import com.novel.ai.dto.resp.TextPolishRespDto;
+import com.novel.ai.invoker.StructuredOutputInvoker;
+import com.novel.ai.model.AuditRuleAiOutput;
+import com.novel.ai.model.TextPolishAiOutput;
+import com.novel.ai.prompt.NovelAiPromptKey;
+import com.novel.ai.prompt.NovelAiPromptLoader;
 import com.novel.ai.service.TextService;
 import com.novel.book.dto.req.BookAuditReqDto;
 import com.novel.book.dto.req.BookCoverReqDto;
 import com.novel.book.dto.req.ChapterAuditReqDto;
 import com.novel.book.dto.resp.BookAuditRespDto;
 import com.novel.book.dto.resp.ChapterAuditRespDto;
-import com.novel.common.resp.RestResp;
 import com.novel.common.constant.ErrorCodeEnum;
+import com.novel.common.resp.RestResp;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.skywalking.apm.toolkit.trace.ActiveSpan;
 import org.apache.skywalking.apm.toolkit.trace.Trace;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.retry.NonTransientAiException;
+import org.springframework.ai.converter.BeanOutputConverter;
 import org.springframework.stereotype.Service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.HashMap;
+import java.util.Map;
 
+/**
+ * 文本相关 AI 能力入口。书籍审核、章节审核已经下沉到
+ * {@code com.novel.ai.agent} 下的 Agent 流水线，本类仅做：
+ * <ol>
+ *     <li>组装审核请求上下文并交给对应 {@link AuditPipeline} 执行；</li>
+ *     <li>承载流程较轻的能力：润色、封面提示词生成、审核经验规则抽取。</li>
+ * </ol>
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class TextServiceImpl implements TextService {
 
     private final ChatClient chatClient;
-    private final SearchFeign searchFeign;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final NovelAiPromptLoader promptLoader;
+    private final StructuredOutputInvoker structuredOutputInvoker;
 
-    private static final int MAX_CONTENT_LENGTH = 5000;
-    private static final int MAX_AUDIT_REASON_LENGTH = 500; // 数据库字段限制
-    private static final int MIN_BOOK_DESC_LENGTH = 30; // 最小小说简介长度
-    private static final int MAX_POLISH_TEXT_LENGTH = 10000; // 润色文本最大长度（字符数）
-    private static final int MIN_POLISH_TEXT_LENGTH = 10; // 润色文本最小长度（字符数）
+    /** 书籍审核流水线，由 {@link com.novel.ai.agent.book.BookAuditPipelineFactory} 装配。 */
+    private final AuditPipeline<BookAuditContext> bookAuditPipeline;
 
-    /**
-     * AI审核书籍（小说名和简介）
-     * @param reqDto 书籍审核请求参数
-     * @return 书籍审核结果
-     */
+    /** 章节审核流水线，由 {@link com.novel.ai.agent.chapter.ChapterAuditPipelineFactory} 装配。 */
+    private final AuditPipeline<ChapterAuditContext> chapterAuditPipeline;
+
+    /** 无状态，复用即可，避免每次调用都重新构造 JsonSchema。 */
+    private final BeanOutputConverter<TextPolishAiOutput> textPolishConverter =
+            new BeanOutputConverter<>(TextPolishAiOutput.class);
+    private final BeanOutputConverter<AuditRuleAiOutput> auditRuleConverter =
+            new BeanOutputConverter<>(AuditRuleAiOutput.class);
+
+    private static final int MIN_BOOK_DESC_LENGTH = 30;
+    private static final int MAX_POLISH_TEXT_LENGTH = 10000;
+    private static final int MIN_POLISH_TEXT_LENGTH = 10;
+
     @Override
     @Trace(operationName = "AI审核书籍")
     public RestResp<BookAuditRespDto> auditBook(BookAuditReqDto reqDto) {
-        // 设置 SkyWalking 监控标签
-        ActiveSpan.tag("ai.model", "文本模型");
-        ActiveSpan.tag("ai.operation", "audit_book");
-        if (reqDto != null && reqDto.getId() != null) {
-            ActiveSpan.tag("bookId", String.valueOf(reqDto.getId()));
-        }
-        if (reqDto != null && reqDto.getBookName() != null) {
-            ActiveSpan.tag("bookName", reqDto.getBookName().length() > 50 ? 
-                reqDto.getBookName().substring(0, 50) : reqDto.getBookName());
-        }
-        
-        long startTime = System.currentTimeMillis();
-        
-        try {
-            // RAG 检索：获取相似审核经验
-            String contentToSearch = (reqDto.getBookName() != null ? reqDto.getBookName() : "") + " " + 
-                                     (reqDto.getBookDesc() != null ? reqDto.getBookDesc() : "");
-            String similarExperiences = getSimilarAuditExperiences(contentToSearch);
-
-            // 构建审核提示词
-            String prompt = buildAuditPrompt(reqDto.getBookName(), reqDto.getBookDesc(), similarExperiences);
-            ActiveSpan.tag("prompt.length", String.valueOf(prompt.length()));
-
-            // 调用AI模型进行审核
-            String aiResponse = chatClient.prompt()
-                    .user(prompt)
-                    .call()
-                    .content();
-
-            long duration = System.currentTimeMillis() - startTime;
-            ActiveSpan.tag("ai.duration.ms", String.valueOf(duration));
-            ActiveSpan.tag("ai.response.length", String.valueOf(aiResponse != null ? aiResponse.length() : 0));
-            ActiveSpan.tag("ai.status", "success");
-
-            log.info("AI审核响应，书籍ID: {}, 耗时: {}ms, 响应: {}", reqDto.getId(), duration, aiResponse);
-
-            // 解析AI响应
-            BookAuditRespDto result = parseAuditResponse(aiResponse, reqDto.getId());
-            
-            if (result != null && result.getAuditStatus() != null) {
-                ActiveSpan.tag("audit.status", String.valueOf(result.getAuditStatus()));
-            }
-
-            return RestResp.ok(result);
-
-        } catch (Exception e) {
-            long duration = System.currentTimeMillis() - startTime;
-            ActiveSpan.tag("ai.duration.ms", String.valueOf(duration));
-            ActiveSpan.tag("ai.status", "error");
-            ActiveSpan.tag("ai.error.type", e.getClass().getSimpleName());
-            String errorMsg = e.getMessage();
-            if (errorMsg != null && errorMsg.length() > 200) {
-                errorMsg = errorMsg.substring(0, 200);
-            }
-            ActiveSpan.tag("ai.error.message", errorMsg != null ? errorMsg : "unknown");
-            ActiveSpan.error(e);
-            
-            log.error("AI审核异常，书籍ID: {}, 耗时: {}ms", reqDto.getId(), duration, e);
-            
-            // 检查是否是内容安全检查失败（AI模型检测到不当内容）
-            if (isContentInspectionFailed(e)) {
-                // AI模型检测到不当内容，直接返回审核不通过
-                ActiveSpan.tag("ai.error.category", "content_inspection_failed");
-                log.warn("AI模型检测到不当内容，书籍ID: {}, 直接标记为审核不通过", reqDto.getId());
-                BookAuditRespDto result = BookAuditRespDto.builder()
-                        .id(reqDto.getId())
-                        .auditStatus(2) // 审核不通过
-                        .aiConfidence(new BigDecimal("1.0"))
-                        .auditReason("内容包含不当信息，不符合平台规范")
-                        .build();
-                return RestResp.ok(result);
-            }
-            
-            // 其他异常，返回待审核状态
-            BookAuditRespDto result = BookAuditRespDto.builder()
-                    .id(reqDto.getId())
-                    .auditStatus(0) // 待审核
-                    .aiConfidence(new BigDecimal("0.0"))
-                    .auditReason("AI审核服务异常，已进入人工审核流程")
-                    .build();
-            return RestResp.ok(result);
-        }
+        BookAuditContext ctx = new BookAuditContext(reqDto);
+        bookAuditPipeline.execute(ctx);
+        return RestResp.ok(ctx.getResult());
     }
 
-    /**
-     * AI审核章节（章节名和内容）
-     * @param reqDto 章节审核请求参数
-     * @return 章节审核结果
-     */
     @Override
     @Trace(operationName = "AI审核章节")
     public RestResp<ChapterAuditRespDto> auditChapter(ChapterAuditReqDto reqDto) {
-        // 设置 SkyWalking 监控标签
-        ActiveSpan.tag("ai.model", "text_model");
-        ActiveSpan.tag("ai.operation", "audit_chapter");
-        if (reqDto != null) {
-            if (reqDto.getBookId() != null) {
-                ActiveSpan.tag("bookId", String.valueOf(reqDto.getBookId()));
-            }
-            if (reqDto.getChapterNum() != null) {
-                ActiveSpan.tag("chapterNum", String.valueOf(reqDto.getChapterNum()));
-            }
-            if (reqDto.getContent() != null) {
-                ActiveSpan.tag("content.length", String.valueOf(reqDto.getContent().length()));
-            }
-        }
-        
-        long startTime = System.currentTimeMillis();
-        try {
-            String content = reqDto.getContent();
-            if (content == null || content.trim().isEmpty()) {
-                // 内容为空时返回待审核
-                ActiveSpan.tag("ai.status", "skipped");
-                ActiveSpan.tag("skip.reason", "content_empty");
-                ChapterAuditRespDto result = ChapterAuditRespDto.builder()
-                        .bookId(reqDto.getBookId())
-                        .chapterNum(reqDto.getChapterNum())
-                        .auditStatus(0)
-                        .aiConfidence(new BigDecimal("0.0"))
-                        .auditReason("章节内容为空，需要人工审核")
-                        .build();
-                return RestResp.ok(result);
-            }
-
-            // 如果内容超过MAX_CONTENT_LENGTH字，进行分段审核
-            if (content.length() > MAX_CONTENT_LENGTH) {
-                List<String> segments = splitContent(content, MAX_CONTENT_LENGTH);
-                ActiveSpan.tag("segments.count", String.valueOf(segments.size()));
-                log.info("章节内容较长，分为 {} 段进行审核，章节 bookId: {}, chapterNum: {}", 
-                        segments.size(), reqDto.getBookId(), reqDto.getChapterNum());
-
-                // 对每段进行审核
-                List<ChapterAuditRespDto> segmentResults = new ArrayList<>();
-                for (int i = 0; i < segments.size(); i++) {
-                    String segment = segments.get(i);
-                    // RAG 检索：获取相似审核经验
-                    String similarExperiences = getSimilarAuditExperiences(segment);
-                    String prompt = buildChapterAuditPrompt(reqDto.getChapterName(), segment, i + 1, segments.size(), similarExperiences);
-
-                    try {
-                        long segmentStartTime = System.currentTimeMillis();
-                        String aiResponse = chatClient.prompt()
-                                .user(prompt)
-                                .call()
-                                .content();
-                        long segmentDuration = System.currentTimeMillis() - segmentStartTime;
-                        ActiveSpan.tag("segment." + (i + 1) + ".duration.ms", String.valueOf(segmentDuration));
-
-                        log.info("AI审核响应，章节 bookId: {}, chapterNum: {}, 第 {}/{} 段, 耗时: {}ms, 响应: {}", 
-                                reqDto.getBookId(), reqDto.getChapterNum(), i + 1, segments.size(), segmentDuration, aiResponse);
-
-                        ChapterAuditRespDto segmentResult = parseChapterAuditResponse(
-                                aiResponse, reqDto.getBookId(), reqDto.getChapterNum());
-                        segmentResults.add(segmentResult);
-                    } catch (Exception segmentException) {
-                        ActiveSpan.tag("segment." + (i + 1) + ".status", "error");
-                        ActiveSpan.tag("segment." + (i + 1) + ".error.type", segmentException.getClass().getSimpleName());
-                        ActiveSpan.error(segmentException);
-                        
-                        log.error("AI审核异常，章节 bookId: {}, chapterNum: {}, 第 {}/{} 段", 
-                                reqDto.getBookId(), reqDto.getChapterNum(), i + 1, segments.size(), segmentException);
-                        
-                        // 检查是否是内容安全检查失败
-                        if (isContentInspectionFailed(segmentException)) {
-                            ActiveSpan.tag("segment." + (i + 1) + ".error.category", "content_inspection_failed");
-                            // 如果任何一段检测到不当内容，直接返回审核不通过
-                            log.warn("第 {}/{} 段检测到不当内容，章节 bookId: {}, chapterNum: {}, 直接标记为审核不通过", 
-                                    i + 1, segments.size(), reqDto.getBookId(), reqDto.getChapterNum());
-                            ChapterAuditRespDto result = ChapterAuditRespDto.builder()
-                                    .bookId(reqDto.getBookId())
-                                    .chapterNum(reqDto.getChapterNum())
-                                    .auditStatus(2) // 审核不通过
-                                    .aiConfidence(new BigDecimal("1.0"))
-                                    .auditReason("内容包含不当信息，不符合平台规范")
-                                    .build();
-                            return RestResp.ok(result);
-                        } else {
-                            // 其他异常，该段标记为待审核
-                            ChapterAuditRespDto segmentResult = ChapterAuditRespDto.builder()
-                                    .bookId(reqDto.getBookId())
-                                    .chapterNum(reqDto.getChapterNum())
-                                    .auditStatus(0) // 待审核
-                                    .aiConfidence(new BigDecimal("0.0"))
-                                    .auditReason("第" + (i + 1) + "段审核异常，已进入人工审核流程")
-                                    .build();
-                            segmentResults.add(segmentResult);
-                        }
-                    }
-                }
-
-                // 合并分段审核结果
-                ChapterAuditRespDto result = mergeSegmentAuditResults(segmentResults, reqDto.getBookId(), reqDto.getChapterNum());
-                long totalDuration = System.currentTimeMillis() - startTime;
-                ActiveSpan.tag("ai.duration.ms", String.valueOf(totalDuration));
-                ActiveSpan.tag("ai.status", "success");
-                if (result != null && result.getAuditStatus() != null) {
-                    ActiveSpan.tag("audit.status", String.valueOf(result.getAuditStatus()));
-                }
-                return RestResp.ok(result);
-            } else {
-                // 内容较短，直接审核
-                String similarExperiences = getSimilarAuditExperiences(content);
-                String prompt = buildChapterAuditPrompt(reqDto.getChapterName(), content, 1, 1, similarExperiences);
-                ActiveSpan.tag("prompt.length", String.valueOf(prompt.length()));
-
-                String aiResponse = chatClient.prompt()
-                        .user(prompt)
-                        .call()
-                        .content();
-
-                long duration = System.currentTimeMillis() - startTime;
-                ActiveSpan.tag("ai.duration.ms", String.valueOf(duration));
-                ActiveSpan.tag("ai.response.length", String.valueOf(aiResponse != null ? aiResponse.length() : 0));
-                ActiveSpan.tag("ai.status", "success");
-
-                log.info("AI审核响应，章节 bookId: {}, chapterNum: {}, 耗时: {}ms, 响应: {}", 
-                        reqDto.getBookId(), reqDto.getChapterNum(), duration, aiResponse);
-
-                ChapterAuditRespDto result = parseChapterAuditResponse(aiResponse, reqDto.getBookId(), reqDto.getChapterNum());
-                if (result != null && result.getAuditStatus() != null) {
-                    ActiveSpan.tag("audit.status", String.valueOf(result.getAuditStatus()));
-                }
-                return RestResp.ok(result);
-            }
-
-        } catch (Exception e) {
-            long duration = System.currentTimeMillis() - startTime;
-            ActiveSpan.tag("ai.duration.ms", String.valueOf(duration));
-            ActiveSpan.tag("ai.status", "error");
-            ActiveSpan.tag("ai.error.type", e.getClass().getSimpleName());
-            String errorMsg = e.getMessage();
-            if (errorMsg != null && errorMsg.length() > 200) {
-                errorMsg = errorMsg.substring(0, 200);
-            }
-            ActiveSpan.tag("ai.error.message", errorMsg != null ? errorMsg : "unknown");
-            ActiveSpan.error(e);
-            
-            log.error("AI审核异常，章节 bookId: {}, chapterNum: {}, 耗时: {}ms", 
-                    reqDto.getBookId(), reqDto.getChapterNum(), duration, e);
-            
-            // 检查是否是内容安全检查失败（AI模型检测到不当内容）
-            if (isContentInspectionFailed(e)) {
-                ActiveSpan.tag("ai.error.category", "content_inspection_failed");
-                // AI模型检测到不当内容，直接返回审核不通过
-                log.warn("AI模型检测到不当内容，章节 bookId: {}, chapterNum: {}, 直接标记为审核不通过", 
-                        reqDto.getBookId(), reqDto.getChapterNum());
-                ChapterAuditRespDto result = ChapterAuditRespDto.builder()
-                        .bookId(reqDto.getBookId())
-                        .chapterNum(reqDto.getChapterNum())
-                        .auditStatus(2) // 审核不通过
-                        .aiConfidence(new BigDecimal("1.0"))
-                        .auditReason("内容包含不当信息，不符合平台规范")
-                        .build();
-                return RestResp.ok(result);
-            }
-            
-            // 其他异常，返回待审核状态
-            ChapterAuditRespDto result = ChapterAuditRespDto.builder()
-                    .bookId(reqDto.getBookId())
-                    .chapterNum(reqDto.getChapterNum())
-                    .auditStatus(0) // 待审核
-                    .aiConfidence(new BigDecimal("0.0"))
-                    .auditReason("AI审核服务异常，已进入人工审核流程")
-                    .build();
-            return RestResp.ok(result);
-        }
+        ChapterAuditContext ctx = new ChapterAuditContext(reqDto);
+        chapterAuditPipeline.execute(ctx);
+        return RestResp.ok(ctx.getResult());
     }
 
-    /**
-     * 构建审核提示词-小说名称和简介审核
-     * @param bookName 小说名称
-     * @param bookDesc 小说简介
-     * @return 提示词
-     */
-    private String buildAuditPrompt(String bookName, String bookDesc, String similarExperiences) {
-        String basePrompt = String.format(
-                "你是一个专业的内容审核系统。请审核以下小说的名称和简介，判断是否符合网络文学平台的内容规范。\n\n" +
-                        "小说名称：%s\n" +
-                        "小说简介：%s\n\n" +
-                        "审核标准：\n" +
-                        "1. 内容是否包含违法违规信息（色情、暴力、政治敏感等）\n" +
-                        "2. 内容是否包含低俗、恶俗内容\n" +
-                        "3. 内容是否包含广告、推广信息\n" +
-                        "4. 内容是否过于简短或缺乏实质性信息\n" +
-                        "5. 内容是否符合网络文学的基本规范\n\n" +
-                        "6. 内容允许改编现有作品、同人文、同性恋、具有文学价值的情感描写等\n\n",
-                bookName != null ? bookName : "",
-                bookDesc != null ? bookDesc : ""
-        );
-
-        if (similarExperiences != null && !similarExperiences.trim().isEmpty()) {
-            basePrompt += "历史相似判例参考：\n" + similarExperiences + "\n\n";
-        }
-
-        basePrompt += "请以JSON格式返回审核结果，格式如下：\n" +
-                "{\n" +
-                "  \"auditStatus\": 1或2（1表示通过，2表示不通过）,\n" +
-                "  \"aiConfidence\": 0.0-1.0之间的数字（表示审核置信度）,\n" +
-                "  \"auditReason\": \"详细的审核原因说明\"\n" +
-                "}\n\n" +
-                "如果内容完全符合规范，auditStatus为1；如果存在任何问题，auditStatus为2，并在auditReason中详细说明问题。";
-
-        return basePrompt;
-    }
-
-    /**
-     * 构建章节审核提示词
-     * @param chapterName 章节名称
-     * @param content 要审核的内容（分段后的内容）
-     * @param segmentIndex 当前段序号（从1开始）
-     * @param totalSegments 总段数
-     */
-    private String buildChapterAuditPrompt(String chapterName, String content, int segmentIndex, int totalSegments, String similarExperiences) {
-        String segmentInfo = "";
-        if (totalSegments > 1) {
-            segmentInfo = String.format("\n注意：这是章节内容的第 %d/%d 段，请对该段内容进行审核。\n", segmentIndex, totalSegments);
-        }
-        
-        String basePrompt = String.format(
-                "你是一个专业的内容审核系统。请审核以下小说章节的名称和内容，判断是否符合网络文学平台的内容规范。%s\n" +
-                        "章节名称：%s\n" +
-                        "章节内容：%s\n\n" +
-                        "审核标准：\n" +
-                        "1. 内容是否包含违法违规信息（色情、暴力、政治敏感等）\n" +
-                        "2. 内容是否包含低俗、恶俗内容\n" +
-                        "3. 内容是否包含广告、推广信息\n" +
-                        "4. 内容是否符合网络文学的基本规范\n" +
-                        "5. 内容质量是否达到发布标准\n\n" +
-                        "6. 内容允许改编现有作品、同人文、同性恋、具有文学价值的情感描写等\n\n",
-                segmentInfo,
-                chapterName != null ? chapterName : "",
-                content != null ? content : ""
-        );
-
-        if (similarExperiences != null && !similarExperiences.trim().isEmpty()) {
-            basePrompt += "历史相似判例参考：\n" + similarExperiences + "\n\n";
-        }
-
-        basePrompt += "请以JSON格式返回审核结果，格式如下：\n" +
-                "{\n" +
-                "  \"auditStatus\": 1或2（1表示通过，2表示不通过）,\n" +
-                "  \"aiConfidence\": 0.0-1.0之间的数字（表示审核置信度）,\n" +
-                "  \"auditReason\": \"详细的审核原因说明\"\n" +
-                "}\n\n" +
-                "如果内容完全符合规范，auditStatus为1；如果存在任何问题，auditStatus为2，并在auditReason中详细说明问题。";
-
-        return basePrompt;
-    }
-
-    /**
-     * 获取相似的审核经验
-     * @param content 要搜索的文本内容
-     * @return 格式化后的相似审核经验字符串，如果没有则返回空字符串
-     */
-    private String getSimilarAuditExperiences(String content) {
-        if (content == null || content.trim().isEmpty()) {
-            return "";
-        }
-
-        try {
-            AuditExperienceSearchReqDto reqDto = new AuditExperienceSearchReqDto();
-            reqDto.setContentText(content);
-            reqDto.setTopK(3);
-            reqDto.setSimilarityThreshold(0.75);
-
-            RestResp<List<AuditExperienceSearchRespDto>> resp = searchFeign.searchAuditExperience(reqDto);
-            
-            if (resp != null && resp.isOk() && resp.getData() != null && !resp.getData().isEmpty()) {
-                List<AuditExperienceSearchRespDto> experiences = resp.getData();
-                StringBuilder sb = new StringBuilder();
-                for (int i = 0; i < experiences.size(); i++) {
-                    AuditExperienceSearchRespDto exp = experiences.get(i);
-                    sb.append(String.format("判例%d：\n", i + 1));
-                    sb.append(String.format("- 核心争议片段：%s\n", exp.getKeySnippet() != null ? exp.getKeySnippet() : "无"));
-                    sb.append(String.format("- 违规标签：%s\n", exp.getViolationLabel() != null ? exp.getViolationLabel() : "无"));
-                    sb.append(String.format("- 判例规则总结：%s\n", exp.getAuditRule() != null ? exp.getAuditRule() : "无"));
-                    sb.append(String.format("- 历史审核结果：%s\n", exp.getAuditStatus() != null && exp.getAuditStatus() == 1 ? "通过" : "不通过"));
-                    sb.append("\n");
-                }
-                return sb.toString();
-            }
-        } catch (Exception e) {
-            log.error("获取相似审核经验失败", e);
-        }
-        
-        return "";
-    }
-
-    /**
-     * 解析AI响应-书籍基本信息审核
-     * @param aiResponse AI响应
-     * @param bookId 书籍 ID
-     * @return 书籍审核结果
-     */
-    private BookAuditRespDto parseAuditResponse(String aiResponse, Long bookId) {
-        try {
-            // 尝试从响应中提取JSON
-            String jsonContent = extractJsonFromResponse(aiResponse);
-
-            // 解析JSON（简化版，实际可以使用Jackson等库）
-            Integer auditStatus = extractField(jsonContent, "auditStatus", Integer.class);
-            BigDecimal aiConfidence = extractField(jsonContent, "aiConfidence", BigDecimal.class);
-            String auditReason = extractField(jsonContent, "auditReason", String.class);
-
-            // 设置默认值
-            if (auditStatus == null) {
-                auditStatus = 0; // 默认待审核
-            }
-            if (aiConfidence == null) {
-                aiConfidence = new BigDecimal("0.5");
-            }
-            if (auditReason == null || auditReason.trim().isEmpty()) {
-                auditReason = "AI审核完成";
-            }
-
-            return BookAuditRespDto.builder()
-                    .id(bookId)
-                    .auditStatus(auditStatus)
-                    .aiConfidence(aiConfidence)
-                    .auditReason(auditReason)
-                    .build();
-
-        } catch (Exception e) {
-            log.error("解析AI审核响应失败，书籍ID: {}", bookId, e);
-            // 解析失败时返回待审核状态
-            return BookAuditRespDto.builder()
-                    .id(bookId)
-                    .auditStatus(0)
-                    .aiConfidence(new BigDecimal("0.0"))
-                    .auditReason("AI审核响应解析失败，已进入人工审核流程")
-                    .build();
-        }
-    }
-
-    /**
-     * 解析AI响应-章节审核
-     * @param aiResponse AI响应
-     * @param bookId 书籍 ID
-     * @param chapterNum 章节编号
-     * @return 章节审核结果
-     */
-    private ChapterAuditRespDto parseChapterAuditResponse(String aiResponse, Long bookId, Integer chapterNum) {
-        try {
-            // 尝试从响应中提取JSON
-            String jsonContent = extractJsonFromResponse(aiResponse);
-
-            // 解析JSON（简化版，实际可以使用Jackson等库）
-            Integer auditStatus = extractField(jsonContent, "auditStatus", Integer.class);
-            BigDecimal aiConfidence = extractField(jsonContent, "aiConfidence", BigDecimal.class);
-            String auditReason = extractField(jsonContent, "auditReason", String.class);
-
-            // 设置默认值
-            if (auditStatus == null) {
-                auditStatus = 0; // 默认待审核
-            }
-            if (aiConfidence == null) {
-                aiConfidence = new BigDecimal("0.5");
-            }
-            if (auditReason == null || auditReason.trim().isEmpty()) {
-                auditReason = "AI审核完成";
-            }
-
-            return ChapterAuditRespDto.builder()
-                    .bookId(bookId)
-                    .chapterNum(chapterNum)
-                    .auditStatus(auditStatus)
-                    .aiConfidence(aiConfidence)
-                    .auditReason(auditReason)
-                    .build();
-
-        } catch (Exception e) {
-            log.error("解析AI审核响应失败，章节 bookId: {}, chapterNum: {}", bookId, chapterNum, e);
-            // 解析失败时返回待审核状态
-            return ChapterAuditRespDto.builder()
-                    .bookId(bookId)
-                    .chapterNum(chapterNum)
-                    .auditStatus(0)
-                    .aiConfidence(new BigDecimal("0.0"))
-                    .auditReason("AI审核响应解析失败，已进入人工审核流程")
-                    .build();
-        }
-    }
-
-    /**
-     * 从响应中提取JSON内容（容错处理）
-     * 优先使用Jackson解析，失败时使用正则表达式兜底
-     * @param response AI模型返回的响应
-     * @return JSON内容
-     */
-    private String extractJsonFromResponse(String response) {
-        if (response == null || response.trim().isEmpty()) {
-            return response;
-        }
-        
-        // 尝试使用Jackson解析，如果已经是有效的JSON，直接返回
-        try {
-            JsonNode jsonNode = objectMapper.readTree(response);
-            if (jsonNode != null) {
-                return response;
-            }
-        } catch (Exception e) {
-            // 不是纯JSON，继续尝试提取
-        }
-        
-        // 兜底：使用正则表达式提取JSON对象（兼容旧逻辑）
-        // 匹配包含auditStatus的JSON对象
-        Pattern jsonPattern = Pattern.compile("\\{[^{}]*\"auditStatus\"[^{}]*\\}", Pattern.DOTALL);
-        Matcher matcher = jsonPattern.matcher(response);
-        if (matcher.find()) {
-            return matcher.group();
-        }
-        
-        // 匹配包含polishedText的JSON对象
-        jsonPattern = Pattern.compile("\\{[^{}]*\"polishedText\"[^{}]*\\}", Pattern.DOTALL);
-        matcher = jsonPattern.matcher(response);
-        if (matcher.find()) {
-            return matcher.group();
-        }
-        
-        // 尝试提取第一个完整的JSON对象
-        jsonPattern = Pattern.compile("\\{[^{}]*(?:\\{[^{}]*\\}[^{}]*)*\\}", Pattern.DOTALL);
-        matcher = jsonPattern.matcher(response);
-        if (matcher.find()) {
-            return matcher.group();
-        }
-        
-        return response;
-    }
-
-    /**
-     * 从JSON字符串中提取字段值（使用Jackson解析，更健壮）
-     * @param json JSON字符串
-     * @param fieldName 字段名
-     * @param type 字段类型
-     * @return 字段值
-     * @param <T> 字段类型
-     */
-    @SuppressWarnings("unchecked")
-    private <T> T extractField(String json, String fieldName, Class<T> type) {
-        if (json == null || json.trim().isEmpty()) {
-            return null;
-        }
-        
-        try {
-            // 优先使用Jackson解析
-            JsonNode jsonNode = objectMapper.readTree(json);
-            if (jsonNode != null && jsonNode.has(fieldName)) {
-                JsonNode fieldNode = jsonNode.get(fieldName);
-                if (fieldNode != null && !fieldNode.isNull()) {
-                    if (type == Integer.class) {
-                        return (T) Integer.valueOf(fieldNode.asInt());
-                    } else if (type == BigDecimal.class) {
-                        return (T) new BigDecimal(fieldNode.asText());
-                    } else if (type == String.class) {
-                        return (T) fieldNode.asText();
-                    }
-                }
-            }
-        } catch (Exception e) {
-            log.debug("使用Jackson解析字段 {} 失败，尝试使用正则表达式: {}", fieldName, e.getMessage());
-        }
-        
-        // 兜底：使用正则表达式（兼容旧逻辑）
-        try {
-            Pattern pattern = Pattern.compile("\"" + Pattern.quote(fieldName) + "\"\\s*:\\s*([^,}\\]]+)");
-            Matcher matcher = pattern.matcher(json);
-            if (matcher.find()) {
-                String value = matcher.group(1).trim();
-                // 移除引号
-                if (value.startsWith("\"") && value.endsWith("\"")) {
-                    value = value.substring(1, value.length() - 1);
-                }
-
-                if (type == Integer.class) {
-                    return (T) Integer.valueOf(value);
-                } else if (type == BigDecimal.class) {
-                    return (T) new BigDecimal(value);
-                } else if (type == String.class) {
-                    return (T) value;
-                }
-            }
-        } catch (Exception e) {
-            log.warn("提取字段 {} 失败", fieldName, e);
-        }
-        return null;
-    }
-
-    /**
-     * 将内容分段，每段最多指定长度
-     * @param content 原始内容
-     * @param maxLength 每段最大长度
-     * @return 分段后的内容列表
-     */
-    private List<String> splitContent(String content, int maxLength) {
-        List<String> segments = new ArrayList<>();
-        if (content == null || content.length() <= maxLength) {
-            if (content != null) {
-                segments.add(content);
-            }
-            return segments;
-        }
-
-        int start = 0;
-        while (start < content.length()) {
-            int end = Math.min(start + maxLength, content.length());
-            
-            // 如果不是最后一段，尝试在句号、问号、感叹号或换行符处断开，避免截断句子
-            if (end < content.length()) {
-                int lastPeriod = content.lastIndexOf('。', end - 1);
-                int lastQuestion = content.lastIndexOf('？', end - 1);
-                int lastExclamation = content.lastIndexOf('！', end - 1);
-                int lastNewline = content.lastIndexOf('\n', end - 1);
-                
-                // 找到最接近末尾的断句位置
-                int breakPoint = Math.max(Math.max(lastPeriod, lastQuestion), 
-                                         Math.max(lastExclamation, lastNewline));
-                
-                // 如果找到了合适的断句位置（在最后200个字符内），使用该位置
-                if (breakPoint > start && breakPoint > end - 200) {
-                    end = breakPoint + 1;
-                }
-            }
-            
-            segments.add(content.substring(start, end));
-            start = end;
-        }
-
-        return segments;
-    }
-
-    /**
-     * 合并分段审核结果
-     * @param segmentResults 各段的审核结果
-     * @param bookId 书籍ID
-     * @param chapterNum 章节号
-     * @return 合并后的审核结果
-     */
-    private ChapterAuditRespDto mergeSegmentAuditResults(List<ChapterAuditRespDto> segmentResults, 
-                                                         Long bookId, Integer chapterNum) {
-        if (segmentResults == null || segmentResults.isEmpty()) {
-            return ChapterAuditRespDto.builder()
-                    .bookId(bookId)
-                    .chapterNum(chapterNum)
-                    .auditStatus(0)
-                    .aiConfidence(new BigDecimal("0.0"))
-                    .auditReason("分段审核结果为空")
-                    .build();
-        }
-
-        // 合并规则：
-        // 1. 如果任何一段不通过（auditStatus=2），则整体不通过
-        // 2. 如果任何一段待审核（auditStatus=0），则整体待审核
-        // 3. 所有段都通过时，整体通过
-        // 4. 置信度取平均值
-        // 5. 审核原因智能合并，优先显示不通过和待审核的段，限制总长度
-
-        int overallStatus = 1; // 默认通过
-        BigDecimal totalConfidence = BigDecimal.ZERO;
-        int validConfidenceCount = 0;
-        
-        // 分类收集各段的审核信息
-        List<String> failedReasons = new ArrayList<>(); // 不通过的段
-        List<String> pendingReasons = new ArrayList<>(); // 待审核的段
-        int passedCount = 0; // 通过的段数
-
-        for (int i = 0; i < segmentResults.size(); i++) {
-            ChapterAuditRespDto segment = segmentResults.get(i);
-            int segmentIndex = i + 1;
-            
-            // 确定整体状态：2 > 0 > 1（不通过 > 待审核 > 通过）
-            if (segment.getAuditStatus() != null) {
-                if (segment.getAuditStatus() == 2) {
-                    overallStatus = 2; // 不通过优先级最高
-                } else if (segment.getAuditStatus() == 0 && overallStatus == 1) {
-                    overallStatus = 0; // 待审核优先级中等
-                }
-            }
-
-            // 累计置信度
-            if (segment.getAiConfidence() != null) {
-                totalConfidence = totalConfidence.add(segment.getAiConfidence());
-                validConfidenceCount++;
-            }
-
-            // 分类收集审核原因
-            String reason = segment.getAuditReason();
-            if (reason != null && !reason.trim().isEmpty()) {
-                String segmentReason = String.format("第%d段：%s", segmentIndex, reason.trim());
-                if (segment.getAuditStatus() != null) {
-                    if (segment.getAuditStatus() == 2) {
-                        failedReasons.add(segmentReason);
-                    } else if (segment.getAuditStatus() == 0) {
-                        pendingReasons.add(segmentReason);
-                    } else {
-                        passedCount++;
-                    }
-                } else {
-                    passedCount++;
-                }
-            } else {
-                if (segment.getAuditStatus() == null || segment.getAuditStatus() == 1) {
-                    passedCount++;
-                }
-            }
-        }
-
-        // 计算平均置信度
-        BigDecimal avgConfidence = validConfidenceCount > 0
-                ? totalConfidence.divide(new BigDecimal(validConfidenceCount), 2, RoundingMode.HALF_UP)
-                : new BigDecimal("0.5");
-
-        // 构建审核原因，优先显示重要信息
-        String mergedReason = buildMergedReason(failedReasons, pendingReasons, passedCount, segmentResults.size(), overallStatus);
-
-        return ChapterAuditRespDto.builder()
-                .bookId(bookId)
-                .chapterNum(chapterNum)
-                .auditStatus(overallStatus)
-                .aiConfidence(avgConfidence)
-                .auditReason(mergedReason)
-                .build();
-    }
-
-    /**
-     * 构建合并后的审核原因，限制长度
-     * @param failedReasons 不通过的段原因列表
-     * @param pendingReasons 待审核的段原因列表
-     * @param passedCount 通过的段数
-     * @param totalSegments 总段数
-     * @param overallStatus 整体审核状态
-     * @return 合并后的审核原因
-     */
-    private String buildMergedReason(List<String> failedReasons, List<String> pendingReasons, 
-                                     int passedCount, int totalSegments, int overallStatus) {
-        StringBuilder reasonBuilder = new StringBuilder();
-        
-        // 优先显示不通过的段
-        if (!failedReasons.isEmpty()) {
-            reasonBuilder.append("不通过段：");
-            for (String reason : failedReasons) {
-                String toAppend = reason + "；";
-                if (reasonBuilder.length() + toAppend.length() > MAX_AUDIT_REASON_LENGTH - 20) {
-                    reasonBuilder.append("（内容过长，已截断）");
-                    break;
-                }
-                reasonBuilder.append(toAppend);
-            }
-        }
-        
-        // 其次显示待审核的段
-        if (!pendingReasons.isEmpty()) {
-            if (!reasonBuilder.isEmpty()) {
-                reasonBuilder.append(" ");
-            }
-            reasonBuilder.append("待审核段：");
-            for (String reason : pendingReasons) {
-                String toAppend = reason + "；";
-                if (reasonBuilder.length() + toAppend.length() > MAX_AUDIT_REASON_LENGTH - 20) {
-                    reasonBuilder.append("（内容过长，已截断）");
-                    break;
-                }
-                reasonBuilder.append(toAppend);
-            }
-        }
-        
-        // 如果所有段都通过，使用简洁的总结
-        if (failedReasons.isEmpty() && pendingReasons.isEmpty() && passedCount > 0) {
-            if (totalSegments == 1) {
-                reasonBuilder.append("内容符合网络文学平台规范，审核通过");
-            } else {
-                reasonBuilder.append(String.format("共%d段内容，均已审核通过，符合网络文学平台规范", totalSegments));
-            }
-        } else if (passedCount > 0) {
-            // 如果有通过的段，在末尾添加统计信息
-            String summary = String.format("（其余%d段通过）", passedCount);
-            if (reasonBuilder.length() + summary.length() <= MAX_AUDIT_REASON_LENGTH - 10) {
-                reasonBuilder.append(summary);
-            }
-        }
-        
-        // 清理末尾的分号
-        String result = reasonBuilder.toString().trim();
-        if (result.endsWith("；")) {
-            result = result.substring(0, result.length() - 1);
-        }
-        
-        // 最终长度检查和截断
-        if (result.length() > MAX_AUDIT_REASON_LENGTH) {
-            result = result.substring(0, MAX_AUDIT_REASON_LENGTH - 3) + "...";
-        }
-        
-        // 如果结果为空，设置默认值
-        if (result.isEmpty()) {
-            result = overallStatus == 1 ? "审核通过" : (overallStatus == 2 ? "审核不通过" : "待审核");
-        }
-        
-        return result;
-    }
-
-    /**
-     * 判断是否是内容安全检查失败异常
-     * 当AI模型检测到不当内容时，会抛出包含 "DataInspectionFailed" 或 "inappropriate content" 的异常
-     * @param e 异常对象
-     * @return true 如果是内容安全检查失败，false 否则
-     */
-    private boolean isContentInspectionFailed(Exception e) {
-        if (e == null) {
-            return false;
-        }
-        
-        // 检查异常类型 - NonTransientAiException 且包含内容检查失败的错误码
-        if (e instanceof NonTransientAiException) {
-            String message = e.getMessage();
-            if (message != null) {
-                String lowerMessage = message.toLowerCase();
-                // 只有当明确包含 DataInspectionFailed 错误码时才认为是内容检查失败
-                // 因为 NonTransientAiException 也可能是其他类型的错误
-                return lowerMessage.contains("datainspectionfailed") ||
-                       lowerMessage.contains("inappropriate content");
-            }
-        }
-        
-        // 检查异常消息中是否包含内容安全检查相关的关键词
-        String message = e.getMessage();
-        if (message != null) {
-            String lowerMessage = message.toLowerCase();
-            return lowerMessage.contains("datainspectionfailed") ||
-                   lowerMessage.contains("inappropriate content") ||
-                   lowerMessage.contains("不当内容") ||
-                   lowerMessage.contains("内容安全检查");
-        }
-        
-        return false;
-    }
-
-    /**
-     * 润色文本（带 SkyWalking 监控）
-     * @param reqDto 润色请求参数
-     * @return 润色结果
-     */
     @Override
     @Trace(operationName = "AI润色文本")
     public RestResp<TextPolishRespDto> polishText(TextPolishReqDto reqDto) {
-        // 参数校验
         if (reqDto == null || reqDto.getSelectedText() == null) {
             return RestResp.fail(ErrorCodeEnum.USER_REQUEST_PARAM_ERROR, "待润色文本不能为空");
         }
-        
+
         String selectedText = reqDto.getSelectedText().trim();
         if (selectedText.isEmpty()) {
             return RestResp.fail(ErrorCodeEnum.USER_REQUEST_PARAM_ERROR, "待润色文本不能为空");
         }
-        
-        // 文本长度校验
         if (selectedText.length() < MIN_POLISH_TEXT_LENGTH) {
-            return RestResp.fail(ErrorCodeEnum.USER_REQUEST_PARAM_ERROR, 
-                String.format("待润色文本长度不能少于%d个字符", MIN_POLISH_TEXT_LENGTH));
+            return RestResp.fail(ErrorCodeEnum.USER_REQUEST_PARAM_ERROR,
+                    String.format("待润色文本长度不能少于%d个字符", MIN_POLISH_TEXT_LENGTH));
         }
-        
         if (selectedText.length() > MAX_POLISH_TEXT_LENGTH) {
-            return RestResp.fail(ErrorCodeEnum.USER_REQUEST_PARAM_ERROR, 
-                String.format("待润色文本长度不能超过%d个字符", MAX_POLISH_TEXT_LENGTH));
+            return RestResp.fail(ErrorCodeEnum.USER_REQUEST_PARAM_ERROR,
+                    String.format("待润色文本长度不能超过%d个字符", MAX_POLISH_TEXT_LENGTH));
         }
-        
-        // 设置 SkyWalking 监控标签
+
         ActiveSpan.tag("ai.model", "text_model");
         ActiveSpan.tag("ai.operation", "polish_text");
         ActiveSpan.tag("text.length", String.valueOf(selectedText.length()));
         if (reqDto.getStyle() != null) {
             ActiveSpan.tag("polish.style", reqDto.getStyle());
         }
-        
-        long startTime = System.currentTimeMillis();
-        
-        try {
-            // 构建润色提示词（使用校验后的文本）
-            TextPolishReqDto validatedReq = new TextPolishReqDto();
-            validatedReq.setSelectedText(selectedText);
-            validatedReq.setStyle(reqDto.getStyle());
-            validatedReq.setRequirement(reqDto.getRequirement());
-            String prompt = buildPolishPrompt(validatedReq);
-            ActiveSpan.tag("prompt.length", String.valueOf(prompt.length()));
 
-            // 调用AI模型
-            String aiResponse = chatClient.prompt()
-                    .user(prompt)
-                    .call()
-                    .content();
+        long startTime = System.currentTimeMillis();
+        try {
+            String systemPrompt = promptLoader.renderSystem(NovelAiPromptKey.TEXT_POLISH)
+                    + "\n\n" + textPolishConverter.getFormat();
+            Map<String, Object> userVars = new HashMap<>();
+            userVars.put("selectedText", selectedText);
+            userVars.put("style", reqDto.getStyle() != null ? reqDto.getStyle() : "通俗易懂");
+            userVars.put("requirement", reqDto.getRequirement() != null
+                    ? reqDto.getRequirement() : "保持原意，提升文学性");
+            String userPrompt = promptLoader.renderUser(NovelAiPromptKey.TEXT_POLISH, userVars);
+            ActiveSpan.tag("prompt.length", String.valueOf(systemPrompt.length() + userPrompt.length()));
+
+            TextPolishAiOutput aiOutput = structuredOutputInvoker.invoke(
+                    chatClient, systemPrompt, userPrompt, textPolishConverter, "text-polish");
 
             long duration = System.currentTimeMillis() - startTime;
             ActiveSpan.tag("ai.duration.ms", String.valueOf(duration));
-            ActiveSpan.tag("ai.response.length", String.valueOf(aiResponse != null ? aiResponse.length() : 0));
             ActiveSpan.tag("ai.status", "success");
 
-            log.info("AI润色响应，耗时: {}ms, 响应: {}", duration, aiResponse);
-
-            // 解析响应
-            TextPolishRespDto result = parsePolishResponse(aiResponse);
-            return RestResp.ok(result);
-
+            log.info("AI润色响应，耗时: {}ms, aiOutput: {}", duration, aiOutput);
+            return RestResp.ok(buildTextPolishResp(aiOutput, selectedText));
         } catch (Exception e) {
             long duration = System.currentTimeMillis() - startTime;
             ActiveSpan.tag("ai.duration.ms", String.valueOf(duration));
             ActiveSpan.tag("ai.status", "error");
             ActiveSpan.tag("ai.error.type", e.getClass().getSimpleName());
-            String errorMsg = e.getMessage();
-            if (errorMsg != null && errorMsg.length() > 200) {
-                errorMsg = errorMsg.substring(0, 200);
-            }
-            ActiveSpan.tag("ai.error.message", errorMsg != null ? errorMsg : "unknown");
             ActiveSpan.error(e);
-            
             log.error("AI润色异常，耗时: {}ms", duration, e);
-            // 如果出错，返回空或错误信息
             return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR, "AI润色服务暂时不可用，请稍后再试");
         }
     }
 
-    /**
-     * 构建润色提示词
-     * @param reqDto 润色请求参数
-     * @return 提示词
-     */
-    private String buildPolishPrompt(TextPolishReqDto reqDto) {
-        return String.format(
-                "你是一个专业的小说编辑。请对以下文本进行润色。\n\n" +
-                        "待润色文本：%s\n\n" +
-                        "润色风格：%s\n" +
-                        "具体要求：%s\n\n" +
-                        "请严格以JSON格式返回结果，不要包含Markdown标记或其他多余内容。注意合理小说需要分段。格式如下：\n" +
-                        "{\n" +
-                        "  \"polishedText\": \"润色后的文本内容\",\n" +
-                        "  \"explanation\": \"润色说明（修改了哪里，为什么要这样修改）\"\n" +
-                        "}",
-                reqDto.getSelectedText(),
-                reqDto.getStyle() != null ? reqDto.getStyle() : "通俗易懂",
-                reqDto.getRequirement() != null ? reqDto.getRequirement() : "保持原意，提升文学性"
-        );
-    }
-
-    /**
-     * 解析润色响应
-     * @param aiResponse AI模型返回的响应
-     * @return 润色结果
-     */
-    private TextPolishRespDto parsePolishResponse(String aiResponse) {
-        try {
-            String jsonContent = extractJsonFromResponse(aiResponse);
-            
-            String polishedText = extractField(jsonContent, "polishedText", String.class);
-            String explanation = extractField(jsonContent, "explanation", String.class);
-            
-            // 如果解析失败，尝试直接使用响应作为润色文本（容错）
-            if (polishedText == null) {
-                polishedText = aiResponse;
-                explanation = "自动润色";
-            }
-            
-            TextPolishRespDto resp = new TextPolishRespDto();
-            resp.setPolishedText(polishedText);
-            resp.setExplanation(explanation);
-            return resp;
-        } catch (Exception e) {
-            log.warn("解析润色响应失败", e);
-            TextPolishRespDto resp = new TextPolishRespDto();
-            resp.setPolishedText(aiResponse); // 降级处理
-            resp.setExplanation("解析失败，显示原始内容");
-            return resp;
-        }
-    }
-
-    /**
-     * 获取小说封面生成提示词（带 SkyWalking 监控）
-     */
     @Override
     @Trace(operationName = "AI生成封面提示词")
     public RestResp<String> getBookCoverPrompt(BookCoverReqDto reqDto) {
-        // 设置 SkyWalking 监控标签
         ActiveSpan.tag("ai.model", "text_model");
         ActiveSpan.tag("ai.operation", "generate_cover_prompt");
         if (reqDto != null && reqDto.getId() != null) {
             ActiveSpan.tag("bookId", String.valueOf(reqDto.getId()));
         }
-        if (reqDto != null && reqDto.getBookName() != null) {
-            ActiveSpan.tag("bookName", reqDto.getBookName().length() > 50 ? 
-                reqDto.getBookName().substring(0, 50) : reqDto.getBookName());
-        }
-        
+
         long startTime = System.currentTimeMillis();
-        
         try {
-            // 1. 基础校验
             if (reqDto == null || reqDto.getBookName() == null) {
                 ActiveSpan.tag("ai.status", "validation_failed");
-                ActiveSpan.tag("validation.error", "bookName_is_null");
                 return RestResp.fail(ErrorCodeEnum.USER_REQUEST_PARAM_ERROR);
             }
-            
-            // 简介少于 MIN_BOOK_DESC_LENGTH 字，依据不足不予生成
             if (reqDto.getBookDesc() == null || reqDto.getBookDesc().trim().length() < MIN_BOOK_DESC_LENGTH) {
                 ActiveSpan.tag("ai.status", "validation_failed");
-                ActiveSpan.tag("validation.error", "bookDesc_too_short");
-                return RestResp.fail(ErrorCodeEnum.USER_REQUEST_PARAM_ERROR, "小说简介过短（需大于30字），无法生成精准封面");
+                return RestResp.fail(ErrorCodeEnum.USER_REQUEST_PARAM_ERROR,
+                        "小说简介过短（需大于30字），无法生成精准封面");
             }
 
-            // 2. 构建提示词
-            String prompt = buildImagePromptPrompt(reqDto);
-            ActiveSpan.tag("prompt.length", String.valueOf(prompt.length()));
+            String systemPrompt = promptLoader.renderSystem(NovelAiPromptKey.COVER_PROMPT);
+            Map<String, Object> userVars = new HashMap<>();
+            userVars.put("bookName", safe(reqDto.getBookName()));
+            userVars.put("categoryName", reqDto.getCategoryName() != null ? reqDto.getCategoryName() : "通俗小说");
+            String bookDesc = reqDto.getBookDesc();
+            if (bookDesc.length() > 500) {
+                bookDesc = bookDesc.substring(0, 500);
+            }
+            userVars.put("bookDesc", bookDesc);
+            String userPrompt = promptLoader.renderUser(NovelAiPromptKey.COVER_PROMPT, userVars);
+            ActiveSpan.tag("prompt.length", String.valueOf(systemPrompt.length() + userPrompt.length()));
 
-            // 3. 调用AI模型
             String aiResponse = chatClient.prompt()
-                    .user(prompt)
+                    .system(systemPrompt)
+                    .user(userPrompt)
                     .call()
                     .content();
 
             long duration = System.currentTimeMillis() - startTime;
             ActiveSpan.tag("ai.duration.ms", String.valueOf(duration));
-            ActiveSpan.tag("ai.response.length", String.valueOf(aiResponse != null ? aiResponse.length() : 0));
             ActiveSpan.tag("ai.status", "success");
-
             log.info("生成封面提示词响应，小说ID: {}, 耗时: {}ms, 响应: {}", reqDto.getId(), duration, aiResponse);
-            
-            // 4. 拼接后缀
+
             String finalPrompt = aiResponse + "，高品质插画，书籍装帧风格，黄金比例构图，极致细节，最高解析度，(无文字，无水印：1.5)";
-
             return RestResp.ok(finalPrompt);
-
         } catch (Exception e) {
             long duration = System.currentTimeMillis() - startTime;
             ActiveSpan.tag("ai.duration.ms", String.valueOf(duration));
             ActiveSpan.tag("ai.status", "error");
             ActiveSpan.tag("ai.error.type", e.getClass().getSimpleName());
-            String errorMsg = e.getMessage();
-            if (errorMsg != null && errorMsg.length() > 200) {
-                errorMsg = errorMsg.substring(0, 200);
-            }
-            ActiveSpan.tag("ai.error.message", errorMsg != null ? errorMsg : "unknown");
             ActiveSpan.error(e);
-            
-            log.error("生成封面提示词异常，小说ID: {}, 耗时: {}ms", reqDto.getId(), duration, e);
+            log.error("生成封面提示词异常，小说ID: {}, 耗时: {}ms",
+                    reqDto != null ? reqDto.getId() : null, duration, e);
             return RestResp.fail(ErrorCodeEnum.AI_COVER_TEXT_SERVICE_ERROR, "生成封面提示词服务暂时不可用");
         }
     }
 
-    /**
-     * 获取小说封面提示词生成的提示词
-     */
-    private String buildImagePromptPrompt(BookCoverReqDto dto) {
-        // 截取过长的简介
-        String bookDesc = dto.getBookDesc();
-        if (bookDesc.length() > 500) {
-            bookDesc = bookDesc.substring(0, 500);
-        }
-        
-        String categoryName = dto.getCategoryName();
-        if (categoryName == null) {
-            categoryName = "通俗小说";
-        }
-
-        // 构建发给 LLM 的请求
-        return String.format(
-                "你的角色： 资深 AI 插画提示词专家 & 书籍装帧设计师\n" +
-                "任务： 请根据提供的《%s》和《%s》，创作一段专为 AI 生图模型设计的视觉描述词。\n\n" +
-                "创作指南：\n" +
-                "去剧情化：不要描述故事情节（如“他爱上了她”），要描述具体的视觉画面（如“漫天大雪中，一个孤独的红色背影”）。\n" +
-                "三段式结构：\n" +
-                "[核心主体]：从小说的核心符号提取。可能是角色、一个象征性物体或标志性建筑。\n" +
-                "[环境氛围]：根据简介基调，确定色彩、天气、时代背景。\n" +
-                "[艺术规格]：统一使用：极高画质，电影级构图，高分辨率\n" +
-                "封面适配逻辑（核心）：\n" +
-                "禁忌词：禁止出现文字、人名、水印。\n\n" +
-                "输入格式： 小说名：%s 小说类别：%s 小说简介：%s\n\n" +
-                "输出格式要求（仅返回以下内容）： [视觉描述]：(100-150字内的结构化提示词)",
-                dto.getBookName(),
-                bookDesc,
-                dto.getBookName(),
-                categoryName,
-                bookDesc
-        );
-    }
-
-    /**
-     * 提取审核经验规则
-     */
     @Override
     @Trace(operationName = "AI提取审核经验规则")
-    public RestResp<com.novel.ai.dto.resp.AuditRuleRespDto> extractAuditRule(com.novel.ai.dto.req.AuditRuleReqDto reqDto) {
+    public RestResp<AuditRuleRespDto> extractAuditRule(AuditRuleReqDto reqDto) {
         if (reqDto == null || reqDto.getContentText() == null || reqDto.getContentText().trim().isEmpty()) {
             return RestResp.fail(ErrorCodeEnum.USER_REQUEST_PARAM_ERROR, "待提取文本不能为空");
         }
 
         long startTime = System.currentTimeMillis();
         try {
-            // 截断超长文本
             String content = reqDto.getContentText();
             if (content.length() > 2000) {
                 content = content.substring(0, 2000);
@@ -1155,54 +214,71 @@ public class TextServiceImpl implements TextService {
             String statusStr = reqDto.getAuditStatus() != null && reqDto.getAuditStatus() == 1 ? "通过" : "不通过";
             String reason = reqDto.getAuditReason() != null ? reqDto.getAuditReason() : "无";
 
-            String prompt = String.format(
-                    "这是一条人工审核记录。请提取并总结核心信息，用于后续的检索增强(RAG)系统。\n\n" +
-                    "原文片段：%s\n" +
-                    "审核结果：%s\n" +
-                    "审核意见：%s\n\n" +
-                    "请严格以JSON格式返回结果，不要包含Markdown标记或其他多余内容。格式如下：\n" +
-                    "{\n" +
-                    "  \"violationLabel\": \"争议/违规标签（如：涉政、低俗色情、同人合规、正常情感描写等，简短的词语）\",\n" +
-                    "  \"keySnippet\": \"核心争议片段（从原文中提取最能体现审核意见的片段，200字内）\",\n" +
-                    "  \"auditRule\": \"判例规则总结（一句话概括，如：同人文不等于抄袭，只要不完全照搬原著剧情，属于合规衍生创作）\"\n" +
-                    "}",
-                    content, statusStr, reason
-            );
+            String systemPrompt = promptLoader.renderSystem(NovelAiPromptKey.AUDIT_RULE_EXTRACT)
+                    + "\n\n" + auditRuleConverter.getFormat();
+            Map<String, Object> userVars = new HashMap<>();
+            userVars.put("contentText", content);
+            userVars.put("auditStatusText", statusStr);
+            userVars.put("auditReason", reason);
+            String userPrompt = promptLoader.renderUser(NovelAiPromptKey.AUDIT_RULE_EXTRACT, userVars);
 
-            String aiResponse = chatClient.prompt()
-                    .user(prompt)
-                    .call()
-                    .content();
+            AuditRuleAiOutput aiOutput = structuredOutputInvoker.invoke(
+                    chatClient, systemPrompt, userPrompt, auditRuleConverter, "audit-rule-extract");
 
             long duration = System.currentTimeMillis() - startTime;
-            log.info("AI提取审核经验规则响应，耗时: {}ms, 响应: {}", duration, aiResponse);
+            log.info("AI提取审核经验规则响应，耗时: {}ms, aiOutput: {}", duration, aiOutput);
 
-            String jsonContent = extractJsonFromResponse(aiResponse);
-            String violationLabel = extractField(jsonContent, "violationLabel", String.class);
-            String keySnippet = extractField(jsonContent, "keySnippet", String.class);
-            String auditRule = extractField(jsonContent, "auditRule", String.class);
-
-            // 如果解析失败，给默认值
-            if (violationLabel == null || violationLabel.trim().isEmpty()) {
-                violationLabel = statusStr.equals("通过") ? "合规内容" : "违规内容";
-            }
-            if (keySnippet == null || keySnippet.trim().isEmpty()) {
-                keySnippet = content.length() > 100 ? content.substring(0, 100) : content;
-            }
-            if (auditRule == null || auditRule.trim().isEmpty()) {
-                auditRule = reason;
-            }
-
-            com.novel.ai.dto.resp.AuditRuleRespDto resp = new com.novel.ai.dto.resp.AuditRuleRespDto();
-            resp.setViolationLabel(violationLabel);
-            resp.setKeySnippet(keySnippet);
-            resp.setAuditRule(auditRule);
-
-            return RestResp.ok(resp);
-
+            return RestResp.ok(buildAuditRuleResp(aiOutput, statusStr, reason, content));
         } catch (Exception e) {
             log.error("AI提取审核经验规则异常", e);
             return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR, "AI提取服务暂时不可用");
         }
+    }
+
+    /**
+     * 将 AI 润色输出转换为业务响应 DTO，字段缺失时降级成"原文 + 说明"。
+     */
+    private TextPolishRespDto buildTextPolishResp(TextPolishAiOutput aiOutput, String originalText) {
+        TextPolishRespDto resp = new TextPolishRespDto();
+        if (aiOutput != null && aiOutput.polishedText() != null && !aiOutput.polishedText().isBlank()) {
+            resp.setPolishedText(aiOutput.polishedText());
+            resp.setExplanation(aiOutput.explanation() != null ? aiOutput.explanation() : "自动润色");
+        } else {
+            resp.setPolishedText(originalText);
+            resp.setExplanation("AI 未返回有效润色结果，已返回原文");
+        }
+        return resp;
+    }
+
+    /**
+     * 将 AI 判例规则抽取输出转换为业务 DTO，字段缺失时用原始审核信息兜底。
+     */
+    private AuditRuleRespDto buildAuditRuleResp(AuditRuleAiOutput aiOutput,
+                                                String statusStr,
+                                                String auditReason,
+                                                String sourceContent) {
+        String violationLabel = (aiOutput != null && aiOutput.violationLabel() != null
+                && !aiOutput.violationLabel().isBlank())
+                ? aiOutput.violationLabel()
+                : ("通过".equals(statusStr) ? "合规内容" : "违规内容");
+        String keySnippet = (aiOutput != null && aiOutput.keySnippet() != null
+                && !aiOutput.keySnippet().isBlank())
+                ? aiOutput.keySnippet()
+                : (sourceContent.length() > 100 ? sourceContent.substring(0, 100) : sourceContent);
+        String auditRule = (aiOutput != null && aiOutput.auditRule() != null
+                && !aiOutput.auditRule().isBlank())
+                ? aiOutput.auditRule()
+                : auditReason;
+
+        AuditRuleRespDto resp = new AuditRuleRespDto();
+        resp.setViolationLabel(violationLabel);
+        resp.setKeySnippet(keySnippet);
+        resp.setAuditRule(auditRule);
+        return resp;
+    }
+
+    /** null 归一成空串，避免 PromptTemplate 渲染占位符失败。 */
+    private static String safe(String value) {
+        return value == null ? "" : value;
     }
 }

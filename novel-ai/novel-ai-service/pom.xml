@@ -93,6 +93,12 @@
             <artifactId>rocketmq-client</artifactId>
         </dependency>
 
+        <!-- 敏感词匹配：Aho-Corasick 多模式串一次扫描 -->
+        <dependency>
+            <groupId>com.hankcs</groupId>
+            <artifactId>aho-corasick-double-array-trie</artifactId>
+        </dependency>
+
     </dependencies>
 
     <build>

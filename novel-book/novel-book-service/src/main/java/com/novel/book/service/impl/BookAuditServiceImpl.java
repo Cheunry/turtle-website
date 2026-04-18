@@ -156,6 +156,8 @@ public class BookAuditServiceImpl implements BookAuditService {
         } catch (Exception e) {
             log.warn("查询审核记录失败，章节ID: {}，将创建新记录。错误: {}", chapterId, e.getMessage());
         }
+        log.info("[AI-Audit] 章节[{}] 已存在 ContentAudit: {}", chapterId,
+                initialAudit != null ? ("id=" + initialAudit.getId() + ",status=" + initialAudit.getAuditStatus()) : "无");
 
         // 如果不存在审核记录，创建一条（待审核状态）
         if (initialAudit == null) {
@@ -170,10 +172,11 @@ public class BookAuditServiceImpl implements BookAuditService {
                     .updateTime(LocalDateTime.now())
                     .build();
             try {
-                contentAuditMapper.insert(initialAudit);
-                log.debug("章节[{}]审核记录已创建", chapterId);
+                int inserted = contentAuditMapper.insert(initialAudit);
+                log.info("[AI-Audit] 章节[{}] 新建 ContentAudit 成功，影响行数: {}, 回填 id: {}",
+                        chapterId, inserted, initialAudit.getId());
             } catch (Exception e) {
-                log.error("创建审核记录失败，章节ID: {}", chapterId, e);
+                log.error("[AI-Audit] 章节[{}] 新建 ContentAudit 失败", chapterId, e);
             }
         }
 
@@ -195,28 +198,35 @@ public class BookAuditServiceImpl implements BookAuditService {
                 fullReason != null && fullReason.length() > 100 ? fullReason.substring(0, 100) + "..." : fullReason);
 
         // 5. 判断审核结果类型
+        boolean isPending = AUDIT_STATUS_PENDING.equals(auditStatus);
         boolean isPassed = AUDIT_STATUS_PASSED.equals(auditStatus);
+        boolean isRejected = AUDIT_STATUS_REJECTED.equals(auditStatus);
         boolean isHighConfidence = aiConfidence != null &&
                 aiConfidence.compareTo(CONFIDENCE_THRESHOLD) >= 0;
+
+        Long contentAuditId = initialAudit != null ? initialAudit.getId() : null;
+        if (contentAuditId == null) {
+            log.warn("[AI-Audit] 章节[{}] ContentAudit id 为空，后续更新将被跳过", chapterId);
+        }
 
         // 6. 更新审核表和章节表
         if (isPassed && isHighConfidence) {
             // 情况1：AI审核通过且置信度高 -> 更新审核表和章节表
-            if (initialAudit != null && initialAudit.getId() != null) {
+            if (contentAuditId != null) {
                 try {
-                    updateContentAuditFromAiResult(initialAudit.getId(),
+                    int rows = updateContentAuditFromAiResult(contentAuditId,
                             AUDIT_STATUS_PASSED, aiResult.getAiConfidence(), aiResult.getAuditReason());
-                    log.debug("章节[{}]审核表已更新", chapterId);
+                    log.info("[AI-Audit] 章节[{}] ContentAudit[{}] 更新为 PASSED，影响行数: {}", chapterId, contentAuditId, rows);
                 } catch (Exception e) {
-                    log.error("更新审核表失败，章节ID: {}", chapterId, e);
+                    log.error("[AI-Audit] 章节[{}] 更新 ContentAudit 失败", chapterId, e);
                 }
             }
-            
+
             try {
                 updateChapterDirectly(chapterId, AUDIT_STATUS_PASSED, null);
-                log.debug("章节[{}]章节表已更新", chapterId);
+                log.info("[AI-Audit] 章节[{}] BookChapter 更新为 PASSED", chapterId);
             } catch (Exception e) {
-                log.error("更新章节表失败，章节ID: {}", chapterId, e);
+                log.error("[AI-Audit] 章节[{}] 更新 BookChapter 失败", chapterId, e);
             }
             
             // 审核通过后，更新bookInfo表的最新章节信息
@@ -257,37 +267,35 @@ public class BookAuditServiceImpl implements BookAuditService {
 
         } else if (isPassed && !isHighConfidence) {
             // 情况2：AI审核通过但置信度低 -> 更新审核表为待人工审核，章节表保持待审核状态
-            if (initialAudit != null && initialAudit.getId() != null) {
+            if (contentAuditId != null) {
                 try {
-                    updateContentAuditFromAiResult(initialAudit.getId(),
+                    int rows = updateContentAuditFromAiResult(contentAuditId,
                             AUDIT_STATUS_PENDING, aiResult.getAiConfidence(), aiResult.getAuditReason());
-                    log.info("章节[{}]AI审核通过但置信度低[{}]，已更新审核表等待人工审核",
-                            chapterId, aiConfidence);
+                    log.info("[AI-Audit] 章节[{}] AI通过但置信度低[{}]，ContentAudit[{}] 更新为 PENDING，影响行数: {}",
+                            chapterId, aiConfidence, contentAuditId, rows);
                 } catch (Exception e) {
-                    log.error("更新审核表失败，章节ID: {}", chapterId, e);
+                    log.error("[AI-Audit] 章节[{}] 更新 ContentAudit 失败", chapterId, e);
                 }
             }
 
-        } else {
+        } else if (isRejected) {
             // 情况3：AI审核不通过 -> 更新审核表和章节表为不通过
             String shortReason = extractShortReason(fullReason, aiConfidence);
-            if (initialAudit != null && initialAudit.getId() != null) {
+            if (contentAuditId != null) {
                 try {
-                    updateContentAuditFromAiResult(initialAudit.getId(),
+                    int rows = updateContentAuditFromAiResult(contentAuditId,
                             AUDIT_STATUS_REJECTED, aiResult.getAiConfidence(), aiResult.getAuditReason());
-                    log.debug("章节[{}]审核表已更新为不通过", chapterId);
+                    log.info("[AI-Audit] 章节[{}] ContentAudit[{}] 更新为 REJECTED，影响行数: {}", chapterId, contentAuditId, rows);
                 } catch (Exception e) {
-                    log.error("更新审核表失败，章节ID: {}", chapterId, e);
+                    log.error("[AI-Audit] 章节[{}] 更新 ContentAudit 失败", chapterId, e);
                 }
             }
-            
+
             try {
-                log.info("开始更新章节表，章节ID: {}, auditStatus: {}, reason: {}",
-                        chapterId, AUDIT_STATUS_REJECTED, shortReason);
                 updateChapterDirectly(chapterId, AUDIT_STATUS_REJECTED, shortReason);
-                log.info("章节[{}]章节表已更新为不通过，auditStatus: {}", chapterId, AUDIT_STATUS_REJECTED);
+                log.info("[AI-Audit] 章节[{}] BookChapter 更新为 REJECTED", chapterId);
             } catch (Exception e) {
-                log.error("更新章节表失败，章节ID: {}, 错误信息: {}", chapterId, e.getMessage(), e);
+                log.error("[AI-Audit] 章节[{}] 更新 BookChapter 失败", chapterId, e);
             }
 
             final Long rejectBookId = bookChapter.getBookId();
@@ -302,6 +310,24 @@ public class BookAuditServiceImpl implements BookAuditService {
             });
 
             log.warn("章节[{}]AI审核不通过，原因: {}，已更新审核表和章节表", chapterId, shortReason);
+
+        } else {
+            // 情况4（pending 或未知状态）：AI 未得出确定结论，保持待人工审核
+            if (!isPending) {
+                log.warn("[AI-Audit] 章节[{}] 收到未知 auditStatus={}，按 PENDING 处理", chapterId, auditStatus);
+            }
+            String shortReason = extractShortReason(fullReason, aiConfidence);
+            if (contentAuditId != null) {
+                try {
+                    int rows = updateContentAuditFromAiResult(contentAuditId,
+                            AUDIT_STATUS_PENDING, aiResult.getAiConfidence(), aiResult.getAuditReason());
+                    log.info("[AI-Audit] 章节[{}] ContentAudit[{}] 更新为 PENDING（待人工），影响行数: {}",
+                            chapterId, contentAuditId, rows);
+                } catch (Exception e) {
+                    log.error("[AI-Audit] 章节[{}] 更新 ContentAudit 失败", chapterId, e);
+                }
+            }
+            log.warn("章节[{}]AI未得出确定结论(status={})，原因: {}，已记录待人工审核", chapterId, auditStatus, shortReason);
         }
     }
 
@@ -340,6 +366,8 @@ public class BookAuditServiceImpl implements BookAuditService {
         } catch (Exception e) {
             log.warn("查询审核记录失败，书籍ID: {}，将创建新记录。错误: {}", bookId, e.getMessage());
         }
+        log.info("[AI-Audit] 书籍[{}] 已存在 ContentAudit: {}", bookId,
+                initialAudit != null ? ("id=" + initialAudit.getId() + ",status=" + initialAudit.getAuditStatus()) : "无");
 
         // 如果不存在审核记录，创建一条（待审核状态）
         if (initialAudit == null) {
@@ -354,10 +382,11 @@ public class BookAuditServiceImpl implements BookAuditService {
                     .updateTime(LocalDateTime.now())
                     .build();
             try {
-                contentAuditMapper.insert(initialAudit);
-                log.debug("书籍[{}]审核记录已创建", bookId);
+                int inserted = contentAuditMapper.insert(initialAudit);
+                log.info("[AI-Audit] 书籍[{}] 新建 ContentAudit 成功，影响行数: {}, 回填 id: {}",
+                        bookId, inserted, initialAudit.getId());
             } catch (Exception e) {
-                log.error("创建审核记录失败，书籍ID: {}", bookId, e);
+                log.error("[AI-Audit] 书籍[{}] 新建 ContentAudit 失败", bookId, e);
             }
         }
 
@@ -378,28 +407,35 @@ public class BookAuditServiceImpl implements BookAuditService {
                 fullReason != null && fullReason.length() > 100 ? fullReason.substring(0, 100) + "..." : fullReason);
 
         // 5. 判断审核结果类型
+        boolean isPending = AUDIT_STATUS_PENDING.equals(auditStatus);
         boolean isPassed = AUDIT_STATUS_PASSED.equals(auditStatus);
+        boolean isRejected = AUDIT_STATUS_REJECTED.equals(auditStatus);
         boolean isHighConfidence = aiConfidence != null &&
                 aiConfidence.compareTo(CONFIDENCE_THRESHOLD) >= 0;
+
+        Long contentAuditId = initialAudit != null ? initialAudit.getId() : null;
+        if (contentAuditId == null) {
+            log.warn("[AI-Audit] 书籍[{}] ContentAudit id 为空，后续更新将被跳过（建议检查 content_audit 表结构或主键自增）", bookId);
+        }
 
         // 6. 更新审核表和书籍表
         if (isPassed && isHighConfidence) {
             // 情况1：AI审核通过且置信度高 -> 更新审核表和书籍表
-            if (initialAudit != null && initialAudit.getId() != null) {
+            if (contentAuditId != null) {
                 try {
-                    updateContentAuditFromAiResult(initialAudit.getId(),
+                    int rows = updateContentAuditFromAiResult(contentAuditId,
                             AUDIT_STATUS_PASSED, aiResult.getAiConfidence(), aiResult.getAuditReason());
-                    log.debug("书籍[{}]审核表已更新", bookId);
+                    log.info("[AI-Audit] 书籍[{}] ContentAudit[{}] 更新为 PASSED，影响行数: {}", bookId, contentAuditId, rows);
                 } catch (Exception e) {
-                    log.error("更新审核表失败，书籍ID: {}", bookId, e);
+                    log.error("[AI-Audit] 书籍[{}] 更新 ContentAudit 失败", bookId, e);
                 }
             }
             
             try {
                 updateBookFromAudit(bookId, AUDIT_STATUS_PASSED, null);
-                log.debug("书籍[{}]书籍表已更新", bookId);
+                log.info("[AI-Audit] 书籍[{}] BookInfo 更新为 PASSED", bookId);
             } catch (Exception e) {
-                log.error("更新书籍表失败，书籍ID: {}", bookId, e);
+                log.error("[AI-Audit] 书籍[{}] 更新 BookInfo 失败", bookId, e);
             }
             
             log.info("书籍[{}]AI审核通过，置信度: {}，已更新审核表和书籍表", bookId, aiConfidence);
@@ -410,38 +446,65 @@ public class BookAuditServiceImpl implements BookAuditService {
 
         } else if (isPassed && !isHighConfidence) {
             // 情况2：AI审核通过但置信度低 -> 更新审核表为待人工审核，书籍表保持待审核状态
-            if (initialAudit != null && initialAudit.getId() != null) {
+            if (contentAuditId != null) {
                 try {
-                    updateContentAuditFromAiResult(initialAudit.getId(),
+                    int rows = updateContentAuditFromAiResult(contentAuditId,
                             AUDIT_STATUS_PENDING, aiResult.getAiConfidence(), aiResult.getAuditReason());
-                    log.info("书籍[{}]AI审核通过但置信度低[{}]，已更新审核表等待人工审核",
-                            bookId, aiConfidence);
+                    log.info("[AI-Audit] 书籍[{}] AI通过但置信度低[{}]，ContentAudit[{}] 更新为 PENDING，影响行数: {}",
+                            bookId, aiConfidence, contentAuditId, rows);
                 } catch (Exception e) {
-                    log.error("更新审核表失败，书籍ID: {}", bookId, e);
+                    log.error("[AI-Audit] 书籍[{}] 更新 ContentAudit 失败", bookId, e);
                 }
             }
 
-        } else {
+        } else if (isRejected) {
             // 情况3：AI审核不通过 -> 更新审核表和书籍表为不通过
             String shortReason = extractShortReason(fullReason, aiConfidence);
-            if (initialAudit != null && initialAudit.getId() != null) {
+            if (contentAuditId != null) {
                 try {
-                    updateContentAuditFromAiResult(initialAudit.getId(),
+                    int rows = updateContentAuditFromAiResult(contentAuditId,
                             AUDIT_STATUS_REJECTED, aiResult.getAiConfidence(), aiResult.getAuditReason());
-                    log.debug("书籍[{}]审核表已更新为不通过", bookId);
+                    log.info("[AI-Audit] 书籍[{}] ContentAudit[{}] 更新为 REJECTED，影响行数: {}", bookId, contentAuditId, rows);
                 } catch (Exception e) {
-                    log.error("更新审核表失败，书籍ID: {}", bookId, e);
+                    log.error("[AI-Audit] 书籍[{}] 更新 ContentAudit 失败", bookId, e);
                 }
             }
-            
+
             try {
                 updateBookFromAudit(bookId, AUDIT_STATUS_REJECTED, shortReason);
-                log.debug("书籍[{}]书籍表已更新为不通过", bookId);
+                log.info("[AI-Audit] 书籍[{}] BookInfo 更新为 REJECTED", bookId);
             } catch (Exception e) {
-                log.error("更新书籍表失败，书籍ID: {}", bookId, e);
+                log.error("[AI-Audit] 书籍[{}] 更新 BookInfo 失败", bookId, e);
             }
-            
+
             log.warn("书籍[{}]AI审核不通过，原因: {}，已更新审核表和书籍表", bookId, shortReason);
+
+        } else {
+            // 情况4（pending 或未知状态）：AI 未得出确定结论（异常兜底 / 请求为空 / 置信度低等）
+            //  - ContentAudit 保持 PENDING 并记录原因，供人工审核查看
+            //  - BookInfo.audit_status 维持原值（不强制改为 REJECTED），仅写入 reason 方便前端提示
+            if (!isPending) {
+                log.warn("[AI-Audit] 书籍[{}] 收到未知 auditStatus={}，按 PENDING 处理", bookId, auditStatus);
+            }
+            String shortReason = extractShortReason(fullReason, aiConfidence);
+            if (contentAuditId != null) {
+                try {
+                    int rows = updateContentAuditFromAiResult(contentAuditId,
+                            AUDIT_STATUS_PENDING, aiResult.getAiConfidence(), aiResult.getAuditReason());
+                    log.info("[AI-Audit] 书籍[{}] ContentAudit[{}] 更新为 PENDING（待人工），影响行数: {}", bookId, contentAuditId, rows);
+                } catch (Exception e) {
+                    log.error("[AI-Audit] 书籍[{}] 更新 ContentAudit 失败", bookId, e);
+                }
+            }
+
+            try {
+                updateBookAuditReasonOnly(bookId, shortReason);
+                log.info("[AI-Audit] 书籍[{}] BookInfo 审核原因已写入，audit_status 保持不变", bookId);
+            } catch (Exception e) {
+                log.error("[AI-Audit] 书籍[{}] 更新 BookInfo 原因失败", bookId, e);
+            }
+
+            log.warn("书籍[{}]AI未得出确定结论(status={})，原因: {}，已记录待人工审核", bookId, auditStatus, shortReason);
         }
     }
 
@@ -606,8 +669,9 @@ public class BookAuditServiceImpl implements BookAuditService {
 
     /**
      * 根据主键 id 更新 AI 审核结果字段
+     * @return 影响行数（0 表示目标记录不存在或条件未命中）
      */
-    private void updateContentAuditFromAiResult(Long contentAuditId, Integer auditStatus,
+    private int updateContentAuditFromAiResult(Long contentAuditId, Integer auditStatus,
             BigDecimal aiConfidence, String auditReason) {
         ContentAudit updateAudit = new ContentAudit();
         updateAudit.setAuditStatus(auditStatus);
@@ -616,13 +680,14 @@ public class BookAuditServiceImpl implements BookAuditService {
         updateAudit.setUpdateTime(LocalDateTime.now());
         QueryWrapper<ContentAudit> updateWrapper = new QueryWrapper<>();
         updateWrapper.eq("id", contentAuditId);
-        contentAuditMapper.update(updateAudit, updateWrapper);
+        return contentAuditMapper.update(updateAudit, updateWrapper);
     }
 
     /**
      * AI 处理失败时按主键 id 更新审核记录
+     * @return 影响行数（0 表示目标记录不存在或条件未命中）
      */
-    private void updateAuditRecordOnFailure(Long contentAuditId, String failureReason) {
+    private int updateAuditRecordOnFailure(Long contentAuditId, String failureReason) {
         ContentAudit updateAudit = new ContentAudit();
         updateAudit.setAuditStatus(AUDIT_STATUS_PENDING);
         updateAudit.setAiConfidence(new BigDecimal("0.0"));
@@ -630,7 +695,7 @@ public class BookAuditServiceImpl implements BookAuditService {
         updateAudit.setUpdateTime(LocalDateTime.now());
         QueryWrapper<ContentAudit> updateWrapper = new QueryWrapper<>();
         updateWrapper.eq("id", contentAuditId);
-        contentAuditMapper.update(updateAudit, updateWrapper);
+        return contentAuditMapper.update(updateAudit, updateWrapper);
     }
 
     /**
@@ -656,6 +721,26 @@ public class BookAuditServiceImpl implements BookAuditService {
                 String cacheKey = CacheConsts.BOOK_INFO_HASH_PREFIX + bookId;
                 stringRedisTemplate.delete(cacheKey);
                 log.debug("已清除书籍信息缓存，bookId: {}", bookId);
+            } catch (Exception e) {
+                log.warn("清除书籍信息缓存失败，bookId: {}", bookId, e);
+            }
+        });
+    }
+
+    /**
+     * 仅更新 book_info.audit_reason，不改 audit_status。用于 AI 返回 pending 时把原因回填给前端。
+     */
+    private void updateBookAuditReasonOnly(Long bookId, String auditReason) {
+        BookInfo updateBook = new BookInfo();
+        updateBook.setId(bookId);
+        updateBook.setAuditReason(auditReason);
+        updateBook.setUpdateTime(LocalDateTime.now());
+        bookInfoMapper.updateById(updateBook);
+
+        runAfterCommit(() -> {
+            try {
+                String cacheKey = CacheConsts.BOOK_INFO_HASH_PREFIX + bookId;
+                stringRedisTemplate.delete(cacheKey);
             } catch (Exception e) {
                 log.warn("清除书籍信息缓存失败，bookId: {}", bookId, e);
             }

@@ -58,6 +58,7 @@
         <swagger-annotations-jakarta.version>2.2.30</swagger-annotations-jakarta.version>
         <apm-toolkit-trace.version>9.2.0</apm-toolkit-trace.version>
         <alipay-sdk-java.version>4.38.170.ALL</alipay-sdk-java.version>
+        <aho-corasick.version>1.2.2</aho-corasick.version>
 
 
 <!--        <shardingsphere-jdbc.version>5.5.2</shardingsphere-jdbc.version>-->
@@ -249,6 +250,12 @@
                 <version>${alipay-sdk-java.version}</version>
             </dependency>
 
+            <!-- 敏感词匹配：hankcs Aho-Corasick 双数组 Trie -->
+            <dependency>
+                <groupId>com.hankcs</groupId>
+                <artifactId>aho-corasick-double-array-trie</artifactId>
+                <version>${aho-corasick.version}</version>
+            </dependency>
 
         </dependencies>
     </dependencyManagement>
