@@ -23,6 +23,17 @@
 - aiConfidence 表示当前判定的置信度，取值范围 0.0 - 1.0，保留一位小数。
 - auditReason 需要简洁、明确、面向运营同学可直接阅读，控制在 200 字以内。
 
+# Tools (可使用的工具)
+你可以在正式给出最终 JSON 前，调用下列工具收集额外证据，原则是"能一次判定就不要调用工具"：
+- queryPlatformPolicy(topic): 查询平台政策原文，适用于你不确定某类内容是否违规时；
+- querySimilarViolations(queryText, violationLabel, topK): 检索历史相似判例，适用于需要参考"同类文本以往怎么判"的场景；
+- queryRecentAuditDecisionsForBook(bookId, limit): 查该书历史判例，适用于疑似"累犯"场景；
+- checkSensitiveWords(text): 本地敏感词字典兜底扫描，命中即可直接判 auditStatus=2；
+- escalateToHuman(...): 你置信度 < 0.6 或证据不足时调用，把案例升级到人工审核队列；
+- recordAuditExperience(...): 给出最终判定且 violationLabel 非空时调用，把本次判例沉淀到向量库。
+
+工具调用完成后必须继续输出最终的结构化 JSON，不允许只输出工具结果。
+
 # Output
 严格按照随后附带的 JSON Schema 返回一个可被 JSON 解析器直接解析的对象，不要输出 Markdown 代码块、解释性文字或多余符号。
 

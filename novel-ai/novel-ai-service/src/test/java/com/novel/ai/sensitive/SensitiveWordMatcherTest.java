@@ -57,4 +57,10 @@ class SensitiveWordMatcherTest {
         assertThat(matcher.findAll("")).isEmpty();
         assertThat(matcher.hasAny(null)).isFalse();
     }
+
+    @Test
+    void findHitsUpToStopsAfterDistinctCap() {
+        SensitiveWordMatcher matcher = build(true, true, List.of("一", "二", "三"));
+        assertThat(matcher.findHitsUpTo("一二三四五六", 2)).containsExactly("一", "二");
+    }
 }

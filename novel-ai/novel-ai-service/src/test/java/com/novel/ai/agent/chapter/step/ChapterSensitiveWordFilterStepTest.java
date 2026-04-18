@@ -10,6 +10,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -19,7 +20,7 @@ class ChapterSensitiveWordFilterStepTest {
     void shouldShortCircuitWhenHitsExist() {
         SensitiveWordMatcher matcher = mock(SensitiveWordMatcher.class);
         when(matcher.isEnabled()).thenReturn(true);
-        when(matcher.findAll(any())).thenReturn(List.of("血腥"));
+        when(matcher.findHitsUpTo(any(), anyInt())).thenReturn(List.of("血腥"));
 
         ChapterSensitiveWordFilterStep step = new ChapterSensitiveWordFilterStep(matcher);
         ChapterAuditContext ctx = new ChapterAuditContext(ChapterAuditReqDto.builder()
@@ -35,7 +36,7 @@ class ChapterSensitiveWordFilterStepTest {
     void shouldContinueWhenNoHit() {
         SensitiveWordMatcher matcher = mock(SensitiveWordMatcher.class);
         when(matcher.isEnabled()).thenReturn(true);
-        when(matcher.findAll(any())).thenReturn(List.of());
+        when(matcher.findHitsUpTo(any(), anyInt())).thenReturn(List.of());
 
         ChapterSensitiveWordFilterStep step = new ChapterSensitiveWordFilterStep(matcher);
         ChapterAuditContext ctx = new ChapterAuditContext(ChapterAuditReqDto.builder()

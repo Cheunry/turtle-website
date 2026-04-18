@@ -91,6 +91,38 @@ public class SensitiveWordMatcher {
     }
 
     /**
+     * 扫描文本，收集至多 {@code maxDistinctHits} 个<b>不同</b>的敏感词即停止（提前终止遍历），
+     * 适合「拒审理由只需展示前几条」的场景，避免在命中极多或同一词反复出现时扫完全文。
+     * <p>
+     * 另设有单次扫描回调上限，防止极端重复命中拖慢扫描。
+     */
+    public List<String> findHitsUpTo(String text, int maxDistinctHits) {
+        if (text == null || text.isEmpty() || !enabled || maxDistinctHits <= 0) {
+            return List.of();
+        }
+        String target = ignoreCase ? text.toLowerCase() : text;
+        AhoCorasickDoubleArrayTrie<String> current = this.trie;
+        if (current == null) {
+            return List.of();
+        }
+        LinkedHashSet<String> hits = new LinkedHashSet<>();
+        int maxCallbacks = Math.max(64, maxDistinctHits * 20);
+        int[] callbacks = {0};
+        current.parseText(target, (begin, end, value) -> {
+            callbacks[0]++;
+            hits.add(value);
+            if (hits.size() >= maxDistinctHits) {
+                return false;
+            }
+            if (callbacks[0] >= maxCallbacks) {
+                return false;
+            }
+            return true;
+        });
+        return new ArrayList<>(hits);
+    }
+
+    /**
      * 扫描文本，返回所有命中的敏感词（去重、保持首次出现顺序）。
      * 文本为 null / 空、或匹配器被禁用时返回空列表。
      */

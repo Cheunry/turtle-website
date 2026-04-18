@@ -88,6 +88,15 @@
             <artifactId>spring-ai-advisors-vector-store</artifactId>
         </dependency>
 
+        <!-- Model Context Protocol Server（Servlet/WebMVC 版）：
+             把内部 @Tool 通过 SSE 暴露给 Cursor / Claude Desktop 等 MCP 客户端。
+             选 webmvc 而不是 webflux 是为了与现有 Spring MVC 栈无缝共存。
+             暴露端点：GET /sse（SSE 订阅）+ POST /mcp/message（MCP JSON-RPC）。 -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-mcp-server-webmvc</artifactId>
+        </dependency>
+
 
         <!-- https://mvnrepository.com/artifact/com.alibaba.cloud.ai/spring-ai-alibaba-starter-dashscope -->
         <dependency>

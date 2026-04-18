@@ -5,6 +5,7 @@ import com.alibaba.cloud.ai.dashscope.image.DashScopeImageModel;
 import com.novel.ai.advisor.NovelAiAdvisorProperties;
 import com.novel.ai.advisor.RetryTransientAiAdvisor;
 import com.novel.ai.advisor.StructuredOutputLogAdvisor;
+import com.novel.ai.tool.AuditTools;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor;
 import org.springframework.ai.image.ImageModel;
@@ -38,16 +39,29 @@ public class AiConfig {
     }
 
     /**
-     * 聊天模型全局客户端——默认挂载"两级重试 + 日志/观测"Advisor 链。
+     * 聊天模型全局客户端——默认挂载：
+     * <ul>
+     *     <li>"两级重试 + 日志/观测"Advisor 链；</li>
+     *     <li>{@link AuditTools} 作为 {@code defaultTools}，让模型可在 ReAct 循环里
+     *         自主调用 6 个审核相关 Function（政策查询、相似判例、敏感词扫描、
+     *         人审升级、经验沉淀等）；</li>
+     * </ul>
      * <p>
-     * 业务调用点无需手动 {@code .advisors(...)}，直接 {@code chatClient.prompt().system().user().call()} 即可。
+     * <b>和结构化输出的兼容性</b>：Spring AI 会先处理 tool_call 循环，拿到最终
+     * 文本响应后再走 {@code BeanOutputConverter}，两者互不冲突；Prompt 模板同步
+     * 在 system 段落里告知"工具使用规范"，避免模型把 Tool 当"常规输出通道"滥用。
+     * <p>
+     * 业务调用点无需手动 {@code .advisors(...)}/{@code .tools(...)}，直接
+     * {@code chatClient.prompt().system().user().call()} 即可获得 advisor+tools 能力。
      */
     @Bean
     public ChatClient chatClient(DashScopeChatModel chatModel,
                                  RetryTransientAiAdvisor retryAdvisor,
-                                 StructuredOutputLogAdvisor logAdvisor) {
+                                 StructuredOutputLogAdvisor logAdvisor,
+                                 AuditTools auditTools) {
         return ChatClient.builder(chatModel)
                 .defaultAdvisors(retryAdvisor, logAdvisor, new SimpleLoggerAdvisor())
+                .defaultTools(auditTools)
                 .build();
     }
 

@@ -44,9 +44,10 @@ public class BookSensitiveWordFilterStep implements AuditStep<BookAuditContext> 
             return StepResult.CONTINUE;
         }
         BookAuditReqDto req = ctx.getRequest();
-        List<String> hits = new ArrayList<>();
-        collect(matcher.findAll(req.getBookName()), hits);
-        collect(matcher.findAll(req.getBookDesc()), hits);
+        List<String> hits = new ArrayList<>(matcher.findHitsUpTo(req.getBookName(), MAX_HITS_IN_REASON));
+        if (hits.isEmpty()) {
+            hits.addAll(matcher.findHitsUpTo(req.getBookDesc(), MAX_HITS_IN_REASON));
+        }
 
         if (hits.isEmpty()) {
             return StepResult.CONTINUE;
@@ -62,14 +63,6 @@ public class BookSensitiveWordFilterStep implements AuditStep<BookAuditContext> 
                 .build();
         ctx.setResult(resp);
         return StepResult.SHORT_CIRCUIT;
-    }
-
-    private void collect(List<String> source, List<String> target) {
-        for (String hit : source) {
-            if (!target.contains(hit)) {
-                target.add(hit);
-            }
-        }
     }
 
     private String buildReason(List<String> hits) {

@@ -41,9 +41,11 @@ public class ChapterSensitiveWordFilterStep implements AuditStep<ChapterAuditCon
             return StepResult.CONTINUE;
         }
         ChapterAuditReqDto req = ctx.getRequest();
-        List<String> hits = new ArrayList<>();
-        collect(matcher.findAll(req.getChapterName()), hits);
-        collect(matcher.findAll(req.getContent()), hits);
+        // 标题先扫：命中则不再扫正文（省一次 O(n)）；理由最多展示 MAX_HITS_IN_REASON 条，提前结束扫描
+        List<String> hits = new ArrayList<>(matcher.findHitsUpTo(req.getChapterName(), MAX_HITS_IN_REASON));
+        if (hits.isEmpty()) {
+            hits.addAll(matcher.findHitsUpTo(req.getContent(), MAX_HITS_IN_REASON));
+        }
 
         if (hits.isEmpty()) {
             return StepResult.CONTINUE;
@@ -61,14 +63,6 @@ public class ChapterSensitiveWordFilterStep implements AuditStep<ChapterAuditCon
                 .build();
         ctx.setResult(resp);
         return StepResult.SHORT_CIRCUIT;
-    }
-
-    private void collect(List<String> source, List<String> target) {
-        for (String hit : source) {
-            if (!target.contains(hit)) {
-                target.add(hit);
-            }
-        }
     }
 
     private String buildReason(List<String> hits) {
