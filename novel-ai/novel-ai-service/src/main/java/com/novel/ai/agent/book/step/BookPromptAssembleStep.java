@@ -39,7 +39,6 @@ public class BookPromptAssembleStep implements AuditStep<BookAuditContext> {
         Map<String, Object> vars = new HashMap<>();
         vars.put("bookName", PromptVars.safe(req.getBookName()));
         vars.put("bookDesc", PromptVars.safe(req.getBookDesc()));
-        vars.put("similarExperiences", PromptVars.safe(ctx.getSimilarExperiences()));
         String userPrompt = promptLoader.renderUser(NovelAiPromptKey.BOOK_AUDIT, vars);
 
         ctx.setSystemPrompt(systemPrompt);

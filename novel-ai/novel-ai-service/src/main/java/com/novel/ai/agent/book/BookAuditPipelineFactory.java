@@ -2,7 +2,6 @@ package com.novel.ai.agent.book;
 
 import com.novel.ai.agent.book.step.BookLlmInvokeStep;
 import com.novel.ai.agent.book.step.BookPromptAssembleStep;
-import com.novel.ai.agent.book.step.BookRagRetrieveStep;
 import com.novel.ai.agent.book.step.BookResponseBuildStep;
 import com.novel.ai.agent.book.step.BookSensitiveWordFilterStep;
 import com.novel.ai.agent.book.step.BookValidateStep;
@@ -36,15 +35,16 @@ public class BookAuditPipelineFactory {
     public AuditPipeline<BookAuditContext> bookAuditPipeline(
             BookValidateStep validateStep,
             BookSensitiveWordFilterStep sensitiveWordFilterStep,
-            BookRagRetrieveStep ragStep,
             BookPromptAssembleStep promptStep,
             BookLlmInvokeStep llmStep,
             BookResponseBuildStep responseStep,
             BookAuditExceptionMapper exceptionMapper,
             AuditErrorClassifier classifier,
             MeterRegistry meterRegistry) {
+        // RAG 召回不再作为独立 Step——改由 LlmStep 局部挂载 RetrievalAugmentationAdvisor
+        // 在 LLM 请求发出前由 Spring AI 自动完成，这里只保留"业务形态"级别的 Step。
         List<AuditStep<BookAuditContext>> steps = List.of(
-                validateStep, sensitiveWordFilterStep, ragStep, promptStep, llmStep, responseStep);
+                validateStep, sensitiveWordFilterStep, promptStep, llmStep, responseStep);
         Function<BookAuditContext, String> decisionExtractor = ctx -> {
             if (!ctx.hasResult()) {
                 return "unknown";

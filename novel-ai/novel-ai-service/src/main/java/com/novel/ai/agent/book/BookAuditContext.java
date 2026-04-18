@@ -8,15 +8,15 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * 书籍审核流水线上下文。在 {@link AuditContext} 基础上补充书籍审核特有字段：
- * RAG 召回结果与 LLM 结构化输出。
+ * 书籍审核流水线上下文。
+ * <p>
+ * 阶段 2-C 重构后，RAG 召回不再落到 Context 字段里——改由
+ * {@code RetrievalAugmentationAdvisor} 在 LLM 调用前自动注入 user prompt，
+ * Pipeline Step 不再承载"判例字符串"状态，Context 只保留 LLM 结构化输出这一块业务结果。
  */
 @Getter
 @Setter
 public class BookAuditContext extends AuditContext<BookAuditReqDto, BookAuditRespDto> {
-
-    /** RAG 检索到的相似判例文本，供 prompt 拼接；无命中时为 ""。 */
-    private String similarExperiences = "";
 
     /** LLM 结构化输出的审核决定，成功调用后填充。 */
     private AuditDecisionAiOutput aiOutput;

@@ -56,6 +56,38 @@
             <artifactId>spring-ai-client-chat</artifactId>
         </dependency>
 
+        <!-- 向量存储：复用现有 Elasticsearch，无需部署独立向量库（Milvus/Qdrant 等）。
+             starter 自带 autoconfigure、core store、新版 co.elastic.clients 客户端。 -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-vector-store-elasticsearch</artifactId>
+        </dependency>
+
+        <!-- 显式覆盖父 pom 的 elasticsearch-java 8.10.4：
+             Spring AI 1.0 的 ElasticsearchVectorStore 运行期需要 8.11+ 才引入的
+             co.elastic.clients.elasticsearch._types.KnnSearch$Builder 类，
+             8.10.4 启动会抛 NoClassDefFoundError。
+             这里只在 ai 模块覆盖，novel-search 仍用父 pom 的 8.10.4，互不影响。
+             8.15.5 向下兼容 ES server 8.10+，与 Spring Boot 3.4 自带的
+             elasticsearch-rest-client 8.15.5 版本对齐。 -->
+        <dependency>
+            <groupId>co.elastic.clients</groupId>
+            <artifactId>elasticsearch-java</artifactId>
+            <version>8.15.5</version>
+        </dependency>
+
+        <!-- RAG 基础设施：DocumentRetriever、RetrievalAugmentationAdvisor 等 -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-rag</artifactId>
+        </dependency>
+
+        <!-- 内置的 QuestionAnswerAdvisor：阶段 2-C 会挂到 ChatClient 上做 RAG 注入 -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-advisors-vector-store</artifactId>
+        </dependency>
+
 
         <!-- https://mvnrepository.com/artifact/com.alibaba.cloud.ai/spring-ai-alibaba-starter-dashscope -->
         <dependency>

@@ -3,24 +3,34 @@ package com.novel.ai.invoker;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.skywalking.apm.toolkit.trace.ActiveSpan;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.api.Advisor;
 import org.springframework.ai.converter.BeanOutputConverter;
 import org.springframework.ai.retry.NonTransientAiException;
+import org.springframework.ai.retry.TransientAiException;
 import org.springframework.stereotype.Component;
 
 /**
- * 结构化输出调用器：在 {@link ChatClient} 之上包一层"重试 + 修复型 Prompt"。
+ * 结构化输出调用器——Novel AI "两级重试"架构的内层。
  * <p>
- * 设计目标：
+ * <b>职责切分</b>（参考 {@code com.novel.ai.advisor.RetryTransientAiAdvisor} 外层）：
  * <ul>
- *     <li>把"调用 LLM + 按 Schema 解析 + 失败重试"这一套样板从业务代码里抽出来，业务只关心业务。</li>
- *     <li>首次失败时在 system prompt 后追加"严格 JSON 指令 + 上次错误"，让模型自我纠错，显著提升成功率。</li>
- *     <li>对 {@link NonTransientAiException}（内容安全失败、模型明确拒绝）不做重试，直接抛出，避免无谓开销和成本浪费。</li>
+ *     <li>外层 Advisor：管模型通信——{@link TransientAiException}（限流 / 超时 / 网关 5xx）重试；</li>
+ *     <li>本类 Invoker：管<b>结构化输出业务语义</b>——
+ *         entity 解析失败（JSON 损坏、字段缺失、类型不匹配）时用"修复型 Prompt"引导模型自纠错。</li>
  * </ul>
+ * 这样每次 {@code invoke} 最多产生
+ * {@code advisor.retryMaxAttempts × structured.maxAttempts} 次实际调用，
+ * 但真正打到模型的次数由 Advisor 去重，不会出现"业务重试×通信重试"的乘法爆炸
+ * ——因为 Transient 在 Advisor 层就被消化或上抛，Invoker 这层看到的要么是成功，
+ * 要么是彻底失败（耗尽 Transient 重试 / NonTransient 直接失败 / 解析失败）。
  * <p>
- * 不做的事：
+ * <b>不做的事</b>：
  * <ul>
- *     <li>不捕获业务异常——成功就返回对象，失败就抛原始异常，由调用方按场景决定是"待审核 / 兜底 / 返回错误"。</li>
- *     <li>不打 Micrometer 指标——目前 novel-ai 没接 actuator，暂用 SkyWalking Span Tag 承载，后续统一接入。</li>
+ *     <li>不再埋 {@code ai.call.*} 的 span tag / 单次调用日志——这些由
+ *         {@code StructuredOutputLogAdvisor} 统一处理，避免重复。</li>
+ *     <li>不重试 {@link NonTransientAiException}（内容安全 / 鉴权 / 参数错误）——透传给上层。</li>
+ *     <li>不重试 {@link TransientAiException}——Advisor 层已经重试过，到了这里说明已经耗尽，
+ *         继续重试毫无意义。</li>
  * </ul>
  */
 @Slf4j
@@ -41,17 +51,9 @@ public class StructuredOutputInvoker {
     }
 
     /**
-     * 带重试与修复型 Prompt 的结构化输出调用。
-     *
-     * @param chatClient      Spring AI ChatClient
-     * @param systemPrompt    已拼好 format instructions 的 system prompt（调用方负责）
-     * @param userPrompt      user prompt
-     * @param outputConverter Bean 解析器
-     * @param logContext      日志上下文标签（例如 "book-audit"），只用于日志与 Span，不影响业务
-     * @param <T>             目标对象类型
-     * @return 解析成功的对象
-     * @throws NonTransientAiException 若模型返回内容触发内容安全等不可重试错误
-     * @throws RuntimeException        若达到最大尝试次数仍解析失败，抛出最后一次异常
+     * 带"修复型 Prompt"的结构化输出调用（无额外 advisor）。
+     * 等价于 {@link #invoke(ChatClient, String, String, BeanOutputConverter, String, Advisor...)}
+     * 传空数组；为不破坏既有调用点保留。
      */
     public <T> T invoke(
             ChatClient chatClient,
@@ -59,58 +61,81 @@ public class StructuredOutputInvoker {
             String userPrompt,
             BeanOutputConverter<T> outputConverter,
             String logContext) {
+        return invoke(chatClient, systemPrompt, userPrompt, outputConverter, logContext, (Advisor[]) null);
+    }
+
+    /**
+     * 带"修复型 Prompt"的结构化输出调用。
+     *
+     * @param chatClient      Spring AI ChatClient（已由 {@code AiConfig} 注入默认 Advisor 链）
+     * @param systemPrompt    已拼好 format instructions 的 system prompt（调用方负责）
+     * @param userPrompt      user prompt
+     * @param outputConverter Bean 解析器
+     * @param logContext      日志上下文标签（例如 "book-audit"），只用于日志与 Span，不影响业务
+     * @param extraAdvisors   本次调用<b>局部追加</b>的 Advisor（例如 RAG 的
+     *                        {@code RetrievalAugmentationAdvisor}）。只影响当前一次调用，
+     *                        不会污染全局 defaultAdvisors 链。{@code null} 或空数组表示不追加。
+     * @param <T>             目标对象类型
+     * @return 解析成功的对象
+     * @throws NonTransientAiException 若模型返回触发内容安全等不可重试错误
+     * @throws TransientAiException    若 Advisor 层耗尽通信重试后仍失败
+     * @throws RuntimeException        若达到 entity 解析重试上限仍失败，抛出最后一次异常
+     */
+    public <T> T invoke(
+            ChatClient chatClient,
+            String systemPrompt,
+            String userPrompt,
+            BeanOutputConverter<T> outputConverter,
+            String logContext,
+            Advisor... extraAdvisors) {
 
         int maxAttempts = Math.max(1, properties.getMaxAttempts());
         RuntimeException lastError = null;
+        boolean hasExtraAdvisors = extraAdvisors != null && extraAdvisors.length > 0;
 
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
             String effectiveSystemPrompt = (attempt == 1)
                     ? systemPrompt
                     : buildRepairSystemPrompt(systemPrompt, lastError);
 
-            long start = System.currentTimeMillis();
             try {
-                T result = chatClient.prompt()
+                ChatClient.ChatClientRequestSpec spec = chatClient.prompt()
                         .system(effectiveSystemPrompt)
-                        .user(userPrompt)
-                        .call()
-                        .entity(outputConverter);
+                        .user(userPrompt);
+                if (hasExtraAdvisors) {
+                    spec = spec.advisors(extraAdvisors);
+                }
+                T result = spec.call().entity(outputConverter);
 
-                long cost = System.currentTimeMillis() - start;
-                ActiveSpan.tag("ai.structured.attempt", String.valueOf(attempt));
-                ActiveSpan.tag("ai.structured.duration.ms", String.valueOf(cost));
-                ActiveSpan.tag("ai.structured.status", "success");
                 if (attempt > 1) {
-                    log.info("[{}] LLM 结构化输出重试成功: attempt={}/{}, cost={}ms", logContext, attempt, maxAttempts, cost);
-                } else {
-                    log.info("[{}] LLM 结构化输出成功: cost={}ms", logContext, cost);
+                    log.info("[{}] 结构化解析重试成功: attempt={}/{}", logContext, attempt, maxAttempts);
+                    ActiveSpan.tag("ai.structured.outcome", "success_after_repair");
+                    ActiveSpan.tag("ai.structured.attempts", String.valueOf(attempt));
                 }
                 return result;
 
-            } catch (NonTransientAiException e) {
-                // 内容安全 / 模型明确拒绝 -> 透传给上层决策，不再浪费次数重试
-                ActiveSpan.tag("ai.structured.status", "non_transient_error");
-                log.warn("[{}] 结构化输出遇到 NonTransientAiException，不再重试: {}", logContext, e.getMessage());
+            } catch (NonTransientAiException | TransientAiException e) {
+                // 通信类异常（Transient 已被 Advisor 耗尽重试 / NonTransient 不可恢复）都透传给上层决策
+                ActiveSpan.tag("ai.structured.outcome", e instanceof TransientAiException
+                        ? "transient_exhausted" : "non_transient");
+                log.warn("[{}] 结构化输出遇到 AI 通信异常，透传不在 Invoker 重试: {}: {}",
+                        logContext, e.getClass().getSimpleName(), e.getMessage());
                 throw e;
 
             } catch (RuntimeException e) {
+                // 走到这里通常是：JSON 损坏 / 字段缺失 / 类型不匹配——业务语义问题，值得用修复型 Prompt 再试一次
                 lastError = e;
-                long cost = System.currentTimeMillis() - start;
-                ActiveSpan.tag("ai.structured.attempt." + attempt + ".status", "failure");
-                ActiveSpan.tag("ai.structured.attempt." + attempt + ".duration.ms", String.valueOf(cost));
-
                 if (attempt < maxAttempts) {
-                    log.warn("[{}] 结构化解析失败，准备重试: attempt={}/{}, cost={}ms, error={}",
-                            logContext, attempt, maxAttempts, cost, e.getMessage());
+                    log.warn("[{}] 结构化解析失败，准备用修复型 Prompt 重试: attempt={}/{}, error={}",
+                            logContext, attempt, maxAttempts, e.getMessage());
                 } else {
-                    log.error("[{}] 结构化解析失败，已达最大重试次数: attempts={}, cost={}ms, error={}",
-                            logContext, maxAttempts, cost, e.getMessage());
+                    log.error("[{}] 结构化解析失败，已达业务重试上限: attempts={}, error={}",
+                            logContext, maxAttempts, e.getMessage());
                 }
             }
         }
 
-        // 走到这里说明全部失败，抛最后一次异常给上层兜底
-        ActiveSpan.tag("ai.structured.status", "failure");
+        ActiveSpan.tag("ai.structured.outcome", "parse_failure");
         throw lastError != null
                 ? lastError
                 : new IllegalStateException("structured output invocation failed without captured error");
