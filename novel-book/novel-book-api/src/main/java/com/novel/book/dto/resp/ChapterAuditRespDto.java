@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -44,4 +45,10 @@ public class ChapterAuditRespDto {
      */
     @Schema(description = "审核原因")
     private String auditReason;
+
+    /**
+     * 本地 AC 敏感词命中词表（仅敏感词前置拦截短路时非空）
+     */
+    @Schema(description = "本地敏感词命中列表")
+    private List<String> sensitiveWordHits;
 }

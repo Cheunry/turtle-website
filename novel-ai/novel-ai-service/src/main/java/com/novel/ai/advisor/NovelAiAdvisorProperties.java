@@ -41,7 +41,11 @@ public class NovelAiAdvisorProperties {
     private long retryMaxBackoffMs = 3000L;
 
     /**
-     * 结构化输出调用埋点日志 Advisor 是否启用。
+     * 是否向 SkyWalking 写入 LLM 调用埋点（duration / status / token tags）。
+     * <p>
+     * 注意：控制台 {@code [LlmCall]} 与 token 统计日志由 {@link StructuredOutputLogAdvisor}
+     * <b>始终</b>输出（只要发生 ChatClient 调用且日志级别为 INFO），不受本开关影响，
+     * 避免误关「观测」后连本地排障日志也消失。
      */
     private boolean observationEnabled = true;
 

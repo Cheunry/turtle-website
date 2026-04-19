@@ -2,21 +2,28 @@ package com.novel.ai.controller.inner;
 
 import com.novel.ai.dto.req.AuditExperienceUpsertReqDto;
 import com.novel.ai.dto.req.AuditRuleReqDto;
+import com.novel.ai.dto.req.CoverImageAsyncSubmitReqDto;
 import com.novel.ai.dto.resp.AuditExperienceUpsertRespDto;
 import com.novel.ai.dto.resp.AuditRuleRespDto;
+import com.novel.ai.dto.resp.ImageGenJobStatusRespDto;
+import com.novel.ai.dto.resp.ImageGenJobSubmitRespDto;
+import com.novel.ai.image.job.ImageAsyncGenerationService;
 import com.novel.ai.rag.AuditExperienceIndexer;
 import com.novel.book.dto.req.BookAuditReqDto;
 import com.novel.book.dto.req.BookCoverReqDto;
 import com.novel.book.dto.req.ChapterAuditReqDto;
 import com.novel.book.dto.resp.BookAuditRespDto;
 import com.novel.book.dto.resp.ChapterAuditRespDto;
-import com.novel.ai.service.ImageService;
+import com.novel.ai.service.ImageGenerationGate;
 import com.novel.ai.service.TextService;
 import com.novel.common.constant.ApiRouterConsts;
 import com.novel.common.resp.RestResp;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -32,7 +39,8 @@ import java.util.List;
 public class InnerAiController {
 
     private final TextService textService;
-    private final ImageService imageService;
+    private final ImageGenerationGate imageGenerationGate;
+    private final ImageAsyncGenerationService imageAsyncGenerationService;
     private final AuditExperienceIndexer auditExperienceIndexer;
 
     /**
@@ -77,7 +85,19 @@ public class InnerAiController {
     @Operation(summary = "根据提示词生成图片")
     @PostMapping("/generate/image")
     public RestResp<String> generateImage(@RequestParam("prompt") String prompt) {
-        return imageService.generateImage(prompt);
+        return imageGenerationGate.generateImage(prompt);
+    }
+
+    @Operation(summary = "异步根据提示词生成图片（立即返回 jobId）")
+    @PostMapping("/generate/image/async")
+    public RestResp<ImageGenJobSubmitRespDto> generateImageAsync(@Valid @RequestBody CoverImageAsyncSubmitReqDto req) {
+        return imageAsyncGenerationService.submit(req);
+    }
+
+    @Operation(summary = "查询异步生图任务状态")
+    @GetMapping("/generate/image/jobs/{jobId}")
+    public RestResp<ImageGenJobStatusRespDto> getImageGenJob(@PathVariable("jobId") String jobId) {
+        return imageAsyncGenerationService.getJob(jobId);
     }
 
     /**

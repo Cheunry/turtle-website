@@ -2,6 +2,8 @@
 
 本文说明 `novel-ai-service` 中 **Spring AI `@Tool`（Function Calling）** 与 **MCP（Model Context Protocol）HTTP/SSE 服务** 的用法，便于本地联调与 Cursor / Claude Desktop 接入。
 
+**与其它文档**：审核流水线、按类别/学习资料是否挂 RAG 等见同目录 [审核智能体-当前实现与改动.md](./审核智能体-当前实现与改动.md)；索引见 [README.md](./README.md)。
+
 ## 1. 架构关系
 
 | 组件 | 作用 |

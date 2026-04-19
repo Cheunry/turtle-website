@@ -226,6 +226,8 @@ public class BookAuthorServiceImpl implements BookAuthorService {
                         .visitCount(v.getVisitCount())
                         .updateTime(v.getUpdateTime())
                         .auditStatus(v.getAuditStatus() != null ? v.getAuditStatus() : 0)
+                        .auditReason(v.getAuditReason())
+                        .rejectSensitiveWords(v.getRejectSensitiveWords())
                         .build()).toList()
                 )
         );
@@ -269,6 +271,8 @@ public class BookAuthorServiceImpl implements BookAuthorService {
                         .chapterUpdateTime(v.getUpdateTime())
                         .isVip(v.getIsVip())
                         .auditStatus(v.getAuditStatus() != null ? v.getAuditStatus() : 0)
+                        .auditReason(v.getAuditReason())
+                        .rejectSensitiveWords(v.getRejectSensitiveWords())
                         .build()).toList()));
     }
 
@@ -356,6 +360,9 @@ public class BookAuthorServiceImpl implements BookAuthorService {
                 .chapterWordCount(bookChapter.getWordCount())
                 .chapterUpdateTime(bookChapter.getUpdateTime())
                 .isVip(bookChapter.getIsVip())
+                .auditStatus(bookChapter.getAuditStatus() != null ? bookChapter.getAuditStatus() : 0)
+                .auditReason(bookChapter.getAuditReason())
+                .rejectSensitiveWords(bookChapter.getRejectSensitiveWords())
                 .build());
     }
 
@@ -510,6 +517,8 @@ public class BookAuthorServiceImpl implements BookAuthorService {
                 .workDirection(bookInfo.getWorkDirection())
                 .picUrl(bookInfo.getPicUrl())
                 .auditStatus(bookInfo.getAuditStatus() != null ? bookInfo.getAuditStatus() : 0)
+                .auditReason(bookInfo.getAuditReason())
+                .rejectSensitiveWords(bookInfo.getRejectSensitiveWords())
                 .build();
 
         return RestResp.ok(bookInfoRespDto);

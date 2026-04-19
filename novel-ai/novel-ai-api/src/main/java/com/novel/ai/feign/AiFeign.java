@@ -1,7 +1,10 @@
 package com.novel.ai.feign;
 
 import com.novel.ai.dto.req.AuditRuleReqDto;
+import com.novel.ai.dto.req.CoverImageAsyncSubmitReqDto;
 import com.novel.ai.dto.resp.AuditRuleRespDto;
+import com.novel.ai.dto.resp.ImageGenJobStatusRespDto;
+import com.novel.ai.dto.resp.ImageGenJobSubmitRespDto;
 import com.novel.ai.dto.req.TextPolishReqDto;
 import com.novel.ai.dto.resp.TextPolishRespDto;
 import com.novel.book.dto.req.BookAuditReqDto;
@@ -14,6 +17,8 @@ import com.novel.common.constant.ErrorCodeEnum;
 import com.novel.common.resp.RestResp;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.stereotype.Component;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -53,6 +58,18 @@ public interface AiFeign {
     @PostMapping(ApiRouterConsts.API_INNER_AI_URL_PREFIX + "/generate/image")
     RestResp<String> generateImage(@RequestParam("prompt") String prompt);
 
+    /**
+     * 异步生图：立即返回 jobId，进度见 {@link #getImageGenJob(String)}。
+     */
+    @PostMapping(ApiRouterConsts.API_INNER_AI_URL_PREFIX + "/generate/image/async")
+    RestResp<ImageGenJobSubmitRespDto> submitImageGenerationAsync(@RequestBody CoverImageAsyncSubmitReqDto req);
+
+    /**
+     * 查询异步生图任务状态（内部）。
+     */
+    @GetMapping(ApiRouterConsts.API_INNER_AI_URL_PREFIX + "/generate/image/jobs/{jobId}")
+    RestResp<ImageGenJobStatusRespDto> getImageGenJob(@PathVariable("jobId") String jobId);
+
 
     /**
      * 提取审核经验规则
@@ -90,6 +107,16 @@ public interface AiFeign {
         @Override
         public RestResp<String> generateImage(String prompt) {
             // 降级处理：返回失败响应
+            return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR);
+        }
+
+        @Override
+        public RestResp<ImageGenJobSubmitRespDto> submitImageGenerationAsync(CoverImageAsyncSubmitReqDto req) {
+            return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR);
+        }
+
+        @Override
+        public RestResp<ImageGenJobStatusRespDto> getImageGenJob(String jobId) {
             return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR);
         }
 

@@ -1,12 +1,15 @@
 package com.novel.ai.service.impl;
 
 import com.alibaba.cloud.ai.dashscope.image.DashScopeImageOptions;
+import com.novel.ai.image.job.ImageGenJobStatus;
+import com.novel.ai.image.job.ImageJobRedisStore;
 import com.novel.ai.service.ImageService;
 import com.novel.common.manager.TencentCosManager;
 import com.novel.common.resp.RestResp;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.apache.skywalking.apm.toolkit.trace.ActiveSpan;
 import org.apache.skywalking.apm.toolkit.trace.Trace;
 import org.springframework.ai.image.ImageModel;
@@ -20,12 +23,19 @@ import org.springframework.stereotype.Service;
 @Service
 public class ImageServiceImpl implements ImageService {
 
+    @Lazy
+    @Autowired
+    private ImageService self;
+
     @Resource
     private ImageModel imageModel;
     
     // 可选注入 COS 管理器（如果配置了 COS，则注入；否则为 null）
     @Autowired(required = false)
     private TencentCosManager tencentCosManager;
+
+    @Autowired(required = false)
+    private ImageJobRedisStore imageJobRedisStore;
 
     /**
      * 生成图片（带 SkyWalking 监控）
@@ -37,9 +47,15 @@ public class ImageServiceImpl implements ImageService {
      */
     @Override
     @Trace(operationName = "AI生成图片")
+    public RestResp<String> generateImage(String prompt) {
+        return self.generateImage(prompt, null);
+    }
+
+    @Override
+    @Trace(operationName = "AI生成图片")
     @Retryable(retryFor = {Exception.class}, maxAttempts = 15,
             backoff = @Backoff(delay = 3000, multiplier = 1.5, maxDelay = 10000))
-    public RestResp<String> generateImage(String prompt) {
+    public RestResp<String> generateImage(String prompt, String jobId) {
         // 设置 SkyWalking 监控标签
         ActiveSpan.tag("ai.model", "qwen-image-plus");
         ActiveSpan.tag("ai.operation", "generate_image");
@@ -54,6 +70,7 @@ public class ImageServiceImpl implements ImageService {
         long startTime = System.currentTimeMillis();
         
         try {
+            touchJob(jobId, ImageGenJobStatus.GENERATING, "正在生成图片…");
             log.info("开始调用AI生图，prompt前50字: {}", prompt);
             
             // 构建生图请求
@@ -102,7 +119,8 @@ public class ImageServiceImpl implements ImageService {
             ActiveSpan.tag("ai.image.url", tempUrl != null ? "generated" : "null");
             
             log.info("图片生成成功，耗时: {}ms, 临时URL: {}", duration, tempUrl);
-            
+
+            touchJob(jobId, ImageGenJobStatus.UPLOADING, "正在保存图片至存储…");
             // 如果配置了 COS，立即转存到 COS
             String finalUrl = tempUrl;
             if (tencentCosManager != null && tempUrl != null) {
@@ -147,6 +165,13 @@ public class ImageServiceImpl implements ImageService {
             // 继续抛出异常，让 @Retryable 捕获并重试
             throw e; 
         }
+    }
+
+    private void touchJob(String jobId, ImageGenJobStatus status, String message) {
+        if (jobId == null || jobId.isBlank() || imageJobRedisStore == null) {
+            return;
+        }
+        imageJobRedisStore.update(jobId, status, message);
     }
 
 }

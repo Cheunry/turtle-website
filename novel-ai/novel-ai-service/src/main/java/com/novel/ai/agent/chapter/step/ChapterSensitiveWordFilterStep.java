@@ -3,6 +3,7 @@ package com.novel.ai.agent.chapter.step;
 import com.novel.ai.agent.chapter.ChapterAuditContext;
 import com.novel.ai.agent.core.AuditStep;
 import com.novel.ai.agent.core.StepResult;
+import com.novel.ai.config.NovelAiLearningAuditProperties;
 import com.novel.ai.sensitive.SensitiveWordMatcher;
 import com.novel.book.dto.req.ChapterAuditReqDto;
 import com.novel.book.dto.resp.ChapterAuditRespDto;
@@ -29,6 +30,7 @@ public class ChapterSensitiveWordFilterStep implements AuditStep<ChapterAuditCon
     private static final int MAX_HITS_IN_REASON = 5;
 
     private final SensitiveWordMatcher matcher;
+    private final NovelAiLearningAuditProperties learningAuditProperties;
 
     @Override
     public String name() {
@@ -37,10 +39,30 @@ public class ChapterSensitiveWordFilterStep implements AuditStep<ChapterAuditCon
 
     @Override
     public StepResult execute(ChapterAuditContext ctx) {
-        if (!matcher.isEnabled()) {
+        ChapterAuditReqDto req = ctx.getRequest();
+        if (req == null) {
             return StepResult.CONTINUE;
         }
-        ChapterAuditReqDto req = ctx.getRequest();
+        if (learningAuditProperties.matchesLearningCategory(req.getCategoryId(), req.getCategoryName())) {
+            log.info("[ChapterSensitiveWordFilter] 学习资料类跳过本地敏感词库 bookId={} chapterNum={}",
+                    req.getBookId(), req.getChapterNum());
+            return StepResult.CONTINUE;
+        }
+        boolean enabled = matcher.isEnabled();
+        int titleLen = req.getChapterName() != null ? req.getChapterName().length() : 0;
+        int contentLen = req.getContent() != null ? req.getContent().length() : 0;
+        // WARN + 与 TextService 相同标签，避免仅 INFO 被全局级别过滤时「搜不到」
+        log.warn("SENSITIVE_WORD_FILTER step=chapter-sensitive-word-filter enabled={} titleChars={} contentChars={} bookId={} chapterNum={}",
+                enabled, titleLen, contentLen, req.getBookId(), req.getChapterNum());
+        log.info("[ChapterSensitiveWordFilter] matcherEnabled={} titleChars={} contentChars={} bookId={} chapterNum={}",
+                enabled, titleLen, contentLen, req.getBookId(), req.getChapterNum());
+
+        if (!enabled) {
+            // INFO：生产默认可见；未启用时必然走后续 AI，与「本地违禁词短路」预期不符时先看这条
+            log.warn("[ChapterSensitiveWordFilter] 匹配器未启用（novel.ai.sensitive-filter.enabled=false 或字典为空/资源不存在），"
+                    + "跳过本地 AC，将走全文 AI 审核。dictionaryPath 见启动日志 [SensitiveWord]");
+            return StepResult.CONTINUE;
+        }
         // 标题先扫：命中则不再扫正文（省一次 O(n)）；理由最多展示 MAX_HITS_IN_REASON 条，提前结束扫描
         List<String> hits = new ArrayList<>(matcher.findHitsUpTo(req.getChapterName(), MAX_HITS_IN_REASON));
         if (hits.isEmpty()) {
@@ -48,6 +70,8 @@ public class ChapterSensitiveWordFilterStep implements AuditStep<ChapterAuditCon
         }
 
         if (hits.isEmpty()) {
+            log.info("[ChapterSensitiveWordFilter] 标题+正文未命中本地词库，继续 RAG/LLM（非违禁词短路） bookId={} chapterNum={}",
+                    req.getBookId(), req.getChapterNum());
             return StepResult.CONTINUE;
         }
 
@@ -60,6 +84,7 @@ public class ChapterSensitiveWordFilterStep implements AuditStep<ChapterAuditCon
                 .auditStatus(2)
                 .aiConfidence(HIT_CONFIDENCE)
                 .auditReason(reason)
+                .sensitiveWordHits(List.copyOf(hits))
                 .build();
         ctx.setResult(resp);
         return StepResult.SHORT_CIRCUIT;

@@ -14,6 +14,12 @@ public enum NovelAiPromptKey {
     /** 章节审核（章节名 + 正文，支持分段） */
     CHAPTER_AUDIT("chapter-audit"),
 
+    /** 书籍审核 — 学习资料类（独立策略，较小说更宽松） */
+    BOOK_AUDIT_LEARNING("book-audit-learning"),
+
+    /** 章节审核 — 学习资料类（独立策略，无 RAG；较小说更宽松） */
+    CHAPTER_AUDIT_LEARNING("chapter-audit-learning"),
+
     /** 文本润色 */
     TEXT_POLISH("text-polish"),
 

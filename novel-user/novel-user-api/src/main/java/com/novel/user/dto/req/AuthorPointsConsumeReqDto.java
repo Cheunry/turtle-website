@@ -51,6 +51,13 @@ public class AuthorPointsConsumeReqDto {
     @Schema(description = "分类名（用于封面生成）")
     private String categoryName;
 
+    /**
+     * 若已调用「AI 封面提示词」接口拿到完整提示词，可在正式生图时回传，避免 user 服务再次 Feign 调 AI 重复生成提示词（省一次 LLM）。
+     * 须与该接口返回字符串一致（含 AI 服务拼接的书装后缀）。
+     */
+    @Schema(description = "封面生图完整提示词（可选；与 ai/cover-prompt 返回一致时可传，跳过一次大模型）")
+    private String coverPrompt;
+
     @Schema(description = "润色风格")
     private String style;
 

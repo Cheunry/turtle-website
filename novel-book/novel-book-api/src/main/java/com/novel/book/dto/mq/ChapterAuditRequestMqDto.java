@@ -44,5 +44,20 @@ public class ChapterAuditRequestMqDto {
      */
     private String content;
 
+    /**
+     * 类别ID
+     */
+    private Long categoryId;
+
+    /**
+     * 类别名称
+     */
+    private String categoryName;
+
+    /**
+     * 作者ID
+     */
+    private Long authorId;
+
 }
 

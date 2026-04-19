@@ -15,9 +15,8 @@ import org.springframework.core.Ordered;
  * <p>
  * 负责：
  * <ul>
- *     <li>每次 {@code ChatClient} 调用前后的 INFO 日志（耗时 / 模型 / token 统计）；</li>
- *     <li>SkyWalking Span tag：{@code ai.call.duration.ms} / {@code ai.call.status} /
- *         {@code ai.call.token.input|output|total}——交给链路追踪系统；</li>
+ *     <li>每次 {@code ChatClient} 调用前后的 INFO 日志（耗时 / token 统计）——<b>始终启用</b>；</li>
+ *     <li>SkyWalking Span tag（同上 token 维度）——仅当 {@code novel.ai.advisor.observation-enabled=true}；</li>
  *     <li>异常时把异常类名和摘要打到 span，便于线上排查。</li>
  * </ul>
  * 这些指标补充 Spring AI 1.0 官方 Observation（{@code gen_ai.client.*}）里的**应用语义维度**，
@@ -42,17 +41,15 @@ public class StructuredOutputLogAdvisor implements CallAdvisor {
 
     @Override
     public ChatClientResponse adviseCall(ChatClientRequest request, CallAdvisorChain chain) {
-        if (!properties.isObservationEnabled()) {
-            return chain.nextCall(request);
-        }
-
         long start = System.currentTimeMillis();
         try {
             ChatClientResponse response = chain.nextCall(request);
             long cost = System.currentTimeMillis() - start;
 
-            ActiveSpan.tag("ai.call.duration.ms", String.valueOf(cost));
-            ActiveSpan.tag("ai.call.status", "success");
+            if (properties.isObservationEnabled()) {
+                ActiveSpan.tag("ai.call.duration.ms", String.valueOf(cost));
+                ActiveSpan.tag("ai.call.status", "success");
+            }
 
             ChatResponse chatResponse = response.chatResponse();
             if (chatResponse != null && chatResponse.getMetadata() != null) {
@@ -63,7 +60,9 @@ public class StructuredOutputLogAdvisor implements CallAdvisor {
                             nullSafe(usage.getPromptTokens()),
                             nullSafe(usage.getCompletionTokens()),
                             nullSafe(usage.getTotalTokens()));
-                    tagTokens(usage);
+                    if (properties.isObservationEnabled()) {
+                        tagTokens(usage);
+                    }
                 } else {
                     log.info("[LlmCall] 调用成功: cost={}ms", cost);
                 }
@@ -73,9 +72,11 @@ public class StructuredOutputLogAdvisor implements CallAdvisor {
             return response;
         } catch (RuntimeException e) {
             long cost = System.currentTimeMillis() - start;
-            ActiveSpan.tag("ai.call.duration.ms", String.valueOf(cost));
-            ActiveSpan.tag("ai.call.status", "failure");
-            ActiveSpan.tag("ai.call.error.type", e.getClass().getSimpleName());
+            if (properties.isObservationEnabled()) {
+                ActiveSpan.tag("ai.call.duration.ms", String.valueOf(cost));
+                ActiveSpan.tag("ai.call.status", "failure");
+                ActiveSpan.tag("ai.call.error.type", e.getClass().getSimpleName());
+            }
             log.warn("[LlmCall] 调用失败: cost={}ms, error={}: {}",
                     cost, e.getClass().getSimpleName(), e.getMessage());
             throw e;

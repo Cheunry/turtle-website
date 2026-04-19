@@ -148,6 +148,11 @@ public interface AuthorService {
     RestResp<Object> generateCover(Long authorId, AuthorPointsConsumeReqDto dto);
 
     /**
+     * 查询异步封面生图任务状态（仅本人任务）
+     */
+    RestResp<Object> getCoverJobStatus(Long authorId, String jobId);
+
+    /**
      * 根据用户ID查询作家信息
      * @param userId 用户ID
      * @return 作家信息DTO，如果不存在则返回null

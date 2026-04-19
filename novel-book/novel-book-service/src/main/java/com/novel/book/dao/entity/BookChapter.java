@@ -1,6 +1,7 @@
 package com.novel.book.dao.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -65,5 +66,11 @@ public class BookChapter {
      * 审核不通过原因（简要原因，完整原因在content_audit表中）
      */
     private String auditReason;
+
+    /**
+     * 审核不通过时命中的违禁词（顿号拼接；本地 AC 拦截时有值）
+     */
+    @TableField("reject_sensitive_words")
+    private String rejectSensitiveWords;
 
 }

@@ -37,10 +37,18 @@ public class UserFeignManager {
     }
 
     /**
-     * 发送消息
+     * 发送消息（站内信）。会检查 Feign 返回值；熔断降级时可能返回失败但不抛异常，此前会导致「库已更新、作者无消息」且无任何日志。
      */
     public void sendMessage(MessageSendReqDto dto) {
-        userFeign.sendMessage(dto);
+        RestResp<Void> resp = userFeign.sendMessage(dto);
+        if (resp == null || !resp.isOk()) {
+            log.error("Feign sendMessage 未成功: code={}, message={}, receiverId={}, receiverType={}, title={}",
+                    resp != null ? resp.getCode() : null,
+                    resp != null ? resp.getMessage() : "null RestResp",
+                    dto != null ? dto.getReceiverId() : null,
+                    dto != null ? dto.getReceiverType() : null,
+                    dto != null ? dto.getTitle() : null);
+        }
     }
 
     /**

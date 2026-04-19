@@ -162,6 +162,11 @@ public enum ErrorCodeEnum {
     AI_COVER_TEXT_SERVICE_ERROR("C4001", "AI生成图片提示词服务异常"),
 
     /**
+     * AI 生图服务端排队已满或并发超限（有界队列拒绝）
+     */
+    AI_IMAGE_GENERATION_BUSY("C4002", "当前生图任务较多，请稍后再试"),
+
+    /**
      * 小说名已存在
      */
     AUTHOR_BOOK_NAME_EXIST("A3001", "小说名已存在"),

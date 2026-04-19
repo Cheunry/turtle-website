@@ -37,13 +37,20 @@ public class BookAuditRequestListener implements RocketMQListener<BookAuditReque
     public void onMessage(BookAuditRequestMqDto requestDto) {
         log.info("收到书籍审核请求，taskId: {}, bookId: {}", 
                 requestDto.getTaskId(), requestDto.getBookId());
-        
+        int nn = requestDto.getBookName() != null ? requestDto.getBookName().length() : -1;
+        int dn = requestDto.getBookDesc() != null ? requestDto.getBookDesc().length() : -1;
+        log.warn("SENSITIVE_WORD_FILTER MQ consumer book audit taskId={} bookId={} nameChars={} descChars={}",
+                requestDto.getTaskId(), requestDto.getBookId(), nn, dn);
+
         try {
             // 1. 构建审核请求DTO
             BookAuditReqDto auditReq = BookAuditReqDto.builder()
                     .id(requestDto.getBookId())
                     .bookName(requestDto.getBookName())
                     .bookDesc(requestDto.getBookDesc())
+                    .categoryId(requestDto.getCategoryId())
+                    .categoryName(requestDto.getCategoryName())
+                    .authorId(requestDto.getAuthorId())
                     .build();
 
             // 2. 调用AI审核服务
@@ -59,6 +66,7 @@ public class BookAuditRequestListener implements RocketMQListener<BookAuditReque
                         .auditStatus(auditResult.getAuditStatus())
                         .aiConfidence(auditResult.getAiConfidence())
                         .auditReason(auditResult.getAuditReason())
+                        .sensitiveWordHits(auditResult.getSensitiveWordHits())
                         .success(true)
                         .build();
                 log.info("书籍审核完成，taskId: {}, bookId: {}, auditStatus: {}, confidence: {}", 

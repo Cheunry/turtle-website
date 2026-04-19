@@ -76,4 +76,16 @@ public class BookChapterRespDto {
     @Schema(description = "审核状态;0-待审核 1-审核通过 2-审核不通过")
     private Integer auditStatus;
 
+    /**
+     * 审核不通过原因（简要）
+     */
+    @Schema(description = "审核不通过原因")
+    private String auditReason;
+
+    /**
+     * 审核不通过时命中违禁词（顿号拼接，本地 AC 拦截时有值）
+     */
+    @Schema(description = "拒审违禁词")
+    private String rejectSensitiveWords;
+
 }

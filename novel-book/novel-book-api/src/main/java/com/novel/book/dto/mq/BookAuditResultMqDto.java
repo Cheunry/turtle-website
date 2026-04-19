@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * 书籍审核结果 MQ 消息 DTO（AI服务 -> 业务服务）
@@ -49,6 +50,11 @@ public class BookAuditResultMqDto {
      * 错误信息（当success=false时使用）
      */
     private String errorMessage;
+
+    /**
+     * 本地 AC 敏感词命中（success=true 且敏感词短路时由 AI 服务填充）
+     */
+    private List<String> sensitiveWordHits;
 
 }
 

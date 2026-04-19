@@ -1,5 +1,7 @@
 package com.novel.ai;
 
+import com.novel.ai.config.NovelAiAuditCategoryProperties;
+import com.novel.ai.config.NovelAiLearningAuditProperties;
 import com.novel.ai.invoker.NovelAiStructuredOutputProperties;
 import com.novel.ai.sensitive.SensitiveWordProperties;
 import com.novel.ai.tool.NovelAiPolicyProperties;
@@ -19,7 +21,9 @@ import org.springframework.retry.annotation.EnableRetry;
 @EnableConfigurationProperties({
         NovelAiStructuredOutputProperties.class,
         SensitiveWordProperties.class,
-        NovelAiPolicyProperties.class
+        NovelAiPolicyProperties.class,
+        NovelAiAuditCategoryProperties.class,
+        NovelAiLearningAuditProperties.class
 })
 public class NovelAiApplication {
     public static void main(String[] args) {

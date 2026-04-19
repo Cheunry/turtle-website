@@ -25,6 +25,11 @@ public class ChapterAuditContext extends AuditContext<ChapterAuditReqDto, Chapte
     /** 各段的审核响应；在 {@link com.novel.ai.agent.chapter.step.ChapterSegmentAuditStep} 中逐项填充。 */
     private final List<ChapterAuditRespDto> segmentResults = new ArrayList<>();
 
+    /**
+     * 学习资料绿色通道截断等说明，拼入 user prompt；无则空串。
+     */
+    private String learningAuditNote = "";
+
     public ChapterAuditContext(ChapterAuditReqDto request) {
         super(request, "audit_chapter");
     }

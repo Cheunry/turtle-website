@@ -5,7 +5,9 @@ import com.novel.ai.agent.core.AuditErrorClassifier;
 import com.novel.ai.agent.core.AuditStep;
 import com.novel.ai.agent.core.StepResult;
 import com.novel.ai.agent.support.AuditDecisionResolver;
+import com.novel.ai.agent.support.AuditCategoryPromptResolver;
 import com.novel.ai.agent.support.PromptVars;
+import com.novel.ai.config.NovelAiLearningAuditProperties;
 import com.novel.ai.invoker.StructuredOutputInvoker;
 import com.novel.ai.model.AuditDecisionAiOutput;
 import com.novel.ai.prompt.NovelAiPromptKey;
@@ -51,6 +53,8 @@ public class ChapterSegmentAuditStep implements AuditStep<ChapterAuditContext> {
     private final AuditDecisionResolver resolver;
     private final AuditErrorClassifier errorClassifier;
     private final ObjectProvider<RetrievalAugmentationAdvisor> ragAdvisorProvider;
+    private final AuditCategoryPromptResolver categoryPromptResolver;
+    private final NovelAiLearningAuditProperties learningAuditProperties;
 
     private final BeanOutputConverter<AuditDecisionAiOutput> converter =
             new BeanOutputConverter<>(AuditDecisionAiOutput.class);
@@ -61,19 +65,50 @@ public class ChapterSegmentAuditStep implements AuditStep<ChapterAuditContext> {
         List<String> segments = ctx.getSegments();
         boolean isMultiSegment = segments.size() > 1;
 
-        RetrievalAugmentationAdvisor ragAdvisor = ragAdvisorProvider.getIfAvailable();
-        Advisor[] extras = ragAdvisor == null ? null : new Advisor[]{ragAdvisor};
+        if (learningAuditProperties.shouldBypassLlmForLearning(
+                req.getCategoryId(), req.getCategoryName(), req.getAuthorId())) {
+            log.info("[ChapterSegmentAudit] 学习资料绿色通道免模型审核 bookId={} chapterNum={} authorId={} segmentCount={}",
+                    req.getBookId(), req.getChapterNum(), req.getAuthorId(), segments.size());
+            ctx.getSegmentResults().clear();
+            BigDecimal conf = new BigDecimal("1.00");
+            String reason = "学习资料绿色通道：免模型审核";
+            for (int i = 0; i < segments.size(); i++) {
+                ctx.getSegmentResults().add(ChapterAuditRespDto.builder()
+                        .bookId(req.getBookId())
+                        .chapterNum(req.getChapterNum())
+                        .auditStatus(1)
+                        .aiConfidence(conf)
+                        .auditReason(reason)
+                        .build());
+            }
+            return StepResult.CONTINUE;
+        }
+
+        boolean learning = learningAuditProperties.matchesLearningCategory(
+                req.getCategoryId(), req.getCategoryName());
+        NovelAiPromptKey chapterKey = learning ? NovelAiPromptKey.CHAPTER_AUDIT_LEARNING : NovelAiPromptKey.CHAPTER_AUDIT;
 
         for (int i = 0; i < segments.size(); i++) {
             String segment = segments.get(i);
             int index = i + 1;
-            String logContext = isMultiSegment ? "chapter-audit-seg-" + index : "chapter-audit";
+            String logContext = learning
+                    ? (isMultiSegment ? "chapter-audit-learning-seg-" + index : "chapter-audit-learning")
+                    : (isMultiSegment ? "chapter-audit-seg-" + index : "chapter-audit");
 
-            String systemPrompt = promptLoader.renderSystem(NovelAiPromptKey.CHAPTER_AUDIT)
+            String systemPrompt = promptLoader.renderSystem(chapterKey)
                     + "\n\n" + converter.getFormat();
+            if (!learning) {
+                String categoryExtra = categoryPromptResolver.resolveSystemExtra(req);
+                if (!categoryExtra.isEmpty()) {
+                    systemPrompt += "\n\n# Category-Specific Audit Guidelines（作品类别附加规则）\n" + categoryExtra;
+                }
+            }
             String userPrompt = promptLoader.renderUser(
-                    NovelAiPromptKey.CHAPTER_AUDIT,
-                    buildUserVars(req.getChapterName(), segment, index, segments.size()));
+                    chapterKey,
+                    buildUserVars(req, ctx, segment, index, segments.size()));
+
+            RetrievalAugmentationAdvisor ragAdvisor = ragAdvisorProvider.getIfAvailable();
+            Advisor[] extras = (learning || ragAdvisor == null) ? null : new Advisor[]{ragAdvisor};
 
             long segmentStart = System.currentTimeMillis();
             try {
@@ -119,15 +154,18 @@ public class ChapterSegmentAuditStep implements AuditStep<ChapterAuditContext> {
         return StepResult.CONTINUE;
     }
 
-    private Map<String, Object> buildUserVars(String chapterName, String content,
+    private Map<String, Object> buildUserVars(ChapterAuditReqDto req, ChapterAuditContext ctx, String content,
                                               int segmentIndex, int totalSegments) {
         String segmentInfo = totalSegments > 1
                 ? String.format("这是章节内容的第 %d/%d 段，请对该段内容进行审核。", segmentIndex, totalSegments)
                 : "（未分段）";
         Map<String, Object> vars = new HashMap<>();
         vars.put("segmentInfo", segmentInfo);
-        vars.put("chapterName", PromptVars.safe(chapterName));
+        vars.put("chapterName", PromptVars.safe(req.getChapterName()));
         vars.put("chapterContent", PromptVars.safe(content));
+        vars.put("categoryId", req.getCategoryId() == null ? "" : String.valueOf(req.getCategoryId()));
+        vars.put("categoryName", PromptVars.safe(req.getCategoryName()));
+        vars.put("learningAuditNote", PromptVars.safe(ctx.getLearningAuditNote()));
         return vars;
     }
 

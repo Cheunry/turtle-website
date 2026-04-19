@@ -3,8 +3,10 @@ package com.novel.book.mq;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.novel.book.dao.entity.BookChapter;
 import com.novel.book.dao.entity.BookInfo;
+import com.novel.book.dao.entity.ContentAudit;
 import com.novel.book.dao.mapper.BookChapterMapper;
 import com.novel.book.dao.mapper.BookInfoMapper;
+import com.novel.book.dao.mapper.ContentAuditMapper;
 import com.novel.book.dto.mq.ChapterAuditRequestMqDto;
 import com.novel.book.dto.mq.ChapterSubmitMqDto;
 import com.novel.common.constant.AmqpConsts;
@@ -36,8 +38,13 @@ import java.util.Objects;
 )
 public class ChapterSubmitListener implements RocketMQListener<ChapterSubmitMqDto> {
 
+    /** 与 content_audit.source_type 一致：章节 */
+    private static final int CONTENT_AUDIT_SOURCE_CHAPTER = 1;
+    private static final int CONTENT_AUDIT_STATUS_PENDING = 0;
+
     private final BookInfoMapper bookInfoMapper;
     private final BookChapterMapper bookChapterMapper;
+    private final ContentAuditMapper contentAuditMapper;
     private final RocketMQTemplate rocketMQTemplate;
 
     @Override
@@ -127,13 +134,16 @@ public class ChapterSubmitListener implements RocketMQListener<ChapterSubmitMqDt
         // 5. 更新书籍字数和最新章节信息（原 BookInfoUpdateListener 逻辑）
         updateBookInfo(bookInfo, oldWordCount, newWordCount, false);
 
-        // 6. 如果开启审核，发送审核请求MQ（异步处理）
+        // 6. 如果开启审核，写入待审快照并发审核请求 MQ（异步处理）
         if (Boolean.TRUE.equals(submitDto.getAuditEnable())) {
-            sendAuditRequest(chapter);
+            insertPendingChapterContentAudit(chapter);
+            sendAuditRequest(chapter, bookInfo);
         }
 
-        // 7. 发送书籍章节更新通知消息
-        sendBookChapterUpdateNotice(bookInfo, chapter);
+        // 7. 仅在不走审核或关闭审核时通知订阅用户（审核通过后的通知在 BookAuditServiceImpl 中发送）
+        if (!Boolean.TRUE.equals(submitDto.getAuditEnable())) {
+            sendBookChapterUpdateNotice(bookInfo, chapter);
+        }
     }
 
     /**
@@ -170,13 +180,16 @@ public class ChapterSubmitListener implements RocketMQListener<ChapterSubmitMqDt
         // 3. 更新书籍字数和最新章节信息（原 BookInfoUpdateListener 逻辑）
         updateBookInfo(bookInfo, 0, newWordCount, true);
 
-        // 4. 如果开启审核，发送审核请求MQ（异步处理）
+        // 4. 如果开启审核，写入待审快照并发审核请求 MQ（异步处理）
         if (Boolean.TRUE.equals(submitDto.getAuditEnable())) {
-            sendAuditRequest(chapter);
+            insertPendingChapterContentAudit(chapter);
+            sendAuditRequest(chapter, bookInfo);
         }
 
-        // 5. 发送书籍章节更新通知消息
-        sendBookChapterUpdateNotice(bookInfo, chapter);
+        // 5. 仅在不走审核或关闭审核时通知订阅用户（审核通过后的通知在 BookAuditServiceImpl 中发送）
+        if (!Boolean.TRUE.equals(submitDto.getAuditEnable())) {
+            sendBookChapterUpdateNotice(bookInfo, chapter);
+        }
     }
 
     /**
@@ -248,9 +261,33 @@ public class ChapterSubmitListener implements RocketMQListener<ChapterSubmitMqDt
     }
 
     /**
+     * 每次提交章节审核时插入一条待审核记录，便于后台列表立即看到本次送审；AI 回调按 id 最新一条更新。
+     */
+    private void insertPendingChapterContentAudit(BookChapter chapter) {
+        if (chapter == null || chapter.getId() == null) {
+            return;
+        }
+        String text = chapter.getChapterName() + " " + (chapter.getContent() != null ? chapter.getContent() : "");
+        ContentAudit row = ContentAudit.builder()
+                .dataSource(CONTENT_AUDIT_SOURCE_CHAPTER)
+                .dataSourceId(chapter.getId())
+                .contentText(text)
+                .auditStatus(CONTENT_AUDIT_STATUS_PENDING)
+                .createTime(LocalDateTime.now())
+                .updateTime(LocalDateTime.now())
+                .build();
+        try {
+            contentAuditMapper.insert(row);
+            log.debug("章节[{}]已插入待审核 content_audit，id: {}", chapter.getId(), row.getId());
+        } catch (Exception e) {
+            log.error("插入章节待审核 content_audit 失败，chapterId: {}", chapter.getId(), e);
+        }
+    }
+
+    /**
      * 发送审核请求MQ
      */
-    private void sendAuditRequest(BookChapter chapter) {
+    private void sendAuditRequest(BookChapter chapter, BookInfo bookInfo) {
         String taskId = generateTaskId(chapter.getId());
         ChapterAuditRequestMqDto auditRequest = ChapterAuditRequestMqDto.builder()
                 .taskId(taskId)
@@ -259,6 +296,9 @@ public class ChapterSubmitListener implements RocketMQListener<ChapterSubmitMqDt
                 .chapterNum(chapter.getChapterNum())
                 .chapterName(chapter.getChapterName())
                 .content(chapter.getContent())
+                .categoryId(bookInfo != null ? bookInfo.getCategoryId() : null)
+                .categoryName(bookInfo != null ? bookInfo.getCategoryName() : null)
+                .authorId(bookInfo != null ? bookInfo.getAuthorId() : null)
                 .build();
         String destination = AmqpConsts.BookAuditRequestMq.TOPIC + ":"
                 + AmqpConsts.BookAuditRequestMq.TAG_AUDIT_CHAPTER_REQUEST;

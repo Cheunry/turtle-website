@@ -3,6 +3,7 @@ package com.novel.ai.agent.book.step;
 import com.novel.ai.agent.book.BookAuditContext;
 import com.novel.ai.agent.core.AuditStep;
 import com.novel.ai.agent.core.StepResult;
+import com.novel.ai.config.NovelAiLearningAuditProperties;
 import com.novel.ai.sensitive.SensitiveWordMatcher;
 import com.novel.book.dto.req.BookAuditReqDto;
 import com.novel.book.dto.resp.BookAuditRespDto;
@@ -32,6 +33,7 @@ public class BookSensitiveWordFilterStep implements AuditStep<BookAuditContext> 
     private static final int MAX_HITS_IN_REASON = 5;
 
     private final SensitiveWordMatcher matcher;
+    private final NovelAiLearningAuditProperties learningAuditProperties;
 
     @Override
     public String name() {
@@ -40,10 +42,26 @@ public class BookSensitiveWordFilterStep implements AuditStep<BookAuditContext> 
 
     @Override
     public StepResult execute(BookAuditContext ctx) {
-        if (!matcher.isEnabled()) {
+        BookAuditReqDto req = ctx.getRequest();
+        if (req == null) {
             return StepResult.CONTINUE;
         }
-        BookAuditReqDto req = ctx.getRequest();
+        if (learningAuditProperties.matchesLearningCategory(req.getCategoryId(), req.getCategoryName())) {
+            log.info("[BookSensitiveWordFilter] 学习资料类跳过本地敏感词库 bookId={}", req.getId());
+            return StepResult.CONTINUE;
+        }
+        boolean enabled = matcher.isEnabled();
+        int nameLen = req.getBookName() != null ? req.getBookName().length() : 0;
+        int descLen = req.getBookDesc() != null ? req.getBookDesc().length() : 0;
+        log.warn("SENSITIVE_WORD_FILTER step=book-sensitive-word-filter enabled={} nameChars={} descChars={} bookId={}",
+                enabled, nameLen, descLen, req.getId());
+        log.info("[BookSensitiveWordFilter] matcherEnabled={} bookNameChars={} bookDescChars={} bookId={}",
+                enabled, nameLen, descLen, req.getId());
+
+        if (!enabled) {
+            log.warn("[BookSensitiveWordFilter] 敏感词匹配器未启用（字典为空或 novel.ai.sensitive-filter.enabled=false），跳过本地拦截");
+            return StepResult.CONTINUE;
+        }
         List<String> hits = new ArrayList<>(matcher.findHitsUpTo(req.getBookName(), MAX_HITS_IN_REASON));
         if (hits.isEmpty()) {
             hits.addAll(matcher.findHitsUpTo(req.getBookDesc(), MAX_HITS_IN_REASON));
@@ -60,6 +78,7 @@ public class BookSensitiveWordFilterStep implements AuditStep<BookAuditContext> 
                 .auditStatus(2)
                 .aiConfidence(HIT_CONFIDENCE)
                 .auditReason(reason)
+                .sensitiveWordHits(List.copyOf(hits))
                 .build();
         ctx.setResult(resp);
         return StepResult.SHORT_CIRCUIT;

@@ -18,6 +18,9 @@ import com.novel.book.dto.resp.BookChapterRespDto;
 import com.novel.book.dto.resp.BookInfoRespDto;
 import com.novel.book.dto.mq.BookSubmitMqDto;
 import com.novel.book.dto.mq.ChapterSubmitMqDto;
+import com.novel.ai.dto.req.CoverImageAsyncSubmitReqDto;
+import com.novel.ai.dto.resp.ImageGenJobStatusRespDto;
+import com.novel.ai.dto.resp.ImageGenJobSubmitRespDto;
 import com.novel.ai.feign.AiFeign;
 import com.novel.book.dto.req.BookAuditReqDto;
 import com.novel.book.dto.req.ChapterAuditReqDto;
@@ -855,28 +858,51 @@ public class AuthorServiceImpl implements AuthorService {
         
         // 2. 调用AI封面生成服务
         try {
-            // 2.1 获取提示词
-            BookCoverReqDto coverReq = BookCoverReqDto.builder()
-                    .id(dto.getRelatedId())
-                    .bookName(dto.getBookName())
-                    .bookDesc(dto.getBookDesc())
-                    .categoryName(dto.getCategoryName())
-                    .build();
-            
-            RestResp<String> promptResp = aiFeign.getBookCoverPrompt(coverReq);
-            if (!promptResp.isOk()) {
-                throw new RuntimeException("获取封面提示词失败: " + promptResp.getMessage());
+            String prompt;
+            if (dto.getCoverPrompt() != null && !dto.getCoverPrompt().isBlank()) {
+                prompt = dto.getCoverPrompt().trim();
+                log.info(
+                        "封面生图：使用请求内携带的 coverPrompt，跳过重复 LLM，作者ID: {}, 小说ID: {}",
+                        authorId,
+                        dto.getRelatedId());
+            } else {
+                BookCoverReqDto coverReq =
+                        BookCoverReqDto.builder()
+                                .id(dto.getRelatedId())
+                                .bookName(dto.getBookName())
+                                .bookDesc(dto.getBookDesc())
+                                .categoryName(dto.getCategoryName())
+                                .build();
+
+                RestResp<String> promptResp = aiFeign.getBookCoverPrompt(coverReq);
+                if (!promptResp.isOk()) {
+                    throw new RuntimeException("获取封面提示词失败: " + promptResp.getMessage());
+                }
+                prompt = promptResp.getData();
             }
-            String prompt = promptResp.getData();
             
-            // 2.2 生成图片
-            RestResp<String> imageResp = aiFeign.generateImage(prompt);
-            if (!imageResp.isOk()) {
-                throw new RuntimeException("图片生成失败: " + imageResp.getMessage());
+            // 2.2 异步生图：立即返回 jobId，进度由前端轮询 getCoverJobStatus
+            CoverImageAsyncSubmitReqDto asyncReq = new CoverImageAsyncSubmitReqDto();
+            asyncReq.setPrompt(prompt);
+            asyncReq.setAuthorId(authorId);
+            asyncReq.setConsumeType(dto.getConsumeType());
+            asyncReq.setConsumePoints(dto.getConsumePoints());
+            asyncReq.setRelatedId(dto.getRelatedId());
+            asyncReq.setRelatedDesc(dto.getRelatedDesc());
+            asyncReq.setUsedFreePoints(dto.getUsedFreePoints());
+            asyncReq.setUsedPaidPoints(dto.getUsedPaidPoints());
+
+            RestResp<ImageGenJobSubmitRespDto> submitResp = aiFeign.submitImageGenerationAsync(asyncReq);
+            if (!submitResp.isOk()) {
+                RestResp<Void> rb = rollbackPoints(dto);
+                if (!rb.isOk()) {
+                    log.error("提交异步生图失败后积分回滚失败，作者ID: {}", authorId);
+                }
+                return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR,
+                        submitResp.getMessage() != null ? submitResp.getMessage() : "提交生图任务失败");
             }
-            
-            return RestResp.ok(imageResp.getData());
-            
+            return RestResp.ok(submitResp.getData());
+
         } catch (Exception e) {
             // 3. AI服务失败，回滚积分
             log.error("AI封面生成服务调用失败，开始回滚积分，作者ID: {}, 错误: {}", authorId, e.getMessage(), e);
@@ -889,6 +915,22 @@ public class AuthorServiceImpl implements AuthorService {
         }
     }
 
+    @Override
+    public RestResp<Object> getCoverJobStatus(Long authorId, String jobId) {
+        if (jobId == null || jobId.isBlank()) {
+            return RestResp.fail(ErrorCodeEnum.USER_REQUEST_PARAM_ERROR, "任务ID无效");
+        }
+        RestResp<ImageGenJobStatusRespDto> r = aiFeign.getImageGenJob(jobId);
+        if (!r.isOk() || r.getData() == null) {
+            return RestResp.fail(ErrorCodeEnum.USER_REQUEST_PARAM_ERROR,
+                    r.getMessage() != null ? r.getMessage() : "查询任务失败");
+        }
+        ImageGenJobStatusRespDto data = r.getData();
+        if (data.getAuthorId() == null || !data.getAuthorId().equals(authorId)) {
+            return RestResp.fail(ErrorCodeEnum.USER_UN_AUTH);
+        }
+        return RestResp.ok(data);
+    }
 
 
 }

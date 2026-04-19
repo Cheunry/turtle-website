@@ -145,6 +145,7 @@ create table book_chapter
     update_time  datetime                     null,
     audit_status tinyint unsigned default '0' not null comment '审核状态;0-待审核 1-审核通过 2-审核不通过',
     audit_reason varchar(500)                 null comment '审核不通过原因',
+    reject_sensitive_words varchar(500)       null comment '审核不通过时命中违禁词（顿号拼接，本地AC拦截时有值）',
     primary key (book_id, chapter_num),
     constraint book_chapter_id_uindex
         unique (id)
@@ -197,6 +198,7 @@ create table book_info
     last_chapter_num         smallint unsigned              null comment '最新章节号',
     audit_status             tinyint unsigned default '0'   not null comment '审核状态;0-待审核 1-审核通过 2-审核不通过',
     audit_reason             varchar(500)                   null comment '审核不通过原因',
+    reject_sensitive_words   varchar(500)                   null comment '审核不通过时命中违禁词（顿号拼接，本地AC拦截时有值）',
     constraint uk_bookName_authorName
         unique (book_name, author_name)
 )
@@ -225,8 +227,8 @@ create table content_audit
     audit_status    tinyint unsigned default '0' not null comment '审核状态;0-待审核 1-通过 2-不通过',
     is_human_final  tinyint(1)                   null comment '是否人工最终裁决;NULL-非人工最终裁决(或历史未标记),1-人工最终裁决',
     audit_reason    varchar(500)                 null comment '通过/不通过原因',
-    violation_label varchar(100)                 null comment '争议/违规标签（由AI提炼）',
-    key_snippet     text                         null comment '核心争议片段（由AI提炼）',
+    violation_label varchar(100)                 null comment '争议/违规标签：AI 提炼或本地敏感词拦截时 SENSITIVE_WORD_AC',
+    key_snippet     text                         null comment '核心争议片段：AI 提炼或敏感词命中词表（顿号拼接）',
     audit_rule      varchar(500)                 null comment '判例规则总结（由AI提炼）',
     create_time     datetime                     null comment '创建时间',
     update_time     datetime                     null comment '更新时间'

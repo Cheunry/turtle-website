@@ -5,6 +5,7 @@ import com.novel.user.dto.req.AuthorPointsConsumeReqDto;
 import com.novel.user.dto.req.AuthorRegisterReqDto;
 import com.novel.user.dto.req.MessagePageReqDto;
 import com.novel.user.dto.resp.MessageRespDto;
+import com.novel.user.ratelimit.annotation.CoverImageRateLimit;
 import com.novel.user.service.AuthorService;
 import com.novel.book.dto.req.*;
 import com.novel.book.dto.resp.BookChapterRespDto;
@@ -24,6 +25,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.context.config.annotation.RefreshScope;
@@ -313,6 +316,7 @@ public class AuthorController {
      */
     @Operation(summary = "AI封面生成（先扣分后服务）")
     @PostMapping("ai/cover")
+    @CoverImageRateLimit
     public RestResp<Object> generateCover(@RequestBody AuthorPointsConsumeReqDto dto) {
         Long authorId = UserHolder.getAuthorId();
         if (authorId == null) {
@@ -320,6 +324,16 @@ public class AuthorController {
         }
         
         return authorService.generateCover(authorId, dto);
+    }
+
+    @Operation(summary = "查询异步封面生图任务状态")
+    @GetMapping("ai/cover/jobs/{jobId}")
+    public RestResp<Object> getCoverJobStatus(@PathVariable("jobId") String jobId) {
+        Long authorId = UserHolder.getAuthorId();
+        if (authorId == null) {
+            return RestResp.fail(ErrorCodeEnum.USER_UN_AUTH);
+        }
+        return authorService.getCoverJobStatus(authorId, jobId);
     }
 
 }

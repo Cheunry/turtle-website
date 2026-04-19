@@ -1,6 +1,7 @@
 package com.novel.book.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.novel.book.dao.entity.BookChapter;
 import com.novel.book.dao.entity.BookInfo;
@@ -9,6 +10,7 @@ import com.novel.book.dao.mapper.BookChapterMapper;
 import com.novel.book.dao.mapper.BookInfoMapper;
 import com.novel.book.dao.mapper.ContentAuditMapper;
 import com.novel.book.dto.mq.BookAuditResultMqDto;
+import com.novel.book.dto.mq.BookChapterUpdateDto;
 import com.novel.book.dto.mq.ChapterAuditResultMqDto;
 import com.novel.book.dto.resp.BookAuditRespDto;
 import com.novel.book.dto.resp.ChapterAuditRespDto;
@@ -88,6 +90,15 @@ public class BookAuditServiceImpl implements BookAuditService {
 
     /** 与表 content_audit.audit_reason 列 varchar(500) 一致 */
     private static final int CONTENT_AUDIT_AUDIT_REASON_MAX_LEN = 500;
+
+    /** 本地 AC 敏感词拦截写入 content_audit.violation_label，便于后台筛选 */
+    private static final String VIOLATION_LABEL_SENSITIVE_AC = "SENSITIVE_WORD_AC";
+
+    /** key_snippet 过长时截断（列类型为 text） */
+    private static final int KEY_SNIPPET_MAX_LEN = 16000;
+
+    /** book_info / book_chapter.reject_sensitive_words 与 audit_reason 同为 varchar(500) */
+    private static final int BIZ_REJECT_SENSITIVE_WORDS_MAX_LEN = 500;
 
     /**
      * 同一数据源可有多条审核记录，业务上取最新一条
@@ -187,6 +198,7 @@ public class BookAuditServiceImpl implements BookAuditService {
                 .auditStatus(resultDto.getAuditStatus())
                 .aiConfidence(resultDto.getAiConfidence())
                 .auditReason(resultDto.getAuditReason())
+                .sensitiveWordHits(resultDto.getSensitiveWordHits())
                 .build();
 
         Integer auditStatus = resultDto.getAuditStatus();
@@ -215,7 +227,8 @@ public class BookAuditServiceImpl implements BookAuditService {
             if (contentAuditId != null) {
                 try {
                     int rows = updateContentAuditFromAiResult(contentAuditId,
-                            AUDIT_STATUS_PASSED, aiResult.getAiConfidence(), aiResult.getAuditReason());
+                            AUDIT_STATUS_PASSED, aiResult.getAiConfidence(), aiResult.getAuditReason(),
+                            aiResult.getSensitiveWordHits());
                     log.info("[AI-Audit] 章节[{}] ContentAudit[{}] 更新为 PASSED，影响行数: {}", chapterId, contentAuditId, rows);
                 } catch (Exception e) {
                     log.error("[AI-Audit] 章节[{}] 更新 ContentAudit 失败", chapterId, e);
@@ -223,7 +236,7 @@ public class BookAuditServiceImpl implements BookAuditService {
             }
 
             try {
-                updateChapterDirectly(chapterId, AUDIT_STATUS_PASSED, null);
+                updateChapterDirectly(chapterId, AUDIT_STATUS_PASSED, null, null);
                 log.info("[AI-Audit] 章节[{}] BookChapter 更新为 PASSED", chapterId);
             } catch (Exception e) {
                 log.error("[AI-Audit] 章节[{}] 更新 BookChapter 失败", chapterId, e);
@@ -256,6 +269,7 @@ public class BookAuditServiceImpl implements BookAuditService {
             });
 
             sendBookChangeMsg(bookChapter.getBookId());
+            sendChapterSubscribeUpdateNotice(bookChapter);
 
             BookInfo bookInfo = bookInfoMapper.selectById(bookChapter.getBookId());
             if (bookInfo != null) {
@@ -270,7 +284,8 @@ public class BookAuditServiceImpl implements BookAuditService {
             if (contentAuditId != null) {
                 try {
                     int rows = updateContentAuditFromAiResult(contentAuditId,
-                            AUDIT_STATUS_PENDING, aiResult.getAiConfidence(), aiResult.getAuditReason());
+                            AUDIT_STATUS_PENDING, aiResult.getAiConfidence(), aiResult.getAuditReason(),
+                            aiResult.getSensitiveWordHits());
                     log.info("[AI-Audit] 章节[{}] AI通过但置信度低[{}]，ContentAudit[{}] 更新为 PENDING，影响行数: {}",
                             chapterId, aiConfidence, contentAuditId, rows);
                 } catch (Exception e) {
@@ -284,7 +299,8 @@ public class BookAuditServiceImpl implements BookAuditService {
             if (contentAuditId != null) {
                 try {
                     int rows = updateContentAuditFromAiResult(contentAuditId,
-                            AUDIT_STATUS_REJECTED, aiResult.getAiConfidence(), aiResult.getAuditReason());
+                            AUDIT_STATUS_REJECTED, aiResult.getAiConfidence(), aiResult.getAuditReason(),
+                            aiResult.getSensitiveWordHits());
                     log.info("[AI-Audit] 章节[{}] ContentAudit[{}] 更新为 REJECTED，影响行数: {}", chapterId, contentAuditId, rows);
                 } catch (Exception e) {
                     log.error("[AI-Audit] 章节[{}] 更新 ContentAudit 失败", chapterId, e);
@@ -292,7 +308,7 @@ public class BookAuditServiceImpl implements BookAuditService {
             }
 
             try {
-                updateChapterDirectly(chapterId, AUDIT_STATUS_REJECTED, shortReason);
+                updateChapterDirectly(chapterId, AUDIT_STATUS_REJECTED, shortReason, resultDto.getSensitiveWordHits());
                 log.info("[AI-Audit] 章节[{}] BookChapter 更新为 REJECTED", chapterId);
             } catch (Exception e) {
                 log.error("[AI-Audit] 章节[{}] 更新 BookChapter 失败", chapterId, e);
@@ -311,6 +327,19 @@ public class BookAuditServiceImpl implements BookAuditService {
 
             log.warn("章节[{}]AI审核不通过，原因: {}，已更新审核表和章节表", chapterId, shortReason);
 
+            BookInfo rejectBookInfo = bookInfoMapper.selectById(bookChapter.getBookId());
+            if (rejectBookInfo != null && rejectBookInfo.getAuthorId() != null) {
+                log.info("[AI-Audit] 章节[{}] 将发送作者拒审通知（事务提交后 Feign）：bookId={}, authorId={}, hits={}",
+                        chapterId, bookChapter.getBookId(), rejectBookInfo.getAuthorId(),
+                        resultDto.getSensitiveWordHits());
+                sendAuditRejectMessageToAuthor(bookChapter.getBookId(),
+                        rejectBookInfo.getBookName() + " - " + bookChapter.getChapterName(), false, shortReason,
+                        resultDto.getSensitiveWordHits());
+            } else {
+                log.warn("[AI-Audit] 章节[{}] 拒审但无法通知作者：book_info 或 authorId 为空，bookId={}",
+                        chapterId, bookChapter.getBookId());
+            }
+
         } else {
             // 情况4（pending 或未知状态）：AI 未得出确定结论，保持待人工审核
             if (!isPending) {
@@ -320,7 +349,8 @@ public class BookAuditServiceImpl implements BookAuditService {
             if (contentAuditId != null) {
                 try {
                     int rows = updateContentAuditFromAiResult(contentAuditId,
-                            AUDIT_STATUS_PENDING, aiResult.getAiConfidence(), aiResult.getAuditReason());
+                            AUDIT_STATUS_PENDING, aiResult.getAiConfidence(), aiResult.getAuditReason(),
+                            aiResult.getSensitiveWordHits());
                     log.info("[AI-Audit] 章节[{}] ContentAudit[{}] 更新为 PENDING（待人工），影响行数: {}",
                             chapterId, contentAuditId, rows);
                 } catch (Exception e) {
@@ -396,6 +426,7 @@ public class BookAuditServiceImpl implements BookAuditService {
                 .auditStatus(resultDto.getAuditStatus())
                 .aiConfidence(resultDto.getAiConfidence())
                 .auditReason(resultDto.getAuditReason())
+                .sensitiveWordHits(resultDto.getSensitiveWordHits())
                 .build();
 
         Integer auditStatus = resultDto.getAuditStatus();
@@ -424,7 +455,8 @@ public class BookAuditServiceImpl implements BookAuditService {
             if (contentAuditId != null) {
                 try {
                     int rows = updateContentAuditFromAiResult(contentAuditId,
-                            AUDIT_STATUS_PASSED, aiResult.getAiConfidence(), aiResult.getAuditReason());
+                            AUDIT_STATUS_PASSED, aiResult.getAiConfidence(), aiResult.getAuditReason(),
+                            aiResult.getSensitiveWordHits());
                     log.info("[AI-Audit] 书籍[{}] ContentAudit[{}] 更新为 PASSED，影响行数: {}", bookId, contentAuditId, rows);
                 } catch (Exception e) {
                     log.error("[AI-Audit] 书籍[{}] 更新 ContentAudit 失败", bookId, e);
@@ -432,7 +464,7 @@ public class BookAuditServiceImpl implements BookAuditService {
             }
             
             try {
-                updateBookFromAudit(bookId, AUDIT_STATUS_PASSED, null);
+                updateBookFromAudit(bookId, AUDIT_STATUS_PASSED, null, null);
                 log.info("[AI-Audit] 书籍[{}] BookInfo 更新为 PASSED", bookId);
             } catch (Exception e) {
                 log.error("[AI-Audit] 书籍[{}] 更新 BookInfo 失败", bookId, e);
@@ -449,7 +481,8 @@ public class BookAuditServiceImpl implements BookAuditService {
             if (contentAuditId != null) {
                 try {
                     int rows = updateContentAuditFromAiResult(contentAuditId,
-                            AUDIT_STATUS_PENDING, aiResult.getAiConfidence(), aiResult.getAuditReason());
+                            AUDIT_STATUS_PENDING, aiResult.getAiConfidence(), aiResult.getAuditReason(),
+                            aiResult.getSensitiveWordHits());
                     log.info("[AI-Audit] 书籍[{}] AI通过但置信度低[{}]，ContentAudit[{}] 更新为 PENDING，影响行数: {}",
                             bookId, aiConfidence, contentAuditId, rows);
                 } catch (Exception e) {
@@ -463,7 +496,8 @@ public class BookAuditServiceImpl implements BookAuditService {
             if (contentAuditId != null) {
                 try {
                     int rows = updateContentAuditFromAiResult(contentAuditId,
-                            AUDIT_STATUS_REJECTED, aiResult.getAiConfidence(), aiResult.getAuditReason());
+                            AUDIT_STATUS_REJECTED, aiResult.getAiConfidence(), aiResult.getAuditReason(),
+                            aiResult.getSensitiveWordHits());
                     log.info("[AI-Audit] 书籍[{}] ContentAudit[{}] 更新为 REJECTED，影响行数: {}", bookId, contentAuditId, rows);
                 } catch (Exception e) {
                     log.error("[AI-Audit] 书籍[{}] 更新 ContentAudit 失败", bookId, e);
@@ -471,13 +505,16 @@ public class BookAuditServiceImpl implements BookAuditService {
             }
 
             try {
-                updateBookFromAudit(bookId, AUDIT_STATUS_REJECTED, shortReason);
+                updateBookFromAudit(bookId, AUDIT_STATUS_REJECTED, shortReason, resultDto.getSensitiveWordHits());
                 log.info("[AI-Audit] 书籍[{}] BookInfo 更新为 REJECTED", bookId);
             } catch (Exception e) {
                 log.error("[AI-Audit] 书籍[{}] 更新 BookInfo 失败", bookId, e);
             }
 
             log.warn("书籍[{}]AI审核不通过，原因: {}，已更新审核表和书籍表", bookId, shortReason);
+
+            sendAuditRejectMessageToAuthor(bookId, bookInfo.getBookName(), true, shortReason,
+                    resultDto.getSensitiveWordHits());
 
         } else {
             // 情况4（pending 或未知状态）：AI 未得出确定结论（异常兜底 / 请求为空 / 置信度低等）
@@ -490,7 +527,8 @@ public class BookAuditServiceImpl implements BookAuditService {
             if (contentAuditId != null) {
                 try {
                     int rows = updateContentAuditFromAiResult(contentAuditId,
-                            AUDIT_STATUS_PENDING, aiResult.getAiConfidence(), aiResult.getAuditReason());
+                            AUDIT_STATUS_PENDING, aiResult.getAiConfidence(), aiResult.getAuditReason(),
+                            aiResult.getSensitiveWordHits());
                     log.info("[AI-Audit] 书籍[{}] ContentAudit[{}] 更新为 PENDING（待人工），影响行数: {}", bookId, contentAuditId, rows);
                 } catch (Exception e) {
                     log.error("[AI-Audit] 书籍[{}] 更新 ContentAudit 失败", bookId, e);
@@ -571,7 +609,7 @@ public class BookAuditServiceImpl implements BookAuditService {
         // 4. 根据数据来源同步更新对应的业务表
         if (DATA_SOURCE_BOOK_INFO.equals(audit.getDataSource())) {
             // 更新书籍表
-            updateBookFromAudit(audit.getDataSourceId(), auditStatus, auditReason);
+            updateBookFromAudit(audit.getDataSourceId(), auditStatus, auditReason, null);
             
             if (AUDIT_STATUS_PASSED.equals(auditStatus)) {
                 sendBookChangeMsg(audit.getDataSourceId());
@@ -580,10 +618,15 @@ public class BookAuditServiceImpl implements BookAuditService {
                     sendAuditPassMessageToAuthor(bookInfoRow.getId(), bookInfoRow.getBookName(), true);
                 }
                 addBookToBloomIfEligible(audit.getDataSourceId());
+            } else if (AUDIT_STATUS_REJECTED.equals(auditStatus)) {
+                BookInfo bookInfoRow = bookInfoMapper.selectById(audit.getDataSourceId());
+                if (bookInfoRow != null) {
+                    sendAuditRejectMessageToAuthor(bookInfoRow.getId(), bookInfoRow.getBookName(), true, auditReason, null);
+                }
             }
         } else if (DATA_SOURCE_BOOK_CHAPTER.equals(audit.getDataSource())) {
             // 更新章节表
-            updateChapterFromAudit(audit.getDataSourceId(), auditStatus, auditReason);
+            updateChapterFromAudit(audit.getDataSourceId(), auditStatus, auditReason, null);
             
             // 如果审核通过，更新bookInfo表的最新章节信息并发送ES消息
             BookChapter chapter = bookChapterMapper.selectById(audit.getDataSourceId());
@@ -615,6 +658,7 @@ public class BookAuditServiceImpl implements BookAuditService {
                     });
 
                     sendBookChangeMsg(chapter.getBookId());
+                    sendChapterSubscribeUpdateNotice(chapter);
 
                     BookInfo bookInfo = bookInfoMapper.selectById(chapter.getBookId());
                     if (bookInfo != null) {
@@ -622,7 +666,7 @@ public class BookAuditServiceImpl implements BookAuditService {
                                 bookInfo.getBookName() + " - " + chapter.getChapterName(), false);
                     }
                 }
-            } else {
+            } else if (AUDIT_STATUS_REJECTED.equals(auditStatus)) {
                 if (chapter != null) {
                     final Long failBookId = chapter.getBookId();
                     final Integer failChapterNum = chapter.getChapterNum();
@@ -634,6 +678,12 @@ public class BookAuditServiceImpl implements BookAuditService {
                             log.warn("删除章节内容缓存失败，bookId: {}, chapterNum: {}", failBookId, failChapterNum, e);
                         }
                     });
+
+                    BookInfo bookInfoReject = bookInfoMapper.selectById(chapter.getBookId());
+                    if (bookInfoReject != null) {
+                        sendAuditRejectMessageToAuthor(chapter.getBookId(),
+                                bookInfoReject.getBookName() + " - " + chapter.getChapterName(), false, auditReason, null);
+                    }
                 }
             }
         }
@@ -647,17 +697,20 @@ public class BookAuditServiceImpl implements BookAuditService {
     /**
      * 直接更新章节表
      */
-    private void updateChapterDirectly(Long chapterId, Integer auditStatus, String rejectReason) {
-        log.info("updateChapterDirectly 开始执行，chapterId: {}, auditStatus: {}, rejectReason: {}", 
+    private void updateChapterDirectly(Long chapterId, Integer auditStatus, String rejectReason,
+            List<String> sensitiveWordHits) {
+        log.info("updateChapterDirectly 开始执行，chapterId: {}, auditStatus: {}, rejectReason: {}",
                 chapterId, auditStatus, rejectReason);
-        
-        // 使用 UpdateWrapper 确保正确更新，包括 null 值
+
+        String rejectWordsCol = formatRejectSensitiveWordsForBizTable(sensitiveWordHits);
+
         UpdateWrapper<BookChapter> updateWrapper = new UpdateWrapper<>();
         updateWrapper.eq("id", chapterId)
                 .set("audit_status", auditStatus)
-                .set("audit_reason", rejectReason)  // 明确设置，包括 null
+                .set("audit_reason", rejectReason)
+                .set("reject_sensitive_words", rejectWordsCol)
                 .set("update_time", LocalDateTime.now());
-        
+
         int updateCount = bookChapterMapper.update(null, updateWrapper);
         log.info("updateChapterDirectly 执行完成，chapterId: {}, 更新行数: {}", chapterId, updateCount);
         if (updateCount == 0) {
@@ -669,18 +722,49 @@ public class BookAuditServiceImpl implements BookAuditService {
 
     /**
      * 根据主键 id 更新 AI 审核结果字段
+     * @param sensitiveWordHits 本地 AC 敏感词命中词表；非空时写入 violation_label + key_snippet
      * @return 影响行数（0 表示目标记录不存在或条件未命中）
      */
     private int updateContentAuditFromAiResult(Long contentAuditId, Integer auditStatus,
-            BigDecimal aiConfidence, String auditReason) {
+            BigDecimal aiConfidence, String auditReason, List<String> sensitiveWordHits) {
         ContentAudit updateAudit = new ContentAudit();
         updateAudit.setAuditStatus(auditStatus);
         updateAudit.setAiConfidence(aiConfidence);
         updateAudit.setAuditReason(truncateForContentAuditAuditReason(auditReason));
         updateAudit.setUpdateTime(LocalDateTime.now());
+        if (sensitiveWordHits != null && !sensitiveWordHits.isEmpty()) {
+            updateAudit.setViolationLabel(VIOLATION_LABEL_SENSITIVE_AC);
+            updateAudit.setKeySnippet(truncateKeySnippetForDb(String.join("、", sensitiveWordHits)));
+        }
         QueryWrapper<ContentAudit> updateWrapper = new QueryWrapper<>();
         updateWrapper.eq("id", contentAuditId);
         return contentAuditMapper.update(updateAudit, updateWrapper);
+    }
+
+    private static String truncateKeySnippetForDb(String s) {
+        if (s == null) {
+            return null;
+        }
+        if (s.length() <= KEY_SNIPPET_MAX_LEN) {
+            return s;
+        }
+        int keep = KEY_SNIPPET_MAX_LEN - 3;
+        return keep > 0 ? s.substring(0, keep) + "..." : "...";
+    }
+
+    /**
+     * 写入 book_info / book_chapter.reject_sensitive_words（varchar 500），与 content_audit.key_snippet 同源词表。
+     */
+    private static String formatRejectSensitiveWordsForBizTable(List<String> sensitiveWordHits) {
+        if (sensitiveWordHits == null || sensitiveWordHits.isEmpty()) {
+            return null;
+        }
+        String joined = String.join("、", sensitiveWordHits);
+        if (joined.length() <= BIZ_REJECT_SENSITIVE_WORDS_MAX_LEN) {
+            return joined;
+        }
+        int keep = BIZ_REJECT_SENSITIVE_WORDS_MAX_LEN - 3;
+        return keep > 0 ? joined.substring(0, keep) + "..." : "...";
     }
 
     /**
@@ -699,22 +783,22 @@ public class BookAuditServiceImpl implements BookAuditService {
     }
 
     /**
-     * 根据审核结果更新书籍表
+     * 根据审核结果更新书籍表（审核通过时清空 audit_reason 与 reject_sensitive_words）
      */
-    private void updateBookFromAudit(Long bookId, Integer auditStatus, String auditReason) {
-        BookInfo updateBook = new BookInfo();
-        updateBook.setId(bookId);
-        updateBook.setAuditStatus(auditStatus);
+    private void updateBookFromAudit(Long bookId, Integer auditStatus, String auditReason,
+            List<String> sensitiveWordHits) {
+        String shortReason = AUDIT_STATUS_REJECTED.equals(auditStatus)
+                ? extractShortReason(auditReason, null) : null;
+        String rejectWords = AUDIT_STATUS_REJECTED.equals(auditStatus)
+                ? formatRejectSensitiveWordsForBizTable(sensitiveWordHits) : null;
 
-        if (AUDIT_STATUS_REJECTED.equals(auditStatus)) {
-            String shortReason = extractShortReason(auditReason, null);
-            updateBook.setAuditReason(shortReason);
-        } else {
-            updateBook.setAuditReason(null);
-        }
-
-        updateBook.setUpdateTime(LocalDateTime.now());
-        bookInfoMapper.updateById(updateBook);
+        LambdaUpdateWrapper<BookInfo> uw = new LambdaUpdateWrapper<>();
+        uw.eq(BookInfo::getId, bookId)
+                .set(BookInfo::getAuditStatus, auditStatus)
+                .set(BookInfo::getAuditReason, shortReason)
+                .set(BookInfo::getRejectSensitiveWords, rejectWords)
+                .set(BookInfo::getUpdateTime, LocalDateTime.now());
+        bookInfoMapper.update(null, uw);
 
         runAfterCommit(() -> {
             try {
@@ -748,22 +832,22 @@ public class BookAuditServiceImpl implements BookAuditService {
     }
 
     /**
-     * 根据审核结果更新章节表
+     * 根据审核结果更新章节表（人工审核；违禁词列仅本地 AC 路径有值，此处传 null）
      */
-    private void updateChapterFromAudit(Long chapterId, Integer auditStatus, String auditReason) {
-        BookChapter updateChapter = new BookChapter();
-        updateChapter.setId(chapterId);
-        updateChapter.setAuditStatus(auditStatus);
+    private void updateChapterFromAudit(Long chapterId, Integer auditStatus, String auditReason,
+            List<String> sensitiveWordHits) {
+        String shortReason = AUDIT_STATUS_REJECTED.equals(auditStatus)
+                ? extractShortReason(auditReason, null) : null;
+        String rejectWords = AUDIT_STATUS_REJECTED.equals(auditStatus)
+                ? formatRejectSensitiveWordsForBizTable(sensitiveWordHits) : null;
 
-        if (AUDIT_STATUS_REJECTED.equals(auditStatus)) {
-            String shortReason = extractShortReason(auditReason, null);
-            updateChapter.setAuditReason(shortReason);
-        } else {
-            updateChapter.setAuditReason(null);
-        }
-
-        updateChapter.setUpdateTime(LocalDateTime.now());
-        bookChapterMapper.updateById(updateChapter);
+        LambdaUpdateWrapper<BookChapter> uw = new LambdaUpdateWrapper<>();
+        uw.eq(BookChapter::getId, chapterId)
+                .set(BookChapter::getAuditStatus, auditStatus)
+                .set(BookChapter::getAuditReason, shortReason)
+                .set(BookChapter::getRejectSensitiveWords, rejectWords)
+                .set(BookChapter::getUpdateTime, LocalDateTime.now());
+        bookChapterMapper.update(null, uw);
     }
 
     /**
@@ -814,6 +898,39 @@ public class BookAuditServiceImpl implements BookAuditService {
                 log.info("书籍变更 MQ 已投递（提交后），bookId: {}", bookId);
             } catch (Exception e) {
                 log.error("发送书籍变更消息失败，书籍ID: {}", bookId, e);
+            }
+        });
+    }
+
+    /**
+     * 章节审核通过后通知书架订阅用户（与 {@link com.novel.book.mq.ChapterSubmitListener} 中免审直发使用同一 Topic/Tag）。
+     * 开启审核时，提交阶段不再发此消息，仅在通过时调用，避免审核不通过仍推送「新章节」。
+     */
+    private void sendChapterSubscribeUpdateNotice(BookChapter chapter) {
+        if (chapter == null || chapter.getId() == null) {
+            return;
+        }
+        runAfterCommit(() -> {
+            try {
+                BookInfo bi = bookInfoMapper.selectById(chapter.getBookId());
+                if (bi == null) {
+                    return;
+                }
+                BookChapterUpdateDto dto = BookChapterUpdateDto.builder()
+                        .bookId(bi.getId())
+                        .bookName(bi.getBookName())
+                        .authorId(bi.getAuthorId())
+                        .authorName(bi.getAuthorName())
+                        .chapterId(chapter.getId())
+                        .chapterName(chapter.getChapterName())
+                        .chapterNum(chapter.getChapterNum())
+                        .updateTime(LocalDateTime.now())
+                        .build();
+                String destination = AmqpConsts.BookChangeMq.TOPIC + ":" + AmqpConsts.BookChangeMq.TAG_CHAPTER_UPDATE;
+                rocketMQTemplate.convertAndSend(destination, dto);
+                log.info("章节审核通过后已投递订阅更新 MQ，bookId: {}, chapterId: {}", bi.getId(), chapter.getId());
+            } catch (Exception e) {
+                log.error("投递章节订阅更新 MQ 失败，chapterId: {}", chapter.getId(), e);
             }
         });
     }
@@ -888,7 +1005,12 @@ public class BookAuditServiceImpl implements BookAuditService {
                 try {
                     String sseData = String.format(
                             "{\"title\":\"%s\",\"content\":\"%s\",\"link\":\"%s\",\"busId\":%d,\"busType\":\"%s\",\"timestamp\":%d}",
-                            title, content, link, bookId, isBook ? "BOOK_AUDIT" : "CHAPTER_AUDIT", System.currentTimeMillis()
+                            escapeJsonForSsePayload(title),
+                            escapeJsonForSsePayload(content),
+                            escapeJsonForSsePayload(link),
+                            bookId,
+                            isBook ? "BOOK_AUDIT" : "CHAPTER_AUDIT",
+                            System.currentTimeMillis()
                     );
                     userFeignManager.pushNotificationToAuthor(bookInfo.getAuthorId(), "audit_pass", sseData);
                 } catch (Exception e) {
@@ -898,6 +1020,101 @@ public class BookAuditServiceImpl implements BookAuditService {
                 log.error("发送审核通过消息给作者失败，书籍ID: {}", bookId, e);
             }
         });
+    }
+
+    /**
+     * 发送审核不通过消息给作者（站内信 + SSE），正文包含原因；若有本地 AC 命中词则单独列出「违禁词」便于作者与管理端查看。
+     */
+    private void sendAuditRejectMessageToAuthor(Long bookId, String contentName, boolean isBook, String rawReason,
+            List<String> sensitiveWordHits) {
+        if (bookId == null) {
+            return;
+        }
+        final String reasonLine = extractShortReason(rawReason, null);
+
+        runAfterCommit(() -> {
+            try {
+                BookInfo bookInfo = bookInfoMapper.selectById(bookId);
+                if (bookInfo == null || bookInfo.getAuthorId() == null) {
+                    log.warn("无法发送审核不通过通知：书籍或作者不存在，书籍ID: {}", bookId);
+                    return;
+                }
+
+                String title = isBook ? "您的作品审核未通过" : "您的章节审核未通过";
+                StringBuilder contentSb = new StringBuilder();
+                contentSb.append("很抱歉，您的").append(isBook ? "作品" : "章节").append("《").append(contentName)
+                        .append("》未通过审核。\n\n原因：").append(reasonLine);
+                if (sensitiveWordHits != null && !sensitiveWordHits.isEmpty()) {
+                    contentSb.append("\n\n违禁词：").append(String.join("、", sensitiveWordHits));
+                }
+                String content = contentSb.toString();
+                String link = isBook ? "/author/book/list" : "/author/chapter/list?bookId=" + bookId;
+
+                MessageSendReqDto messageDto = MessageSendReqDto.builder()
+                        .receiverId(bookInfo.getAuthorId())
+                        .receiverType(DatabaseConsts.MessageReceiveTable.RECEIVER_TYPE_AUTHOR)
+                        .title(title)
+                        .content(content)
+                        .type(2)
+                        .link(link)
+                        .busId(bookId)
+                        .busType(isBook ? "BOOK_AUDIT" : "CHAPTER_AUDIT")
+                        .build();
+
+                userFeignManager.sendMessage(messageDto);
+                log.info("审核不通过通知已发送（提交后），作者ID: {}, 书籍ID: {}", bookInfo.getAuthorId(), bookId);
+
+                try {
+                    String sseData = String.format(
+                            "{\"title\":\"%s\",\"content\":\"%s\",\"link\":\"%s\",\"busId\":%d,\"busType\":\"%s\",\"timestamp\":%d}",
+                            escapeJsonForSsePayload(title),
+                            escapeJsonForSsePayload(content),
+                            escapeJsonForSsePayload(link),
+                            bookId,
+                            isBook ? "BOOK_AUDIT" : "CHAPTER_AUDIT",
+                            System.currentTimeMillis()
+                    );
+                    userFeignManager.pushNotificationToAuthor(bookInfo.getAuthorId(), "audit_reject", sseData);
+                } catch (Exception e) {
+                    log.warn("推送审核不通过 SSE 失败，作者ID: {}", bookInfo.getAuthorId(), e);
+                }
+            } catch (Exception e) {
+                log.error("发送审核不通过消息给作者失败，书籍ID: {}", bookId, e);
+            }
+        });
+    }
+
+    /**
+     * 将字符串嵌入 SSE 的 JSON 负载时对引号与换行转义，避免打断 JSON。
+     */
+    private static String escapeJsonForSsePayload(String s) {
+        if (s == null) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder(s.length() + 16);
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            switch (c) {
+                case '\\':
+                    sb.append("\\\\");
+                    break;
+                case '"':
+                    sb.append("\\\"");
+                    break;
+                case '\n':
+                    sb.append("\\n");
+                    break;
+                case '\r':
+                    sb.append("\\r");
+                    break;
+                case '\t':
+                    sb.append("\\t");
+                    break;
+                default:
+                    sb.append(c);
+            }
+        }
+        return sb.toString();
     }
 
     /**

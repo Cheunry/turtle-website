@@ -1,6 +1,12 @@
 # Input Data
 请根据以下章节信息进行审核：
 
+## 作品分类上下文（本书）
+- 类别ID：{categoryId}
+- 类别名称：{categoryName}
+
+{learningAuditNote}
+
 ## 分段信息
 {segmentInfo}
 

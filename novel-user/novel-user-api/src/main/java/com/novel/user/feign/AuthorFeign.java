@@ -19,5 +19,11 @@ public interface AuthorFeign {
     @PostMapping(ApiRouterConsts.API_INNER_AUTHOR_URL_PREFIX + "/points/deduct")
     RestResp<Void> deductPoints(@RequestBody AuthorPointsConsumeReqDto dto);
 
+    /**
+     * 回滚作者积分（AI 异步任务失败等场景）
+     */
+    @PostMapping(ApiRouterConsts.API_INNER_AUTHOR_URL_PREFIX + "/points/rollback")
+    RestResp<Void> rollbackPoints(@RequestBody AuthorPointsConsumeReqDto dto);
+
 }
 

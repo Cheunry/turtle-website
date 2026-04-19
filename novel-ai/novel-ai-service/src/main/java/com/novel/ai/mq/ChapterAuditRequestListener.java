@@ -37,7 +37,11 @@ public class ChapterAuditRequestListener implements RocketMQListener<ChapterAudi
     public void onMessage(ChapterAuditRequestMqDto requestDto) {
         log.info("收到章节审核请求，taskId: {}, chapterId: {}, bookId: {}", 
                 requestDto.getTaskId(), requestDto.getChapterId(), requestDto.getBookId());
-        
+        int tn = requestDto.getChapterName() != null ? requestDto.getChapterName().length() : -1;
+        int cn = requestDto.getContent() != null ? requestDto.getContent().length() : -1;
+        log.warn("SENSITIVE_WORD_FILTER MQ consumer chapter audit taskId={} chapterId={} bookId={} titleChars={} contentChars={}",
+                requestDto.getTaskId(), requestDto.getChapterId(), requestDto.getBookId(), tn, cn);
+
         try {
             // 1. 构建审核请求DTO
             ChapterAuditReqDto auditReq = ChapterAuditReqDto.builder()
@@ -45,6 +49,9 @@ public class ChapterAuditRequestListener implements RocketMQListener<ChapterAudi
                     .chapterNum(requestDto.getChapterNum())
                     .chapterName(requestDto.getChapterName())
                     .content(requestDto.getContent())
+                    .categoryId(requestDto.getCategoryId())
+                    .categoryName(requestDto.getCategoryName())
+                    .authorId(requestDto.getAuthorId())
                     .build();
 
             // 2. 调用AI审核服务
@@ -61,6 +68,7 @@ public class ChapterAuditRequestListener implements RocketMQListener<ChapterAudi
                         .auditStatus(auditResult.getAuditStatus())
                         .aiConfidence(auditResult.getAiConfidence())
                         .auditReason(auditResult.getAuditReason())
+                        .sensitiveWordHits(auditResult.getSensitiveWordHits())
                         .success(true)
                         .build();
                 log.info("章节审核完成，taskId: {}, chapterId: {}, auditStatus: {}, confidence: {}", 

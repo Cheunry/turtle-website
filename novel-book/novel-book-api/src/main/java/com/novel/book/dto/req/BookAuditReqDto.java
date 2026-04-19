@@ -1,11 +1,15 @@
 package com.novel.book.dto.req;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @Schema(description = "小说审核请求DTO")
 public class BookAuditReqDto {
 
@@ -24,7 +28,25 @@ public class BookAuditReqDto {
     /**
      * 小说描述
      */
-     @Schema(description = "小说描述")
-      private String bookDesc;
+    @Schema(description = "小说描述")
+    private String bookDesc;
+
+    /**
+     * 类别ID（与 book_info.category_id 一致，用于 AI 按类选用审核标准）
+     */
+    @Schema(description = "类别ID")
+    private Long categoryId;
+
+    /**
+     * 类别名称
+     */
+    @Schema(description = "类别名称")
+    private String categoryName;
+
+    /**
+     * 作者 ID（用于学习资料绿色通道等策略）
+     */
+    @Schema(description = "作者ID")
+    private Long authorId;
 
 }

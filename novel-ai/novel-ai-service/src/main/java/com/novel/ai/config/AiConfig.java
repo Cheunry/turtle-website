@@ -12,6 +12,7 @@ import org.springframework.ai.image.ImageModel;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 
 /**
  * AI 相关核心 Bean 装配。
@@ -39,22 +40,11 @@ public class AiConfig {
     }
 
     /**
-     * 聊天模型全局客户端——默认挂载：
-     * <ul>
-     *     <li>"两级重试 + 日志/观测"Advisor 链；</li>
-     *     <li>{@link AuditTools} 作为 {@code defaultTools}，让模型可在 ReAct 循环里
-     *         自主调用 6 个审核相关 Function（政策查询、相似判例、敏感词扫描、
-     *         人审升级、经验沉淀等）；</li>
-     * </ul>
-     * <p>
-     * <b>和结构化输出的兼容性</b>：Spring AI 会先处理 tool_call 循环，拿到最终
-     * 文本响应后再走 {@code BeanOutputConverter}，两者互不冲突；Prompt 模板同步
-     * 在 system 段落里告知"工具使用规范"，避免模型把 Tool 当"常规输出通道"滥用。
-     * <p>
-     * 业务调用点无需手动 {@code .advisors(...)}/{@code .tools(...)}，直接
-     * {@code chatClient.prompt().system().user().call()} 即可获得 advisor+tools 能力。
+     * 审核 Agent、章节/书籍 LLM 步骤使用：带 {@link AuditTools}（ReAct + 结构化输出等）。
+     * 与 {@link #textChatClient} 分工，避免润色/封面等场景把工具定义塞进请求。
      */
     @Bean
+    @Primary
     public ChatClient chatClient(DashScopeChatModel chatModel,
                                  RetryTransientAiAdvisor retryAdvisor,
                                  StructuredOutputLogAdvisor logAdvisor,
@@ -62,6 +52,18 @@ public class AiConfig {
         return ChatClient.builder(chatModel)
                 .defaultAdvisors(retryAdvisor, logAdvisor, new SimpleLoggerAdvisor())
                 .defaultTools(auditTools)
+                .build();
+    }
+
+    /**
+     * 润色、封面提示词、审核规则抽取等<b>不需要</b> Function Calling 的场景使用，避免把 6 个审核工具定义塞进 DashScope 请求（省 Token、降延迟）。
+     */
+    @Bean
+    public ChatClient textChatClient(DashScopeChatModel chatModel,
+                                     RetryTransientAiAdvisor retryAdvisor,
+                                     StructuredOutputLogAdvisor logAdvisor) {
+        return ChatClient.builder(chatModel)
+                .defaultAdvisors(retryAdvisor, logAdvisor, new SimpleLoggerAdvisor())
                 .build();
     }
 

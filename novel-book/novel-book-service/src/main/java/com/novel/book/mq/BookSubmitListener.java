@@ -3,7 +3,9 @@ package com.novel.book.mq;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.novel.book.dao.entity.BookInfo;
+import com.novel.book.dao.entity.ContentAudit;
 import com.novel.book.dao.mapper.BookInfoMapper;
+import com.novel.book.dao.mapper.ContentAuditMapper;
 import com.novel.book.dto.mq.BookAuditRequestMqDto;
 import com.novel.book.dto.mq.BookSubmitMqDto;
 import com.novel.common.constant.AmqpConsts;
@@ -38,7 +40,11 @@ import java.util.UUID;
 )
 public class BookSubmitListener implements RocketMQListener<BookSubmitMqDto> {
 
+    private static final int CONTENT_AUDIT_SOURCE_BOOK = 0;
+    private static final int CONTENT_AUDIT_STATUS_PENDING = 0;
+
     private final BookInfoMapper bookInfoMapper;
+    private final ContentAuditMapper contentAuditMapper;
     private final RocketMQTemplate rocketMQTemplate;
     private final StringRedisTemplate stringRedisTemplate;
 
@@ -98,8 +104,9 @@ public class BookSubmitListener implements RocketMQListener<BookSubmitMqDto> {
         bookInfoMapper.insert(bookInfo);
         log.debug("书籍信息新增完成，bookId: {}, bookName: {}", bookInfo.getId(), bookInfo.getBookName());
 
-        // 4. 如果开启审核，触发AI审核
+        // 4. 如果开启审核，写入待审快照并触发 AI 审核
         if (Boolean.TRUE.equals(submitDto.getAuditEnable())) {
+            insertPendingBookContentAudit(bookInfo);
             sendAuditRequest(bookInfo);
         }
     }
@@ -120,26 +127,28 @@ public class BookSubmitListener implements RocketMQListener<BookSubmitMqDto> {
             return;
         }
 
-        // 2. 更新信息
+        // 2. 更新信息（needAudit 仅当书名/简介相对库中数据实际变更，避免仅改封面等全量提交触发重复 AI 审核）
         BookInfo updateBook = new BookInfo();
         updateBook.setId(submitDto.getBookId());
         
         boolean hasUpdate = false;
-        boolean needAudit = false; // 标记是否需要重新审核
+        boolean needAudit = false; // 仅书名或简介真实变化时为 true，用于重置审核状态与发送审书 MQ
         
-        if (StringUtils.isNotBlank(submitDto.getBookName())) {
-            updateBook.setBookName(submitDto.getBookName());
+        if (StringUtils.isNotBlank(submitDto.getBookName())
+                && textAuditFieldChanged(bookInfo.getBookName(), submitDto.getBookName())) {
+            updateBook.setBookName(submitDto.getBookName().trim());
             hasUpdate = true;
-            needAudit = true; // 小说名变更需要重新审核
+            needAudit = true;
         }
         if (StringUtils.isNotBlank(submitDto.getPicUrl())) {
             updateBook.setPicUrl(submitDto.getPicUrl());
             hasUpdate = true;
         }
-        if (StringUtils.isNotBlank(submitDto.getBookDesc())) {
-            updateBook.setBookDesc(submitDto.getBookDesc());
+        if (StringUtils.isNotBlank(submitDto.getBookDesc())
+                && textAuditFieldChanged(bookInfo.getBookDesc(), submitDto.getBookDesc())) {
+            updateBook.setBookDesc(submitDto.getBookDesc().trim());
             hasUpdate = true;
-            needAudit = true; // 简介变更需要重新审核
+            needAudit = true;
         }
         if (submitDto.getCategoryId() != null) {
             updateBook.setCategoryId(submitDto.getCategoryId());
@@ -183,20 +192,57 @@ public class BookSubmitListener implements RocketMQListener<BookSubmitMqDto> {
                 log.warn("清除书籍信息缓存失败，bookId: {}, 不影响业务", submitDto.getBookId(), e);
             }
             
-            // 如果小说名或简介有变更，且开启了审核，触发AI审核
+            // 如果小说名或简介有变更，且开启了审核，写入待审快照并触发 AI 审核
             if (needAudit && Boolean.TRUE.equals(submitDto.getAuditEnable())) {
+                BookInfo fresh = bookInfoMapper.selectById(submitDto.getBookId());
+                if (fresh != null) {
+                    insertPendingBookContentAudit(fresh);
+                }
                 // 需要发送最新的书籍信息进行审核
                 // 这里重新查询一次或者合并 updateBook 和 bookInfo 都可以
                 // 为保险起见，使用 updateBook 中的关键信息（如果有）和原 bookInfo 中的信息
                 BookInfo auditBookInfo = new BookInfo();
                 auditBookInfo.setId(submitDto.getBookId());
-                auditBookInfo.setBookName(StringUtils.isNotBlank(submitDto.getBookName()) ? submitDto.getBookName() : bookInfo.getBookName());
-                auditBookInfo.setBookDesc(StringUtils.isNotBlank(submitDto.getBookDesc()) ? submitDto.getBookDesc() : bookInfo.getBookDesc());
+                auditBookInfo.setBookName(StringUtils.isNotBlank(submitDto.getBookName())
+                        ? submitDto.getBookName().trim() : bookInfo.getBookName());
+                auditBookInfo.setBookDesc(StringUtils.isNotBlank(submitDto.getBookDesc())
+                        ? submitDto.getBookDesc().trim() : bookInfo.getBookDesc());
+                if (fresh != null) {
+                    auditBookInfo.setCategoryId(fresh.getCategoryId());
+                    auditBookInfo.setCategoryName(fresh.getCategoryName());
+                    auditBookInfo.setAuthorId(fresh.getAuthorId());
+                }
                 
                 sendAuditRequest(auditBookInfo);
             }
         } else {
             log.debug("没有需要更新的字段，bookId: {}", submitDto.getBookId());
+        }
+    }
+
+    /**
+     * 每次送审书籍信息时插入一条待审核记录，便于后台立即看到本次任务；AI 回调更新 id 最新一条。
+     */
+    private void insertPendingBookContentAudit(BookInfo bookInfo) {
+        if (bookInfo == null || bookInfo.getId() == null) {
+            return;
+        }
+        String text = (bookInfo.getBookName() != null ? bookInfo.getBookName() : "")
+                + " "
+                + (bookInfo.getBookDesc() != null ? bookInfo.getBookDesc() : "");
+        ContentAudit row = ContentAudit.builder()
+                .dataSource(CONTENT_AUDIT_SOURCE_BOOK)
+                .dataSourceId(bookInfo.getId())
+                .contentText(text)
+                .auditStatus(CONTENT_AUDIT_STATUS_PENDING)
+                .createTime(LocalDateTime.now())
+                .updateTime(LocalDateTime.now())
+                .build();
+        try {
+            contentAuditMapper.insert(row);
+            log.debug("书籍[{}]已插入待审核 content_audit，id: {}", bookInfo.getId(), row.getId());
+        } catch (Exception e) {
+            log.error("插入书籍待审核 content_audit 失败，bookId: {}", bookInfo.getId(), e);
         }
     }
 
@@ -211,6 +257,9 @@ public class BookSubmitListener implements RocketMQListener<BookSubmitMqDto> {
                 .bookId(bookInfo.getId())
                 .bookName(bookInfo.getBookName())
                 .bookDesc(bookInfo.getBookDesc())
+                .categoryId(bookInfo.getCategoryId())
+                .categoryName(bookInfo.getCategoryName())
+                .authorId(bookInfo.getAuthorId())
                 .build();
 
         String destination = AmqpConsts.BookAuditRequestMq.TOPIC + ":" 
@@ -247,6 +296,18 @@ public class BookSubmitListener implements RocketMQListener<BookSubmitMqDto> {
                 bookId, 
                 System.currentTimeMillis(), 
                 UUID.randomUUID().toString().substring(0, 8));
+    }
+
+    /**
+     * 书名/简介是否与库中不一致（去首尾空白后比较）。用于决定是否需要重新走 AI 书籍信息审核。
+     */
+    private static boolean textAuditFieldChanged(String dbValue, String incoming) {
+        if (incoming == null || StringUtils.isBlank(incoming)) {
+            return false;
+        }
+        String normNew = incoming.trim();
+        String normDb = dbValue == null ? "" : dbValue.trim();
+        return !normDb.equals(normNew);
     }
 }
 

@@ -20,12 +20,12 @@ import com.novel.book.dto.resp.BookAuditRespDto;
 import com.novel.book.dto.resp.ChapterAuditRespDto;
 import com.novel.common.constant.ErrorCodeEnum;
 import com.novel.common.resp.RestResp;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.skywalking.apm.toolkit.trace.ActiveSpan;
 import org.apache.skywalking.apm.toolkit.trace.Trace;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.converter.BeanOutputConverter;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -41,10 +41,10 @@ import java.util.Map;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class TextServiceImpl implements TextService {
 
-    private final ChatClient chatClient;
+    /** 无 Function Tools，供润色/封面/规则抽取，避免请求体携带审核 Agent 工具定义 */
+    private final ChatClient textChatClient;
     private final NovelAiPromptLoader promptLoader;
     private final StructuredOutputInvoker structuredOutputInvoker;
 
@@ -53,6 +53,19 @@ public class TextServiceImpl implements TextService {
 
     /** 章节审核流水线，由 {@link com.novel.ai.agent.chapter.ChapterAuditPipelineFactory} 装配。 */
     private final AuditPipeline<ChapterAuditContext> chapterAuditPipeline;
+
+    public TextServiceImpl(
+            @Qualifier("textChatClient") ChatClient textChatClient,
+            NovelAiPromptLoader promptLoader,
+            StructuredOutputInvoker structuredOutputInvoker,
+            AuditPipeline<BookAuditContext> bookAuditPipeline,
+            AuditPipeline<ChapterAuditContext> chapterAuditPipeline) {
+        this.textChatClient = textChatClient;
+        this.promptLoader = promptLoader;
+        this.structuredOutputInvoker = structuredOutputInvoker;
+        this.bookAuditPipeline = bookAuditPipeline;
+        this.chapterAuditPipeline = chapterAuditPipeline;
+    }
 
     /** 无状态，复用即可，避免每次调用都重新构造 JsonSchema。 */
     private final BeanOutputConverter<TextPolishAiOutput> textPolishConverter =
@@ -67,6 +80,14 @@ public class TextServiceImpl implements TextService {
     @Override
     @Trace(operationName = "AI审核书籍")
     public RestResp<BookAuditRespDto> auditBook(BookAuditReqDto reqDto) {
+        if (reqDto != null) {
+            int nl = reqDto.getBookName() != null ? reqDto.getBookName().length() : -1;
+            int dl = reqDto.getBookDesc() != null ? reqDto.getBookDesc().length() : -1;
+            log.warn("SENSITIVE_WORD_FILTER TextService.auditBook bookId={} nameChars={} descChars={}",
+                    reqDto.getId(), nl, dl);
+        } else {
+            log.warn("SENSITIVE_WORD_FILTER TextService.auditBook request is null");
+        }
         BookAuditContext ctx = new BookAuditContext(reqDto);
         bookAuditPipeline.execute(ctx);
         return RestResp.ok(ctx.getResult());
@@ -75,6 +96,15 @@ public class TextServiceImpl implements TextService {
     @Override
     @Trace(operationName = "AI审核章节")
     public RestResp<ChapterAuditRespDto> auditChapter(ChapterAuditReqDto reqDto) {
+        if (reqDto != null) {
+            int titleLen = reqDto.getChapterName() != null ? reqDto.getChapterName().length() : -1;
+            int bodyLen = reqDto.getContent() != null ? reqDto.getContent().length() : -1;
+            // WARN + 固定标签：便于在任意环境 grep「SENSITIVE_WORD_FILTER」排查是否进入 novel-ai 章节审核
+            log.warn("SENSITIVE_WORD_FILTER TextService.auditChapter bookId={} chapterNum={} titleChars={} contentChars={}",
+                    reqDto.getBookId(), reqDto.getChapterNum(), titleLen, bodyLen);
+        } else {
+            log.warn("SENSITIVE_WORD_FILTER TextService.auditChapter request is null");
+        }
         ChapterAuditContext ctx = new ChapterAuditContext(reqDto);
         chapterAuditPipeline.execute(ctx);
         return RestResp.ok(ctx.getResult());
@@ -120,7 +150,7 @@ public class TextServiceImpl implements TextService {
             ActiveSpan.tag("prompt.length", String.valueOf(systemPrompt.length() + userPrompt.length()));
 
             TextPolishAiOutput aiOutput = structuredOutputInvoker.invoke(
-                    chatClient, systemPrompt, userPrompt, textPolishConverter, "text-polish");
+                    textChatClient, systemPrompt, userPrompt, textPolishConverter, "text-polish");
 
             long duration = System.currentTimeMillis() - startTime;
             ActiveSpan.tag("ai.duration.ms", String.valueOf(duration));
@@ -172,7 +202,7 @@ public class TextServiceImpl implements TextService {
             String userPrompt = promptLoader.renderUser(NovelAiPromptKey.COVER_PROMPT, userVars);
             ActiveSpan.tag("prompt.length", String.valueOf(systemPrompt.length() + userPrompt.length()));
 
-            String aiResponse = chatClient.prompt()
+            String aiResponse = textChatClient.prompt()
                     .system(systemPrompt)
                     .user(userPrompt)
                     .call()
@@ -223,7 +253,7 @@ public class TextServiceImpl implements TextService {
             String userPrompt = promptLoader.renderUser(NovelAiPromptKey.AUDIT_RULE_EXTRACT, userVars);
 
             AuditRuleAiOutput aiOutput = structuredOutputInvoker.invoke(
-                    chatClient, systemPrompt, userPrompt, auditRuleConverter, "audit-rule-extract");
+                    textChatClient, systemPrompt, userPrompt, auditRuleConverter, "audit-rule-extract");
 
             long duration = System.currentTimeMillis() - startTime;
             log.info("AI提取审核经验规则响应，耗时: {}ms, aiOutput: {}", duration, aiOutput);

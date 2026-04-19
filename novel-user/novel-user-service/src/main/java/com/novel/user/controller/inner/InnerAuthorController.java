@@ -31,5 +31,11 @@ public class InnerAuthorController {
     public RestResp<Void> deductPoints(@RequestBody AuthorPointsConsumeReqDto dto) {
         return authorService.deductPoints(dto);
     }
+
+    @Operation(summary = "回滚作者积分")
+    @PostMapping("points/rollback")
+    public RestResp<Void> rollbackPoints(@RequestBody AuthorPointsConsumeReqDto dto) {
+        return authorService.rollbackPoints(dto);
+    }
 }
 
