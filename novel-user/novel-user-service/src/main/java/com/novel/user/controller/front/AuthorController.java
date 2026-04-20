@@ -5,7 +5,8 @@ import com.novel.user.dto.req.AuthorPointsConsumeReqDto;
 import com.novel.user.dto.req.AuthorRegisterReqDto;
 import com.novel.user.dto.req.MessagePageReqDto;
 import com.novel.user.dto.resp.MessageRespDto;
-import com.novel.user.ratelimit.annotation.CoverImageRateLimit;
+import com.novel.user.ratelimit.AuthorAiRateLimitScene;
+import com.novel.user.ratelimit.annotation.AuthorAiRateLimit;
 import com.novel.user.service.AuthorService;
 import com.novel.book.dto.req.*;
 import com.novel.book.dto.resp.BookChapterRespDto;
@@ -25,11 +26,15 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.context.config.annotation.RefreshScope;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+
+import java.io.IOException;
 
 @Tag(name = "AuthorController", description = "作者模块")
 @SecurityRequirement(name = SystemConfigConsts.HTTP_AUTH_HEADER_NAME)
@@ -272,6 +277,7 @@ public class AuthorController {
      */
     @Operation(summary = "AI审核（先扣分后服务）")
     @PostMapping("ai/audit")
+    @AuthorAiRateLimit(AuthorAiRateLimitScene.AUDIT)
     public RestResp<Object> audit(@RequestBody AuthorPointsConsumeReqDto dto) {
         Long authorId = UserHolder.getAuthorId();
         if (authorId == null) {
@@ -287,6 +293,7 @@ public class AuthorController {
      */
     @Operation(summary = "AI润色（先扣分后服务）")
     @PostMapping("ai/polish")
+    @AuthorAiRateLimit(AuthorAiRateLimitScene.POLISH)
     public RestResp<Object> polish(@RequestBody AuthorPointsConsumeReqDto dto) {
         Long authorId = UserHolder.getAuthorId();
         if (authorId == null) {
@@ -294,6 +301,33 @@ public class AuthorController {
         }
         
         return authorService.polish(authorId, dto);
+    }
+
+    /**
+     * AI润色（SSE 真流式，先扣分；事件：delta 增量正文、done 结束、error 错误）
+     */
+    @Operation(summary = "AI润色（SSE流式，先扣分）")
+    @PostMapping(value = "ai/polish/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @AuthorAiRateLimit(AuthorAiRateLimitScene.POLISH)
+    public SseEmitter polishStream(@RequestBody AuthorPointsConsumeReqDto dto) {
+        Long authorId = UserHolder.getAuthorId();
+        if (authorId == null) {
+            SseEmitter e = new SseEmitter(5_000L);
+            try {
+                e.send(
+                        SseEmitter.event()
+                                .name("error")
+                                .data(
+                                        "{\"code\":\""
+                                                + ErrorCodeEnum.USER_UN_AUTH.getCode()
+                                                + "\",\"message\":\"未登录\"}"));
+            } catch (IOException ex) {
+                log.debug("polishStream 未登录 SSE 发送失败", ex);
+            }
+            e.complete();
+            return e;
+        }
+        return authorService.polishStream(authorId, dto);
     }
 
     /**
@@ -316,7 +350,7 @@ public class AuthorController {
      */
     @Operation(summary = "AI封面生成（先扣分后服务）")
     @PostMapping("ai/cover")
-    @CoverImageRateLimit
+    @AuthorAiRateLimit(AuthorAiRateLimitScene.COVER_IMAGE)
     public RestResp<Object> generateCover(@RequestBody AuthorPointsConsumeReqDto dto) {
         Long authorId = UserHolder.getAuthorId();
         if (authorId == null) {

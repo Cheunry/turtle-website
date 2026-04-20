@@ -30,6 +30,7 @@ import com.novel.book.dto.resp.BookAuditRespDto;
 import com.novel.book.dto.resp.ChapterAuditRespDto;
 import com.novel.ai.dto.resp.TextPolishRespDto;
 import com.novel.common.constant.AmqpConsts;
+import com.novel.common.constant.ApiRouterConsts;
 import com.novel.common.constant.CacheConsts;
 import com.novel.common.constant.DatabaseConsts;
 import com.novel.common.constant.ErrorCodeEnum;
@@ -39,14 +40,23 @@ import com.novel.common.resp.RestResp;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.spring.core.RocketMQTemplate;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.http.MediaType;
+import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import reactor.core.Disposable;
+import reactor.core.scheduler.Schedulers;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Service
 @RequiredArgsConstructor
@@ -59,6 +69,7 @@ public class AuthorServiceImpl implements AuthorService {
     private final BookFeignManager bookFeignManager;
     private final MessageService messageService;
     private final AiFeign aiFeign;
+    private final WebClient aiInnerWebClient;
     private final CacheService cacheService;
 
     /**
@@ -823,6 +834,133 @@ public class AuthorServiceImpl implements AuthorService {
             }
             return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR, "AI润色服务调用失败，积分已自动退回");
         }
+    }
+
+    @Override
+    public SseEmitter polishStream(Long authorId, AuthorPointsConsumeReqDto dto) {
+        SseEmitter clientEmitter = new SseEmitter(300_000L);
+        dto.setAuthorId(authorId);
+        dto.setConsumeType(1);
+        dto.setConsumePoints(10);
+
+        RestResp<Void> deductResult = deductPoints(dto);
+        if (!deductResult.isOk()) {
+            try {
+                clientEmitter.send(
+                        SseEmitter.event()
+                                .name("error")
+                                .data(
+                                        sseJson(
+                                                ErrorCodeEnum.USER_POINTS_NOT_ENOUGH.getCode(),
+                                                deductResult.getMessage())));
+            } catch (IOException e) {
+                log.warn("润色流式 SSE 发送扣分错误失败", e);
+            }
+            clientEmitter.complete();
+            return clientEmitter;
+        }
+
+        TextPolishReqDto polishReq = new TextPolishReqDto();
+        polishReq.setSelectedText(dto.getContent());
+        polishReq.setStyle(dto.getStyle());
+        polishReq.setRequirement(dto.getRequirement());
+
+        String uri =
+                "http://novel-ai-service"
+                        + ApiRouterConsts.API_INNER_AI_URL_PREFIX
+                        + "/polish/stream";
+
+        AtomicBoolean rolledBack = new AtomicBoolean(false);
+        AtomicBoolean clientCompleted = new AtomicBoolean(false);
+
+        Runnable rollbackOnce =
+                () -> {
+                    if (rolledBack.compareAndSet(false, true)) {
+                        RestResp<Void> rb = rollbackPoints(dto);
+                        if (!rb.isOk()) {
+                            log.error("流式润色回滚积分失败，作者ID: {}", authorId);
+                        }
+                    }
+                };
+
+        ParameterizedTypeReference<ServerSentEvent<String>> sseType = new ParameterizedTypeReference<>() {};
+
+        Disposable disposable =
+                aiInnerWebClient
+                        .post()
+                        .uri(uri)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .bodyValue(polishReq)
+                        .accept(MediaType.TEXT_EVENT_STREAM)
+                        .retrieve()
+                        .bodyToFlux(sseType)
+                        .publishOn(Schedulers.boundedElastic())
+                        .subscribe(
+                                evt -> {
+                                    String name = evt.event() != null ? evt.event() : "message";
+                                    String data = evt.data() != null ? evt.data() : "";
+                                    if ("error".equals(name)) {
+                                        rollbackOnce.run();
+                                    }
+                                    try {
+                                        clientEmitter.send(SseEmitter.event().name(name).data(data));
+                                        if ("done".equals(name) && clientCompleted.compareAndSet(false, true)) {
+                                            clientEmitter.complete();
+                                        }
+                                    } catch (IOException e) {
+                                        log.warn("转发润色 SSE 失败", e);
+                                        rollbackOnce.run();
+                                        clientEmitter.completeWithError(e);
+                                    }
+                                },
+                                err -> {
+                                    log.error("润色流式上游异常，作者ID: {}", authorId, err);
+                                    rollbackOnce.run();
+                                    if (clientCompleted.compareAndSet(false, true)) {
+                                        try {
+                                            clientEmitter.send(
+                                                    SseEmitter.event()
+                                                            .name("error")
+                                                            .data(
+                                                                    sseJson(
+                                                                            ErrorCodeEnum.SYSTEM_ERROR.getCode(),
+                                                                            "AI润色服务暂时不可用，积分已退回")));
+                                        } catch (IOException ex) {
+                                            log.debug("发送流式错误事件失败", ex);
+                                        }
+                                        clientEmitter.completeWithError(err);
+                                    }
+                                },
+                                () -> {
+                                    if (clientCompleted.compareAndSet(false, true)) {
+                                        clientEmitter.complete();
+                                    }
+                                });
+
+        clientEmitter.onCompletion(disposable::dispose);
+        clientEmitter.onTimeout(
+                () -> {
+                    disposable.dispose();
+                    rollbackOnce.run();
+                });
+        clientEmitter.onError(
+                e -> {
+                    disposable.dispose();
+                    rollbackOnce.run();
+                });
+
+        return clientEmitter;
+    }
+
+    private static String sseJson(String code, String message) {
+        String safe =
+                message == null
+                        ? ""
+                        : message.replace("\\", "\\\\")
+                                .replace("\"", "\\\"")
+                                .replace("\n", " ")
+                                .replace("\r", " ");
+        return "{\"code\":\"" + code + "\",\"message\":\"" + safe + "\"}";
     }
 
     @Override

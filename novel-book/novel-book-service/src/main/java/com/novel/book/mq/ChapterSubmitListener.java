@@ -15,11 +15,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.spring.annotation.RocketMQMessageListener;
 import org.apache.rocketmq.spring.core.RocketMQListener;
-import org.apache.rocketmq.spring.core.RocketMQTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
 import java.util.Objects;
@@ -45,7 +42,7 @@ public class ChapterSubmitListener implements RocketMQListener<ChapterSubmitMqDt
     private final BookInfoMapper bookInfoMapper;
     private final BookChapterMapper bookChapterMapper;
     private final ContentAuditMapper contentAuditMapper;
-    private final RocketMQTemplate rocketMQTemplate;
+    private final BookRocketMqTxPublisher bookRocketMqTxPublisher;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -233,30 +230,8 @@ public class ChapterSubmitListener implements RocketMQListener<ChapterSubmitMqDt
 
         if (bookInfo.getAuditStatus() != null && bookInfo.getAuditStatus() == 1) {
             String destination = AmqpConsts.BookChangeMq.TOPIC + ":" + AmqpConsts.BookChangeMq.TAG_UPDATE;
-            sendRocketMqAfterCommit(destination, bookId, "ES同步 bookId=" + bookId);
-        }
-    }
-
-    private void sendRocketMqAfterCommit(String destination, Object payload, String logLabel) {
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    try {
-                        rocketMQTemplate.convertAndSend(destination, payload);
-                        log.debug("MQ 已投递（提交后）: {}", logLabel);
-                    } catch (Exception e) {
-                        log.error("发送 MQ 失败: {}", logLabel, e);
-                    }
-                }
-            });
-        } else {
-            try {
-                rocketMQTemplate.convertAndSend(destination, payload);
-                log.debug("MQ 已投递（无事务）: {}", logLabel);
-            } catch (Exception e) {
-                log.error("发送 MQ 失败: {}", logLabel, e);
-            }
+            bookRocketMqTxPublisher.sendAfterLocalDbCommit(destination, bookId);
+            log.debug("MQ 已注册事务投递（提交后）: ES同步 bookId={}", bookId);
         }
     }
 
@@ -302,7 +277,8 @@ public class ChapterSubmitListener implements RocketMQListener<ChapterSubmitMqDt
                 .build();
         String destination = AmqpConsts.BookAuditRequestMq.TOPIC + ":"
                 + AmqpConsts.BookAuditRequestMq.TAG_AUDIT_CHAPTER_REQUEST;
-        sendRocketMqAfterCommit(destination, auditRequest, "章节审核请求 chapterId=" + chapter.getId() + ", taskId=" + taskId);
+        bookRocketMqTxPublisher.sendAfterLocalDbCommit(destination, auditRequest);
+        log.debug("章节审核请求已注册事务投递 chapterId={} taskId={}", chapter.getId(), taskId);
     }
 
     /**
@@ -324,7 +300,8 @@ public class ChapterSubmitListener implements RocketMQListener<ChapterSubmitMqDt
                         .updateTime(LocalDateTime.now())
                         .build();
         String destination = AmqpConsts.BookChangeMq.TOPIC + ":" + AmqpConsts.BookChangeMq.TAG_CHAPTER_UPDATE;
-        sendRocketMqAfterCommit(destination, updateDto, "章节更新通知 chapterId=" + chapter.getId());
+        bookRocketMqTxPublisher.sendAfterLocalDbCommit(destination, updateDto);
+        log.debug("章节更新通知已注册事务投递 chapterId={}", chapter.getId());
     }
 
     /**

@@ -23,6 +23,9 @@ public enum NovelAiPromptKey {
     /** 文本润色 */
     TEXT_POLISH("text-polish"),
 
+    /** 文本润色（SSE 流式纯文本，非 JSON 结构化输出） */
+    TEXT_POLISH_STREAM("text-polish-stream"),
+
     /** 封面提示词生成 */
     COVER_PROMPT("cover-prompt"),
 

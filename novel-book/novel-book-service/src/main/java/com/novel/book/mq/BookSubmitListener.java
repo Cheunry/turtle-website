@@ -15,12 +15,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.spring.annotation.RocketMQMessageListener;
 import org.apache.rocketmq.spring.core.RocketMQListener;
-import org.apache.rocketmq.spring.core.RocketMQTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
 import java.util.Objects;
@@ -45,8 +42,8 @@ public class BookSubmitListener implements RocketMQListener<BookSubmitMqDto> {
 
     private final BookInfoMapper bookInfoMapper;
     private final ContentAuditMapper contentAuditMapper;
-    private final RocketMQTemplate rocketMQTemplate;
     private final StringRedisTemplate stringRedisTemplate;
+    private final BookRocketMqTxPublisher bookRocketMqTxPublisher;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -262,30 +259,10 @@ public class BookSubmitListener implements RocketMQListener<BookSubmitMqDto> {
                 .authorId(bookInfo.getAuthorId())
                 .build();
 
-        String destination = AmqpConsts.BookAuditRequestMq.TOPIC + ":" 
+        String destination = AmqpConsts.BookAuditRequestMq.TOPIC + ":"
                 + AmqpConsts.BookAuditRequestMq.TAG_AUDIT_BOOK_REQUEST;
-
-        // 在事务提交后发送 MQ 消息
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    try {
-                        rocketMQTemplate.convertAndSend(destination, auditRequest);
-                        log.info("书籍[{}]审核请求已发送到MQ，taskId: {}", bookInfo.getId(), taskId);
-                    } catch (Exception e) {
-                        log.error("发送书籍审核请求MQ失败，bookId: {}", bookInfo.getId(), e);
-                    }
-                }
-            });
-        } else {
-            try {
-                rocketMQTemplate.convertAndSend(destination, auditRequest);
-                log.info("书籍[{}]审核请求已发送到MQ，taskId: {}", bookInfo.getId(), taskId);
-            } catch (Exception e) {
-                log.error("发送书籍审核请求MQ失败，bookId: {}", bookInfo.getId(), e);
-            }
-        }
+        bookRocketMqTxPublisher.sendAfterLocalDbCommit(destination, auditRequest);
+        log.info("书籍[{}]审核请求已注册事务投递，taskId: {}", bookInfo.getId(), taskId);
     }
 
     /**

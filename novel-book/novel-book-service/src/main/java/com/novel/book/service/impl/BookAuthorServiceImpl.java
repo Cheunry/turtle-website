@@ -14,26 +14,19 @@ import com.novel.book.dto.resp.BookChapterRespDto;
 import com.novel.book.dto.resp.BookInfoRespDto;
 import com.novel.book.service.BookAuthorService;
 import com.novel.common.constant.AmqpConsts;
-import com.novel.common.constant.CacheConsts;
 import com.novel.common.constant.DatabaseConsts;
 import com.novel.common.constant.ErrorCodeEnum;
 import com.novel.common.resp.PageRespDto;
 import com.novel.common.resp.RestResp;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import com.novel.book.mq.BookRocketMqTxPublisher;
 import org.apache.rocketmq.spring.core.RocketMQTemplate;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
-import java.time.LocalDateTime;
 import java.util.Objects;
-import java.util.UUID;
-import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 
 @Slf4j
 @Service
@@ -47,7 +40,7 @@ public class BookAuthorServiceImpl implements BookAuthorService {
     private final BookInfoMapper bookInfoMapper;
     private final BookChapterMapper bookChapterMapper;
     private final RocketMQTemplate rocketMQTemplate;
-    private final StringRedisTemplate stringRedisTemplate;
+    private final BookRocketMqTxPublisher bookRocketMqTxPublisher;
 
 
     /**
@@ -282,61 +275,15 @@ public class BookAuthorServiceImpl implements BookAuthorService {
      * @param dto 删除请求
      * @return void
      */
-    @Transactional(rollbackFor = Exception.class)
     public RestResp<Void> deleteBookChapter(ChapterDelReqDto dto) {
-
-        // 校验该作品是否属于当前作家
         BookInfo bookInfo = bookInfoMapper.selectById(dto.getBookId());
+        if (bookInfo == null) {
+            return RestResp.fail(ErrorCodeEnum.USER_UN_AUTH);
+        }
         if (!Objects.equals(bookInfo.getAuthorId(), dto.getAuthorId())) {
             return RestResp.fail(ErrorCodeEnum.USER_UN_AUTH);
         }
-
-        QueryWrapper<BookChapter> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq(DatabaseConsts.BookChapterTable.COLUMN_BOOK_ID, dto.getBookId())
-                .eq(DatabaseConsts.BookChapterTable.COLUMN_CHAPTER_NUM, dto.getChapterNum());
-        BookChapter bookChapter = bookChapterMapper.selectOne(queryWrapper);
-        int count = bookChapter.getWordCount() == null ? 0 : bookChapter.getWordCount();
-
-        BookInfo book = bookInfoMapper.selectById(dto.getBookId());
-
-        if (Objects.nonNull(book)) {
-
-            book.setWordCount(book.getWordCount() - count);
-
-            // 如果删除的章节是该本小说的最新章节，需要重新查找最新的审核通过的章节
-            if (book.getWordCount() > 0 && book.getLastChapterNum().equals(bookChapter.getChapterNum())) {
-                QueryWrapper<BookChapter> bookChapterQueryWrapper = new QueryWrapper<>();
-                bookChapterQueryWrapper.eq(DatabaseConsts.BookChapterTable.COLUMN_BOOK_ID, book.getId())
-                        .eq("audit_status", 1) // 只查询审核通过的章节
-                        .ne(DatabaseConsts.BookChapterTable.COLUMN_CHAPTER_NUM, dto.getChapterNum()) // 明确排除正在删除的章节
-                        .orderByDesc(DatabaseConsts.BookChapterTable.COLUMN_CHAPTER_UPDATE_TIME)
-                        .last("limit 1");
-                BookChapter bookChapter1 = bookChapterMapper.selectOne(bookChapterQueryWrapper);
-                if (bookChapter1 != null) {
-                    book.setLastChapterNum(bookChapter1.getChapterNum());
-                    book.setLastChapterName(bookChapter1.getChapterName());
-                    book.setLastChapterUpdateTime(bookChapter1.getUpdateTime());
-                } else {
-                    // 如果没有审核通过的章节了，清空最新章节信息
-                    book.setLastChapterNum(null);
-                    book.setLastChapterName(null);
-                    book.setLastChapterUpdateTime(null);
-                }
-            } else if (book.getWordCount() <= 0 && book.getLastChapterNum().equals(bookChapter.getChapterNum())) {
-                book.setWordCount(0);
-                book.setLastChapterNum(null);
-                book.setLastChapterName(null);
-                book.setLastChapterUpdateTime(null);
-            }
-            bookInfoMapper.updateById(book);
-        }
-
-        bookChapterMapper.delete(queryWrapper);
-
-        // 发送 MQ 消息
-        sendBookChangeMsg(dto.getBookId());
-
-        return RestResp.ok();
+        return bookRocketMqTxPublisher.sendDeleteChapterInTransaction(dto);
     }
 
     /**
@@ -422,9 +369,7 @@ public class BookAuthorServiceImpl implements BookAuthorService {
      * @return Void
      */
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public RestResp<Void> deleteBook(BookDelReqDto dto) {
-        // 1. 校验小说是否存在且属于该作者
         BookInfo bookInfo = bookInfoMapper.selectById(dto.getBookId());
         if (Objects.isNull(bookInfo)) {
             return RestResp.ok();
@@ -432,59 +377,7 @@ public class BookAuthorServiceImpl implements BookAuthorService {
         if (!Objects.equals(bookInfo.getAuthorId(), dto.getAuthorId())) {
             return RestResp.fail(ErrorCodeEnum.USER_UN_AUTH);
         }
-
-        // 2. 删除章节
-        QueryWrapper<BookChapter> chapterWrapper = new QueryWrapper<>();
-        chapterWrapper.eq(DatabaseConsts.BookChapterTable.COLUMN_BOOK_ID, dto.getBookId());
-        bookChapterMapper.delete(chapterWrapper);
-
-        // 3. 删除书籍
-        bookInfoMapper.deleteById(dto.getBookId());
-
-        // 4. 发送 MQ 消息 (通知搜索引擎等更新)
-        sendBookChangeMsg(dto.getBookId());
-
-        return RestResp.ok();
-    }
-
-    /**
-     * 发送书籍变更消息
-     */
-    private void sendBookChangeMsg(Long bookId) {
-        if (bookId == null) {
-            return;
-        }
-        // 构建 Destination: Topic:Tag
-        String destination = AmqpConsts.BookChangeMq.TOPIC + ":" + AmqpConsts.BookChangeMq.TAG_UPDATE;
-
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    try {
-                        // 发送消息，消息体就是 bookId
-                        rocketMQTemplate.convertAndSend(destination, bookId);
-                    } catch (Exception e) {
-                        log.error("发送书籍ChangeMsg MQ失败，bookId: {}", bookId, e);
-                    }
-                }
-            });
-        } else {
-            // 发送消息，消息体就是 bookId
-            rocketMQTemplate.convertAndSend(destination, bookId);
-        }
-    }
-
-    /**
-     * 生成任务ID（用于关联审核请求和结果，保证幂等性）
-     * @param chapterId 章节ID
-     * @return 任务ID
-     */
-    private String generateTaskId(Long chapterId) {
-        return String.format("audit_chapter_%s_%s_%s", 
-                chapterId, 
-                System.currentTimeMillis(), 
-                UUID.randomUUID().toString().substring(0, 8));
+        return bookRocketMqTxPublisher.sendDeleteBookInTransaction(dto);
     }
 
     /**

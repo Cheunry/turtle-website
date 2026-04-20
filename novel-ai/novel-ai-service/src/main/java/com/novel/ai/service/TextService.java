@@ -3,6 +3,7 @@ package com.novel.ai.service;
 import com.novel.ai.dto.req.AuditRuleReqDto;
 import com.novel.ai.dto.resp.AuditRuleRespDto;
 import com.novel.ai.dto.req.TextPolishReqDto;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import com.novel.ai.dto.resp.TextPolishRespDto;
 import com.novel.book.dto.req.BookAuditReqDto;
 import com.novel.book.dto.req.BookCoverReqDto;
@@ -27,6 +28,11 @@ public interface TextService {
      * 文本润色
      */
     RestResp<TextPolishRespDto> polishText(TextPolishReqDto reqDto);
+
+    /**
+     * 文本润色（SSE 流式输出模型增量，事件名：{@code delta}、结束 {@code done}、错误 {@code error}）。
+     */
+    void streamPolishText(TextPolishReqDto reqDto, SseEmitter emitter);
 
     /**
      * 获取小说封面生成提示词

@@ -172,4 +172,9 @@ public class AmqpConsts {
         public static final String CONSUMER_GROUP_ROLLBACK = "group-author-points-rollback";
 
     }
+
+    /**
+     * novel-book-service 事务消息生产者组，须与该服务 {@code rocketmq.producer.group} 配置一致。
+     */
+    public static final String NOVEL_BOOK_TX_PRODUCER_GROUP = "novel-book-tx-producer";
 }

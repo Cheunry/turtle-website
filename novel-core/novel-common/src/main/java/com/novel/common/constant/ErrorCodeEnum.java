@@ -167,6 +167,11 @@ public enum ErrorCodeEnum {
     AI_IMAGE_GENERATION_BUSY("C4002", "当前生图任务较多，请稍后再试"),
 
     /**
+     * 作家端 AI 能力（润色、提交审核等）请求过于频繁（用户维度令牌桶）
+     */
+    AI_AUTHOR_RATE_LIMIT("C4003", "操作过于频繁，请稍后再试"),
+
+    /**
      * 小说名已存在
      */
     AUTHOR_BOOK_NAME_EXIST("A3001", "小说名已存在"),

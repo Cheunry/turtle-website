@@ -58,6 +58,11 @@
             <artifactId>alipay-sdk-java</artifactId>
         </dependency>
 
+        <!-- WebClient：转发 novel-ai 润色 SSE（Feign 不适合消费流式响应） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webflux</artifactId>
+        </dependency>
 
     </dependencies>
 

@@ -3,6 +3,7 @@ package com.novel.ai.service.impl;
 import com.novel.ai.agent.book.BookAuditContext;
 import com.novel.ai.agent.chapter.ChapterAuditContext;
 import com.novel.ai.agent.core.AuditPipeline;
+import com.novel.ai.config.AuditPipelineExecutorConfig;
 import com.novel.ai.dto.req.AuditRuleReqDto;
 import com.novel.ai.dto.req.TextPolishReqDto;
 import com.novel.ai.dto.resp.AuditRuleRespDto;
@@ -18,6 +19,8 @@ import com.novel.book.dto.req.BookCoverReqDto;
 import com.novel.book.dto.req.ChapterAuditReqDto;
 import com.novel.book.dto.resp.BookAuditRespDto;
 import com.novel.book.dto.resp.ChapterAuditRespDto;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.novel.common.constant.ErrorCodeEnum;
 import com.novel.common.resp.RestResp;
 import lombok.extern.slf4j.Slf4j;
@@ -27,15 +30,25 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.converter.BeanOutputConverter;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import reactor.core.Disposable;
+import reactor.core.publisher.Flux;
+import reactor.core.scheduler.Schedulers;
 
+import java.io.IOException;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.Executor;
 
 /**
  * 文本相关 AI 能力入口。书籍审核、章节审核已经下沉到
  * {@code com.novel.ai.agent} 下的 Agent 流水线，本类仅做：
  * <ol>
- *     <li>组装审核请求上下文并交给对应 {@link AuditPipeline} 执行；</li>
+ *     <li>组装审核请求上下文并交给对应 {@link AuditPipeline} 执行；书籍/章节审核在
+ *         {@link com.novel.ai.config.AuditPipelineExecutorConfig} 的虚拟线程执行器上跑整条链（含等 ES、调模型等阻塞）；</li>
  *     <li>承载流程较轻的能力：润色、封面提示词生成、审核经验规则抽取。</li>
  * </ol>
  */
@@ -54,17 +67,28 @@ public class TextServiceImpl implements TextService {
     /** 章节审核流水线，由 {@link com.novel.ai.agent.chapter.ChapterAuditPipelineFactory} 装配。 */
     private final AuditPipeline<ChapterAuditContext> chapterAuditPipeline;
 
+    /**
+     * 仅书籍/章节审核使用：默认 {@link java.util.concurrent.Executors#newVirtualThreadPerTaskExecutor()}，
+     * 见 {@link com.novel.ai.config.AuditPipelineExecutorConfig}。
+     */
+    private final Executor auditPipelineExecutor;
+    private final ObjectMapper objectMapper;
+
     public TextServiceImpl(
             @Qualifier("textChatClient") ChatClient textChatClient,
             NovelAiPromptLoader promptLoader,
             StructuredOutputInvoker structuredOutputInvoker,
             AuditPipeline<BookAuditContext> bookAuditPipeline,
-            AuditPipeline<ChapterAuditContext> chapterAuditPipeline) {
+            AuditPipeline<ChapterAuditContext> chapterAuditPipeline,
+            @Qualifier(AuditPipelineExecutorConfig.AUDIT_PIPELINE_EXECUTOR) Executor auditPipelineExecutor,
+            ObjectMapper objectMapper) {
         this.textChatClient = textChatClient;
         this.promptLoader = promptLoader;
         this.structuredOutputInvoker = structuredOutputInvoker;
         this.bookAuditPipeline = bookAuditPipeline;
         this.chapterAuditPipeline = chapterAuditPipeline;
+        this.auditPipelineExecutor = auditPipelineExecutor;
+        this.objectMapper = objectMapper;
     }
 
     /** 无状态，复用即可，避免每次调用都重新构造 JsonSchema。 */
@@ -89,7 +113,7 @@ public class TextServiceImpl implements TextService {
             log.warn("SENSITIVE_WORD_FILTER TextService.auditBook request is null");
         }
         BookAuditContext ctx = new BookAuditContext(reqDto);
-        bookAuditPipeline.execute(ctx);
+        runAuditPipeline(() -> bookAuditPipeline.execute(ctx));
         return RestResp.ok(ctx.getResult());
     }
 
@@ -106,29 +130,19 @@ public class TextServiceImpl implements TextService {
             log.warn("SENSITIVE_WORD_FILTER TextService.auditChapter request is null");
         }
         ChapterAuditContext ctx = new ChapterAuditContext(reqDto);
-        chapterAuditPipeline.execute(ctx);
+        runAuditPipeline(() -> chapterAuditPipeline.execute(ctx));
         return RestResp.ok(ctx.getResult());
     }
 
     @Override
     @Trace(operationName = "AI润色文本")
     public RestResp<TextPolishRespDto> polishText(TextPolishReqDto reqDto) {
-        if (reqDto == null || reqDto.getSelectedText() == null) {
-            return RestResp.fail(ErrorCodeEnum.USER_REQUEST_PARAM_ERROR, "待润色文本不能为空");
+        String validationError = validatePolishRequest(reqDto);
+        if (validationError != null) {
+            return RestResp.fail(ErrorCodeEnum.USER_REQUEST_PARAM_ERROR, validationError);
         }
 
         String selectedText = reqDto.getSelectedText().trim();
-        if (selectedText.isEmpty()) {
-            return RestResp.fail(ErrorCodeEnum.USER_REQUEST_PARAM_ERROR, "待润色文本不能为空");
-        }
-        if (selectedText.length() < MIN_POLISH_TEXT_LENGTH) {
-            return RestResp.fail(ErrorCodeEnum.USER_REQUEST_PARAM_ERROR,
-                    String.format("待润色文本长度不能少于%d个字符", MIN_POLISH_TEXT_LENGTH));
-        }
-        if (selectedText.length() > MAX_POLISH_TEXT_LENGTH) {
-            return RestResp.fail(ErrorCodeEnum.USER_REQUEST_PARAM_ERROR,
-                    String.format("待润色文本长度不能超过%d个字符", MAX_POLISH_TEXT_LENGTH));
-        }
 
         ActiveSpan.tag("ai.model", "text_model");
         ActiveSpan.tag("ai.operation", "polish_text");
@@ -166,6 +180,113 @@ public class TextServiceImpl implements TextService {
             ActiveSpan.error(e);
             log.error("AI润色异常，耗时: {}ms", duration, e);
             return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR, "AI润色服务暂时不可用，请稍后再试");
+        }
+    }
+
+    @Override
+    @Trace(operationName = "AI润色文本流式")
+    public void streamPolishText(TextPolishReqDto reqDto, SseEmitter emitter) {
+        String validationError = validatePolishRequest(reqDto);
+        if (validationError != null) {
+            try {
+                emitter.send(
+                        SseEmitter.event()
+                                .name("error")
+                                .data(sseErrorJson(ErrorCodeEnum.USER_REQUEST_PARAM_ERROR.getCode(), validationError)));
+            } catch (IOException e) {
+                log.warn("SSE 发送校验错误失败", e);
+            }
+            emitter.complete();
+            return;
+        }
+
+        String selectedText = reqDto.getSelectedText().trim();
+        ActiveSpan.tag("ai.model", "text_model");
+        ActiveSpan.tag("ai.operation", "polish_text_stream");
+        ActiveSpan.tag("text.length", String.valueOf(selectedText.length()));
+
+        String systemPrompt = promptLoader.renderSystem(NovelAiPromptKey.TEXT_POLISH_STREAM);
+        Map<String, Object> userVars = new HashMap<>();
+        userVars.put("selectedText", selectedText);
+        userVars.put("style", reqDto.getStyle() != null ? reqDto.getStyle() : "通俗易懂");
+        userVars.put(
+                "requirement",
+                reqDto.getRequirement() != null ? reqDto.getRequirement() : "保持原意，提升文学性");
+        String userPrompt = promptLoader.renderUser(NovelAiPromptKey.TEXT_POLISH_STREAM, userVars);
+
+        Flux<String> contentFlux =
+                textChatClient.prompt().system(systemPrompt).user(userPrompt).stream().content();
+
+        Disposable disposable =
+                contentFlux
+                        .publishOn(Schedulers.boundedElastic())
+                        .subscribe(
+                                chunk -> {
+                                    if (chunk == null || chunk.isEmpty()) {
+                                        return;
+                                    }
+                                    try {
+                                        emitter.send(SseEmitter.event().name("delta").data(chunk));
+                                    } catch (IOException e) {
+                                        log.warn("SSE delta 发送失败", e);
+                                        emitter.completeWithError(e);
+                                    }
+                                },
+                                error -> {
+                                    ActiveSpan.error(error);
+                                    log.error("AI 流式润色异常", error);
+                                    try {
+                                        emitter.send(
+                                                SseEmitter.event()
+                                                        .name("error")
+                                                        .data(
+                                                                sseErrorJson(
+                                                                        ErrorCodeEnum.SYSTEM_ERROR.getCode(),
+                                                                        "AI润色服务暂时不可用，请稍后再试")));
+                                    } catch (IOException ioException) {
+                                        log.warn("SSE 发送错误事件失败", ioException);
+                                    }
+                                    emitter.completeWithError(error);
+                                },
+                                () -> {
+                                    try {
+                                        emitter.send(SseEmitter.event().name("done").data("{}"));
+                                    } catch (IOException e) {
+                                        log.warn("SSE done 发送失败", e);
+                                    }
+                                    emitter.complete();
+                                });
+
+        emitter.onCompletion(disposable::dispose);
+        emitter.onTimeout(disposable::dispose);
+        emitter.onError(e -> disposable.dispose());
+    }
+
+    private String validatePolishRequest(TextPolishReqDto reqDto) {
+        if (reqDto == null || reqDto.getSelectedText() == null) {
+            return "待润色文本不能为空";
+        }
+        String selectedText = reqDto.getSelectedText().trim();
+        if (selectedText.isEmpty()) {
+            return "待润色文本不能为空";
+        }
+        if (selectedText.length() < MIN_POLISH_TEXT_LENGTH) {
+            return String.format("待润色文本长度不能少于%d个字符", MIN_POLISH_TEXT_LENGTH);
+        }
+        if (selectedText.length() > MAX_POLISH_TEXT_LENGTH) {
+            return String.format("待润色文本长度不能超过%d个字符", MAX_POLISH_TEXT_LENGTH);
+        }
+        return null;
+    }
+
+    private String sseErrorJson(String code, String message) {
+        try {
+            Map<String, String> m = new LinkedHashMap<>();
+            m.put("code", code);
+            m.put("message", message);
+            return objectMapper.writeValueAsString(m);
+        } catch (JsonProcessingException e) {
+            return "{\"code\":\"" + code + "\",\"message\":\"序列化错误\"}";
         }
     }
 
@@ -310,5 +431,23 @@ public class TextServiceImpl implements TextService {
     /** null 归一成空串，避免 PromptTemplate 渲染占位符失败。 */
     private static String safe(String value) {
         return value == null ? "" : value;
+    }
+
+    /**
+     * 在 {@link #auditPipelineExecutor} 上跑流水线；异常语义与同步 {@code execute} 一致。
+     */
+    private void runAuditPipeline(Runnable pipeline) {
+        try {
+            CompletableFuture.runAsync(pipeline, auditPipelineExecutor).join();
+        } catch (CompletionException e) {
+            Throwable c = e.getCause();
+            if (c instanceof Error err) {
+                throw err;
+            }
+            if (c instanceof RuntimeException re) {
+                throw re;
+            }
+            throw new RuntimeException(c);
+        }
     }
 }

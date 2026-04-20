@@ -14,6 +14,7 @@ import com.novel.common.req.PageReqDto;
 import com.novel.common.resp.PageRespDto;
 import com.novel.common.resp.RestResp;
 import org.springframework.stereotype.Service;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @Service
 public interface AuthorService {
@@ -136,6 +137,11 @@ public interface AuthorService {
      * AI润色（先扣分后服务，服务失败自动回滚积分）
      */
     RestResp<Object> polish(Long authorId, AuthorPointsConsumeReqDto dto);
+
+    /**
+     * AI 润色（SSE 流式；先扣分，流式失败或 error 事件时回滚积分）
+     */
+    SseEmitter polishStream(Long authorId, AuthorPointsConsumeReqDto dto);
 
     /**
      * AI封面提示词生成（不扣积分）
