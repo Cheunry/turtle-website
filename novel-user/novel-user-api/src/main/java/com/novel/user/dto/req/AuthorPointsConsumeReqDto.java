@@ -2,6 +2,7 @@ package com.novel.user.dto.req;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.Builder;
 import lombok.Data;
 /**
@@ -17,6 +18,10 @@ public class AuthorPointsConsumeReqDto {
     @Schema(description = "用户ID（当authorId为空时使用）")
     private Long userId;
 
+    @Schema(description = "业务幂等号；同一次积分消费请求必须保持不变")
+    @Size(max = 96, message = "业务幂等号长度不能超过96")
+    private String requestId;
+
     @Schema(description = "消费类型;0-AI审核 1-AI润色 2-AI封面")
     @NotNull(message = "消费类型不能为空")
     private Integer consumeType;
@@ -30,6 +35,9 @@ public class AuthorPointsConsumeReqDto {
 
     @Schema(description = "关联描述（如：章节名、小说名等）")
     private String relatedDesc;
+
+    @Schema(description = "审核目标版本号")
+    private Integer version;
 
     /* ***************** AI 服务扩展字段 ***************** */
 
@@ -71,5 +79,7 @@ public class AuthorPointsConsumeReqDto {
     
     @Schema(description = "已使用的付费积分（内部使用，用于精确回滚）")
     private Integer usedPaidPoints;
-}
 
+    @Schema(description = "本次扣减是否被幂等拦截（内部使用）")
+    private Boolean deductSkipped;
+}

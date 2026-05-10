@@ -77,6 +77,12 @@ public class BookChapterRespDto {
     private Integer auditStatus;
 
     /**
+     * 章节版本号
+     */
+    @Schema(description = "章节版本号")
+    private Integer version;
+
+    /**
      * 审核不通过原因（简要）
      */
     @Schema(description = "审核不通过原因")

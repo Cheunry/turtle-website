@@ -53,6 +53,11 @@ public class BookChapter {
      */
     private Integer isVip;
 
+    /**
+     * 章节版本号
+     */
+    private Integer version;
+
     private LocalDateTime createTime;
 
     private LocalDateTime updateTime;

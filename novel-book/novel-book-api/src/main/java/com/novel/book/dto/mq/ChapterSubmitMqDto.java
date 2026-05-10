@@ -65,5 +65,9 @@ public class ChapterSubmitMqDto {
      */
     private Boolean auditEnable;
 
-}
+    /**
+     * 章节版本号
+     */
+    private Integer version;
 
+}

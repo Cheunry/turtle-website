@@ -41,6 +41,9 @@ public class CoverImageAsyncSubmitReqDto {
     @Schema(description = "关联描述")
     private String relatedDesc;
 
+    @Schema(description = "原积分扣减业务幂等号")
+    private String requestId;
+
     @Schema(description = "已扣免费积分（回滚用）")
     private Integer usedFreePoints;
 

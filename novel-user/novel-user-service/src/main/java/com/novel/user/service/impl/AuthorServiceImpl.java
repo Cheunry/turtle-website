@@ -2,7 +2,11 @@ package com.novel.user.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.novel.user.dao.entity.AuthorInfo;
+import com.novel.user.dao.entity.AuthorPointsConsumeLog;
+import com.novel.user.dao.entity.AuthorPointsTx;
 import com.novel.user.dao.mapper.AuthorInfoMapper;
+import com.novel.user.dao.mapper.AuthorPointsConsumeLogMapper;
+import com.novel.user.dao.mapper.AuthorPointsTxMapper;
 import com.novel.user.dto.AuthorInfoDto;
 import com.novel.user.dto.mq.AuthorPointsConsumeMqDto;
 import com.novel.user.dto.req.AuthorPointsConsumeReqDto;
@@ -45,17 +49,16 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import reactor.core.Disposable;
 import reactor.core.scheduler.Schedulers;
 
 import java.io.IOException;
-import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Objects;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Service
@@ -64,8 +67,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class AuthorServiceImpl implements AuthorService {
 
     private final AuthorInfoMapper authorInfoMapper;
+    private final AuthorPointsConsumeLogMapper authorPointsConsumeLogMapper;
+    private final AuthorPointsTxMapper authorPointsTxMapper;
     private final StringRedisTemplate stringRedisTemplate;
     private final RocketMQTemplate rocketMQTemplate;
+    private final TransactionTemplate transactionTemplate;
     private final BookFeignManager bookFeignManager;
     private final MessageService messageService;
     private final AiFeign aiFeign;
@@ -131,25 +137,20 @@ public class AuthorServiceImpl implements AuthorService {
             return RestResp.ok(null);
         }
         
-        // 从 Redis 读取最新积分（如果 Redis 中没有，会从数据库加载）
         Long authorId = authorInfoDto.getId();
-        initPointsIfNeeded(authorId);
-        
-        // 检查并重置免费积分（每日重置），确保查询时看到的是最新状态
-        resetFreePointsIfNeeded(authorId, LocalDate.now());
-        
-        int freePoints = getFreePoints(authorId);
-        int paidPoints = getPaidPoints(authorId);
+        PointsBalance pointsBalance = loadAuthorPointsFromDb(authorId, LocalDate.now());
+        syncRedisPoints(authorId, pointsBalance.freePoints(), pointsBalance.paidPoints());
         
         // 更新 DTO 中的积分值
-        authorInfoDto.setFreePoints(freePoints);
-        authorInfoDto.setPaidPoints(paidPoints);
+        authorInfoDto.setFreePoints(pointsBalance.freePoints());
+        authorInfoDto.setPaidPoints(pointsBalance.paidPoints());
         
         return RestResp.ok(authorInfoDto);
     }
     
     /**
-     * 扣除作者积分（使用 Redis + RocketMQ 方案）
+     * 扣除作者积分（MySQL 主账本事务扣减，Redis 仅作缓存）
+     *
      * @param dto 扣分请求DTO
      * @return Void
      */
@@ -171,96 +172,47 @@ public class AuthorServiceImpl implements AuthorService {
             dto.setAuthorId(authorId);
         }
 
-        // 2. 幂等性检查：生成唯一标识，防止重复扣分
-        String idempotentKey = generateIdempotentKey(authorId, dto.getConsumeType(), 
-            dto.getRelatedId(), System.currentTimeMillis());
-        String idempotentRedisKey = String.format(CacheConsts.AUTHOR_POINTS_DEDUCT_IDEMPOTENT_KEY,
-            authorId, dto.getConsumeType(), 
-            dto.getRelatedId() != null ? dto.getRelatedId() : "null",
-            idempotentKey);
-        
-        // 使用 SETNX 实现幂等性控制（24小时过期）
-        Boolean isSet = stringRedisTemplate.opsForValue()
-            .setIfAbsent(idempotentRedisKey, "1", Duration.ofHours(24));
-        
-        if (Boolean.FALSE.equals(isSet)) {
-            log.warn("作者[{}]积分扣除请求重复，已忽略。消费类型: {}, 关联ID: {}", 
-                authorId, dto.getConsumeType(), dto.getRelatedId());
-            return RestResp.fail(ErrorCodeEnum.USER_REQUEST_PARAM_ERROR, "重复请求，请勿重复提交");
+        String idempotentKey = resolveDeductIdempotentKey(authorId, dto);
+        LocalDate today = LocalDate.now();
+        PointsDeductResult deductResult;
+        try {
+            Long deductAuthorId = authorId;
+            deductResult = transactionTemplate.execute(status -> deductPointsInDb(deductAuthorId, dto, today, idempotentKey));
+        } catch (PointsNotEnoughException e) {
+            log.warn("作者[{}]积分不足，消费点数: {}, requestId: {}", authorId, dto.getConsumePoints(), idempotentKey);
+            return RestResp.fail(ErrorCodeEnum.USER_POINTS_NOT_ENOUGH);
+        } catch (Exception e) {
+            log.error("作者[{}]积分扣除失败，requestId: {}", authorId, idempotentKey, e);
+            return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR, "积分扣除失败，请稍后重试");
         }
 
-        // 3. 初始化 Redis 中的积分（如果不存在，从数据库加载）
-        initPointsIfNeeded(authorId);
+        if (deductResult == null) {
+            return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR);
+        }
 
-        // 3. 检查并重置免费积分（每日重置）
-        LocalDate today = LocalDate.now();
-        resetFreePointsIfNeeded(authorId, today);
-
-        // 4. 从 Redis 获取当前积分值
-        int currentFreePoints = getFreePoints(authorId);
-        int currentPaidPoints = getPaidPoints(authorId);
-        
-        int consumePoints = dto.getConsumePoints();
-        int usedFreePoints = 0;
-        int usedPaidPoints = 0;
-
-        // 5. Redis 原子操作：扣除积分
-        if (currentFreePoints >= consumePoints) {
-            // 免费积分足够，全部使用免费积分
-            Long newFree = stringRedisTemplate.opsForValue()
-                .decrement(getFreePointsKey(authorId), consumePoints);
-            if (newFree == null || newFree < 0) {
-                // 回滚
-                if (newFree != null && newFree < 0) {
-                    stringRedisTemplate.opsForValue()
-                        .increment(getFreePointsKey(authorId), consumePoints);
-                }
-                log.warn("作者[{}]免费积分不足，当前: {}, 需要: {}", authorId, currentFreePoints, consumePoints);
-                return RestResp.fail(ErrorCodeEnum.USER_POINTS_NOT_ENOUGH);
-            }
-            usedFreePoints = consumePoints;
-        } else {
-            // 混合使用：先用免费，再用付费
-            int needPaid = consumePoints - currentFreePoints;
-            
-            // 先扣除免费积分（如果有）
-            if (currentFreePoints > 0) {
-                Long newFree = stringRedisTemplate.opsForValue()
-                    .decrement(getFreePointsKey(authorId), currentFreePoints);
-                if (newFree == null || newFree < 0) {
-                    log.warn("作者[{}]扣除免费积分失败", authorId);
-                    return RestResp.fail(ErrorCodeEnum.USER_POINTS_NOT_ENOUGH);
-                }
-                usedFreePoints = currentFreePoints;
-            }
-            
-            // 再扣除付费积分（原子操作）
-            Long newPaid = stringRedisTemplate.opsForValue()
-                .decrement(getPaidPointsKey(authorId), needPaid);
-            if (newPaid == null || newPaid < 0) {
-                // 回滚免费积分
-                if (usedFreePoints > 0) {
-                    stringRedisTemplate.opsForValue()
-                        .increment(getFreePointsKey(authorId), usedFreePoints);
-                }
-                log.warn("作者[{}]付费积分不足，当前: {}, 需要: {}", authorId, currentPaidPoints, needPaid);
-                return RestResp.fail(ErrorCodeEnum.USER_POINTS_NOT_ENOUGH);
-            }
-            usedPaidPoints = needPaid;
+        if (deductResult.duplicate()) {
+            dto.setUsedFreePoints(0);
+            dto.setUsedPaidPoints(0);
+            dto.setDeductSkipped(true);
+            log.info("作者[{}]积分扣除请求重复，按幂等成功返回。消费类型: {}, 关联ID: {}, requestId: {}",
+                authorId, dto.getConsumeType(), dto.getRelatedId(), idempotentKey);
+            return RestResp.ok();
         }
 
         // 保存使用的积分信息到dto，用于后续回滚
-        dto.setUsedFreePoints(usedFreePoints);
-        dto.setUsedPaidPoints(usedPaidPoints);
+        dto.setUsedFreePoints(deductResult.usedFreePoints());
+        dto.setUsedPaidPoints(deductResult.usedPaidPoints());
+        dto.setDeductSkipped(false);
+        syncRedisPoints(authorId, deductResult.freePoints(), deductResult.paidPoints());
 
         // 6. 发送 MQ 消息，异步持久化到数据库
         try {
             AuthorPointsConsumeMqDto mqDto = AuthorPointsConsumeMqDto.builder()
                 .authorId(authorId)
                 .consumeType(dto.getConsumeType())
-                .consumePoints(consumePoints)
-                .usedFreePoints(usedFreePoints)
-                .usedPaidPoints(usedPaidPoints)
+                .consumePoints(dto.getConsumePoints())
+                .usedFreePoints(deductResult.usedFreePoints())
+                .usedPaidPoints(deductResult.usedPaidPoints())
                 .relatedId(dto.getRelatedId())
                 .relatedDesc(dto.getRelatedDesc())
                 .consumeDate(today)
@@ -271,10 +223,10 @@ public class AuthorServiceImpl implements AuthorService {
                 + AmqpConsts.AuthorPointsConsumeMq.TAG_DEDUCT;
             rocketMQTemplate.convertAndSend(destination, mqDto);
             log.debug("作者[{}]积分消费消息已发送到MQ，消费点数: {}, 幂等性key: {}", 
-                authorId, consumePoints, idempotentKey);
+                authorId, dto.getConsumePoints(), idempotentKey);
         } catch (Exception e) {
-            log.error("发送积分消费MQ消息失败，作者ID: {}, 消费点数: {}", authorId, consumePoints, e);
-            // MQ 发送失败不影响积分扣除，因为 Redis 已经扣除了
+            log.error("发送积分消费MQ消息失败，作者ID: {}, 消费点数: {}", authorId, dto.getConsumePoints(), e);
+            // MQ 发送失败不影响积分扣除，MySQL 主账本已完成事务扣减
         }
 
         return RestResp.ok();
@@ -302,191 +254,299 @@ public class AuthorServiceImpl implements AuthorService {
             dto.setAuthorId(authorId);
         }
 
-        int consumePoints = dto.getConsumePoints();
-        if (consumePoints <= 0) {
-            log.warn("作者[{}]回滚积分点数无效: {}", authorId, consumePoints);
+        if (Boolean.TRUE.equals(dto.getDeductSkipped())) {
+            log.info("作者[{}]本次积分扣减被幂等拦截，无需回滚。requestId: {}", authorId, dto.getRequestId());
+            return RestResp.ok();
+        }
+
+        String requestId = dto.getRequestId();
+        if (requestId == null || requestId.isBlank()) {
+            log.warn("作者[{}]回滚积分缺少原扣减 requestId", authorId);
             return RestResp.fail(ErrorCodeEnum.USER_REQUEST_PARAM_ERROR);
         }
+        requestId = requestId.trim();
 
-        // 1. 从 Redis 获取当前积分值，计算需要回滚的积分
-        initPointsIfNeeded(authorId);
-        
-        // 2. 精确回滚：根据实际使用的免费积分和付费积分进行回滚
-        // 优先回滚到付费积分，再回滚到免费积分（与扣除顺序相反）
-        Integer usedFreePoints = dto.getUsedFreePoints();
-        Integer usedPaidPoints = dto.getUsedPaidPoints();
-        
-        // 如果没有记录使用的积分信息，使用旧逻辑（全部回滚到免费积分）
-        if (usedFreePoints == null && usedPaidPoints == null) {
-            log.warn("作者[{}]回滚积分时缺少使用记录，使用默认回滚策略（全部回滚到免费积分）", authorId);
-            usedFreePoints = consumePoints;
-            usedPaidPoints = 0;
-        } else {
-            // 确保值不为null
-            if (usedFreePoints == null) usedFreePoints = 0;
-            if (usedPaidPoints == null) usedPaidPoints = 0;
+        String rollbackKey = requestId + ":ROLLBACK";
+        if (selectPointsTx(rollbackKey) != null) {
+            log.info("作者[{}]积分已回滚过，按幂等成功返回。requestId: {}", authorId, requestId);
+            return RestResp.ok();
         }
-        
+
+        AuthorPointsTx deductTx = authorPointsTxMapper.selectOne(
+            new QueryWrapper<AuthorPointsTx>()
+                .eq("request_id", requestId)
+                .eq("author_id", authorId)
+                .eq("tx_type", 1));
+        if (deductTx == null) {
+            log.warn("作者[{}]回滚积分未找到原扣减事务。requestId: {}", authorId, requestId);
+            return RestResp.fail(ErrorCodeEnum.USER_REQUEST_PARAM_ERROR, "未找到原扣减事务，无法回滚");
+        }
+        if (Objects.equals(deductTx.getStatus(), 2)) {
+            log.info("作者[{}]原扣减事务已标记回滚，按幂等成功返回。requestId: {}", authorId, requestId);
+            return RestResp.ok();
+        }
+
+        int usedFreePoints = Math.abs(Math.min(deductTx.getFreePointsDelta() != null ? deductTx.getFreePointsDelta() : 0, 0));
+        int usedPaidPoints = Math.abs(Math.min(deductTx.getPaidPointsDelta() != null ? deductTx.getPaidPointsDelta() : 0, 0));
+        int rollbackPoints = usedFreePoints + usedPaidPoints;
+        if (rollbackPoints <= 0) {
+            log.warn("作者[{}]原扣减事务积分无效。requestId: {}, free: {}, paid: {}",
+                authorId, requestId, usedFreePoints, usedPaidPoints);
+            return RestResp.fail(ErrorCodeEnum.USER_REQUEST_PARAM_ERROR);
+        }
+        final Long rollbackAuthorId = authorId;
+
         try {
-            // 先回滚付费积分
-            if (usedPaidPoints > 0) {
-                Long newPaid = stringRedisTemplate.opsForValue()
-                    .increment(getPaidPointsKey(authorId), usedPaidPoints);
-                if (newPaid == null) {
-                    log.error("作者[{}]回滚付费积分失败，Redis操作返回null", authorId);
-                    return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR);
+            PointsBalance balance = transactionTemplate.execute(status -> {
+                AuthorInfo author = authorInfoMapper.selectOne(
+                    new QueryWrapper<AuthorInfo>()
+                        .eq("id", rollbackAuthorId)
+                        .last("for update"));
+                if (author == null) {
+                    throw new IllegalStateException("作者不存在");
                 }
-                log.debug("作者[{}]回滚付费积分成功，回滚点数: {}, 当前付费积分: {}", 
-                    authorId, usedPaidPoints, newPaid);
-            }
-            
-            // 再回滚免费积分
-            if (usedFreePoints > 0) {
-                Long newFree = stringRedisTemplate.opsForValue()
-                    .increment(getFreePointsKey(authorId), usedFreePoints);
-                if (newFree == null) {
-                    log.error("作者[{}]回滚免费积分失败，Redis操作返回null", authorId);
-                    return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR);
+
+                if (selectPointsTx(rollbackKey) != null) {
+                    return null;
                 }
-                log.debug("作者[{}]回滚免费积分成功，回滚点数: {}, 当前免费积分: {}", 
-                    authorId, usedFreePoints, newFree);
+
+                int newFreePoints = (author.getFreePoints() != null ? author.getFreePoints() : 0) + usedFreePoints;
+                int newPaidPoints = (author.getPaidPoints() != null ? author.getPaidPoints() : 0) + usedPaidPoints;
+                LocalDateTime now = LocalDateTime.now();
+                author.setFreePoints(newFreePoints);
+                author.setPaidPoints(newPaidPoints);
+                author.setUpdateTime(now);
+                if (usedFreePoints > 0) {
+                    author.setFreePointsUpdateTime(now);
+                }
+                authorInfoMapper.updateById(author);
+
+                AuthorPointsTx rollbackTx = new AuthorPointsTx();
+                rollbackTx.setRequestId(rollbackKey);
+                rollbackTx.setAuthorId(rollbackAuthorId);
+                rollbackTx.setTxType(2);
+                rollbackTx.setConsumeType(deductTx.getConsumeType());
+                rollbackTx.setFreePointsDelta(usedFreePoints);
+                rollbackTx.setPaidPointsDelta(usedPaidPoints);
+                rollbackTx.setStatus(1);
+                rollbackTx.setRelatedId(deductTx.getRelatedId());
+                rollbackTx.setRelatedDesc(deductTx.getRelatedDesc());
+                rollbackTx.setCreateTime(now);
+                rollbackTx.setUpdateTime(now);
+                authorPointsTxMapper.insert(rollbackTx);
+
+                deductTx.setStatus(2);
+                deductTx.setUpdateTime(now);
+                authorPointsTxMapper.updateById(deductTx);
+
+                AuthorPointsConsumeLog rollbackLog = new AuthorPointsConsumeLog();
+                rollbackLog.setAuthorId(rollbackAuthorId);
+                rollbackLog.setConsumeType(deductTx.getConsumeType());
+                rollbackLog.setConsumePoints(rollbackPoints);
+                rollbackLog.setPointsType(0);
+                rollbackLog.setRelatedId(deductTx.getRelatedId());
+                rollbackLog.setRelatedDesc(deductTx.getRelatedDesc() != null ? "回滚: " + deductTx.getRelatedDesc() : "积分回滚");
+                rollbackLog.setConsumeDate(LocalDate.now());
+                rollbackLog.setCreateTime(now);
+                rollbackLog.setUpdateTime(now);
+                rollbackLog.setIdempotentKey(rollbackKey);
+                authorPointsConsumeLogMapper.insert(rollbackLog);
+                return new PointsBalance(newFreePoints, newPaidPoints);
+            });
+
+            if (balance == null) {
+                log.info("作者[{}]积分已回滚过，按幂等成功返回。requestId: {}", authorId, requestId);
+                return RestResp.ok();
             }
-            
-            log.info("作者[{}]积分回滚成功，回滚免费积分: {}, 回滚付费积分: {}", 
-                authorId, usedFreePoints, usedPaidPoints);
+
+            syncRedisPoints(authorId, balance.freePoints(), balance.paidPoints());
+            log.info("作者[{}]积分回滚成功，requestId: {}, 回滚免费积分: {}, 回滚付费积分: {}",
+                authorId, requestId, usedFreePoints, usedPaidPoints);
         } catch (Exception e) {
-            log.error("作者[{}]回滚积分失败，回滚免费积分: {}, 回滚付费积分: {}", 
-                authorId, usedFreePoints, usedPaidPoints, e);
+            log.error("作者[{}]积分回滚失败，requestId: {}, 回滚免费积分: {}, 回滚付费积分: {}",
+                authorId, requestId, usedFreePoints, usedPaidPoints, e);
             return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR);
-        }
-
-        // 3. 发送 MQ 消息，异步持久化回滚记录到数据库
-        LocalDate today = LocalDate.now();
-        try {
-            AuthorPointsConsumeMqDto mqDto = AuthorPointsConsumeMqDto.builder()
-                .authorId(authorId)
-                .consumeType(dto.getConsumeType())
-                .consumePoints(consumePoints)
-                .usedFreePoints(usedFreePoints != null ? usedFreePoints : consumePoints) // 使用实际使用的免费积分
-                .usedPaidPoints(usedPaidPoints != null ? usedPaidPoints : 0) // 使用实际使用的付费积分
-                .relatedId(dto.getRelatedId())
-                .relatedDesc(dto.getRelatedDesc() != null ? 
-                    "回滚: " + dto.getRelatedDesc() : "积分回滚")
-                .consumeDate(today)
-                .idempotentKey(generateIdempotentKey(authorId, dto.getConsumeType(), 
-                    dto.getRelatedId(), System.currentTimeMillis()))
-                .build();
-                
-            String destination = AmqpConsts.AuthorPointsConsumeMq.TOPIC + ":" 
-                + AmqpConsts.AuthorPointsConsumeMq.TAG_ROLLBACK;
-            rocketMQTemplate.convertAndSend(destination, mqDto);
-            log.debug("作者[{}]积分回滚消息已发送到MQ，回滚点数: {}", authorId, consumePoints);
-        } catch (Exception e) {
-            log.error("发送积分回滚MQ消息失败，作者ID: {}, 回滚点数: {}", authorId, consumePoints, e);
-            // MQ 发送失败不影响积分回滚，因为 Redis 已经回滚了
         }
 
         return RestResp.ok();
     }
 
     /**
-     * 生成幂等性唯一标识
+     * 解析扣减幂等号。优先使用调用方传入的稳定 requestId，避免重复提交时生成新 key。
      */
-    private String generateIdempotentKey(Long authorId, Integer consumeType, 
-                                         Long relatedId, long timestamp) {
-        return String.format("%s_%s_%s_%s_%s", 
-            authorId, 
-            consumeType, 
-            relatedId != null ? relatedId : "null",
-            timestamp,
-            UUID.randomUUID().toString().substring(0, 8));
+    private String resolveDeductIdempotentKey(Long authorId, AuthorPointsConsumeReqDto dto) {
+        String requestId = dto.getRequestId();
+        if (requestId != null && !requestId.isBlank()) {
+            return requestId.trim();
+        }
+        String fallbackKey = String.format("LEGACY:%s:%s:%s:%s",
+            authorId,
+            dto.getConsumeType(),
+            dto.getRelatedId() != null ? dto.getRelatedId() : "null",
+            System.currentTimeMillis());
+        log.warn("作者[{}]积分扣除请求未传 requestId，使用临时幂等号: {}", authorId, fallbackKey);
+        return fallbackKey;
     }
 
-    /**
-     * 初始化积分（如果 Redis 中不存在，从数据库加载）
-     */
-    private void initPointsIfNeeded(Long authorId) {
-        String freeKey = getFreePointsKey(authorId);
-        String paidKey = getPaidPointsKey(authorId);
-        
-        boolean freeExists = stringRedisTemplate.hasKey(freeKey);
-        boolean paidExists = stringRedisTemplate.hasKey(paidKey);
-        
-        if (!freeExists || !paidExists) {
-            // 从数据库加载
-            AuthorInfo author = authorInfoMapper.selectById(authorId);
-            if (author != null) {
-                int free = author.getFreePoints() != null ? author.getFreePoints() : 0;
-                int paid = author.getPaidPoints() != null ? author.getPaidPoints() : 0;
-                
-                if (!freeExists) {
-                    stringRedisTemplate.opsForValue().set(freeKey, String.valueOf(free));
-                }
-                if (!paidExists) {
-                    stringRedisTemplate.opsForValue().set(paidKey, String.valueOf(paid));
-                }
-                log.debug("作者[{}]积分已从数据库加载到Redis，免费: {}, 付费: {}", authorId, free, paid);
+    private PointsDeductResult deductPointsInDb(Long authorId,
+                                                AuthorPointsConsumeReqDto dto,
+                                                LocalDate today,
+                                                String requestId) {
+        AuthorPointsTx existingTx = selectPointsTx(requestId);
+        if (existingTx != null) {
+            return PointsDeductResult.duplicateResult();
+        }
+
+        AuthorInfo author = authorInfoMapper.selectOne(
+            new QueryWrapper<AuthorInfo>()
+                .eq("id", authorId)
+                .last("for update"));
+        if (author == null) {
+            throw new IllegalStateException("作者不存在");
+        }
+
+        existingTx = selectPointsTx(requestId);
+        if (existingTx != null) {
+            return PointsDeductResult.duplicateResult();
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        resetAuthorFreePointsIfNeeded(author, today, now);
+
+        int currentFreePoints = author.getFreePoints() != null ? author.getFreePoints() : 0;
+        int currentPaidPoints = author.getPaidPoints() != null ? author.getPaidPoints() : 0;
+        int consumePoints = dto.getConsumePoints() != null ? dto.getConsumePoints() : 0;
+        if (consumePoints <= 0) {
+            throw new IllegalArgumentException("消费积分必须大于0");
+        }
+
+        int usedFreePoints = Math.min(currentFreePoints, consumePoints);
+        int usedPaidPoints = consumePoints - usedFreePoints;
+        if (currentPaidPoints < usedPaidPoints) {
+            throw new PointsNotEnoughException();
+        }
+
+        int newFreePoints = currentFreePoints - usedFreePoints;
+        int newPaidPoints = currentPaidPoints - usedPaidPoints;
+        author.setFreePoints(newFreePoints);
+        author.setPaidPoints(newPaidPoints);
+        author.setUpdateTime(now);
+        if (usedFreePoints > 0) {
+            author.setFreePointsUpdateTime(now);
+        }
+        authorInfoMapper.updateById(author);
+
+        AuthorPointsTx tx = new AuthorPointsTx();
+        tx.setRequestId(requestId);
+        tx.setAuthorId(authorId);
+        tx.setTxType(1);
+        tx.setConsumeType(dto.getConsumeType());
+        tx.setFreePointsDelta(-usedFreePoints);
+        tx.setPaidPointsDelta(-usedPaidPoints);
+        tx.setStatus(1);
+        tx.setRelatedId(dto.getRelatedId());
+        tx.setRelatedDesc(dto.getRelatedDesc());
+        tx.setCreateTime(now);
+        tx.setUpdateTime(now);
+        authorPointsTxMapper.insert(tx);
+
+        insertDeductLogIfNeeded(authorId, dto, usedFreePoints, 0, today, requestId + "_FREE", now);
+        insertDeductLogIfNeeded(authorId, dto, usedPaidPoints, 1, today, requestId + "_PAID", now);
+
+        return new PointsDeductResult(false, usedFreePoints, usedPaidPoints, newFreePoints, newPaidPoints);
+    }
+
+    private AuthorPointsTx selectPointsTx(String requestId) {
+        return authorPointsTxMapper.selectOne(
+            new QueryWrapper<AuthorPointsTx>()
+                .eq("request_id", requestId));
+    }
+
+    private boolean resetAuthorFreePointsIfNeeded(AuthorInfo author, LocalDate today, LocalDateTime now) {
+        LocalDateTime updateTime = author.getFreePointsUpdateTime();
+        if (updateTime == null || updateTime.toLocalDate().isBefore(today)) {
+            author.setFreePoints(500);
+            author.setFreePointsUpdateTime(now);
+            return true;
+        }
+        return false;
+    }
+
+    private PointsBalance loadAuthorPointsFromDb(Long authorId, LocalDate today) {
+        PointsBalance balance = transactionTemplate.execute(status -> {
+            AuthorInfo author = authorInfoMapper.selectOne(
+                new QueryWrapper<AuthorInfo>()
+                    .eq("id", authorId)
+                    .last("for update"));
+            if (author == null) {
+                return new PointsBalance(0, 0);
             }
-        }
+
+            LocalDateTime now = LocalDateTime.now();
+            if (resetAuthorFreePointsIfNeeded(author, today, now)) {
+                author.setUpdateTime(now);
+                authorInfoMapper.updateById(author);
+            }
+
+            int freePoints = author.getFreePoints() != null ? author.getFreePoints() : 0;
+            int paidPoints = author.getPaidPoints() != null ? author.getPaidPoints() : 0;
+            return new PointsBalance(freePoints, paidPoints);
+        });
+        return balance != null ? balance : new PointsBalance(0, 0);
     }
 
-    /**
-     * 每日重置免费积分
-     */
-    private void resetFreePointsIfNeeded(Long authorId, LocalDate today) {
-        String resetKey = String.format(CacheConsts.AUTHOR_FREE_POINTS_RESET_KEY, authorId, today);
-        String freeKey = getFreePointsKey(authorId);
-        
-        // 使用 SETNX 实现每日只重置一次
-        Boolean isSet = stringRedisTemplate.opsForValue()
-            .setIfAbsent(resetKey, "1", Duration.ofDays(1));
-            
-        if (Boolean.TRUE.equals(isSet)) {
-            // 今天第一次使用，重置免费积分为 500
-            stringRedisTemplate.opsForValue().set(freeKey, "500");
-            
-            // 【新增】同步更新数据库，确保 Redis 丢失后数据依然正确
-            AuthorInfo update = new AuthorInfo();
-            update.setId(authorId);
-            update.setFreePoints(500);
-            // 这里只更新免费积分和时间，不影响付费积分
-            update.setFreePointsUpdateTime(LocalDateTime.now());
-            authorInfoMapper.updateById(update);
-            
-            log.debug("作者[{}]免费积分已重置为500 (Redis + DB)", authorId);
-        }
-    }
-
-    /**
-     * 获取免费积分
-     */
-    private int getFreePoints(Long authorId) {
-        String value = stringRedisTemplate.opsForValue().get(getFreePointsKey(authorId));
-        if (value == null) {
-            return 0;
+    private void insertDeductLogIfNeeded(Long authorId,
+                                         AuthorPointsConsumeReqDto dto,
+                                         int consumePoints,
+                                         int pointsType,
+                                         LocalDate consumeDate,
+                                         String idempotentKey,
+                                         LocalDateTime now) {
+        if (consumePoints <= 0) {
+            return;
         }
         try {
-            return Integer.parseInt(value);
-        } catch (NumberFormatException e) {
-            log.error("解析免费积分失败，作者ID: {}, 值: {}", authorId, value, e);
-            return 0;
+            AuthorPointsConsumeLog consumeLog = new AuthorPointsConsumeLog();
+            consumeLog.setAuthorId(authorId);
+            consumeLog.setConsumeType(dto.getConsumeType());
+            consumeLog.setConsumePoints(consumePoints);
+            consumeLog.setPointsType(pointsType);
+            consumeLog.setRelatedId(dto.getRelatedId());
+            consumeLog.setRelatedDesc(dto.getRelatedDesc());
+            consumeLog.setConsumeDate(consumeDate);
+            consumeLog.setCreateTime(now);
+            consumeLog.setUpdateTime(now);
+            consumeLog.setIdempotentKey(idempotentKey);
+            authorPointsConsumeLogMapper.insert(consumeLog);
+        } catch (org.springframework.dao.DuplicateKeyException e) {
+            log.info("扣减流水已存在，跳过重复插入。作者ID: {}, Key: {}", authorId, idempotentKey);
         }
     }
 
-    /**
-     * 获取付费积分
-     */
-    private int getPaidPoints(Long authorId) {
-        String value = stringRedisTemplate.opsForValue().get(getPaidPointsKey(authorId));
-        if (value == null) {
-            return 0;
-        }
+    private void syncRedisPoints(Long authorId, int freePoints, int paidPoints) {
         try {
-            return Integer.parseInt(value);
-        } catch (NumberFormatException e) {
-            log.error("解析付费积分失败，作者ID: {}, 值: {}", authorId, value, e);
-            return 0;
+            stringRedisTemplate.opsForValue().set(getFreePointsKey(authorId), String.valueOf(freePoints));
+            stringRedisTemplate.opsForValue().set(getPaidPointsKey(authorId), String.valueOf(paidPoints));
+        } catch (Exception e) {
+            log.warn("同步作者积分到 Redis 失败，作者ID: {}, free: {}, paid: {}",
+                authorId, freePoints, paidPoints, e);
         }
+    }
+
+    private record PointsBalance(int freePoints, int paidPoints) {
+    }
+
+    private record PointsDeductResult(boolean duplicate,
+                                      int usedFreePoints,
+                                      int usedPaidPoints,
+                                      int freePoints,
+                                      int paidPoints) {
+        private static PointsDeductResult duplicateResult() {
+            return new PointsDeductResult(true, 0, 0, 0, 0);
+        }
+    }
+
+    private static class PointsNotEnoughException extends RuntimeException {
     }
 
     /**
@@ -1027,6 +1087,7 @@ public class AuthorServiceImpl implements AuthorService {
             asyncReq.setConsumePoints(dto.getConsumePoints());
             asyncReq.setRelatedId(dto.getRelatedId());
             asyncReq.setRelatedDesc(dto.getRelatedDesc());
+            asyncReq.setRequestId(dto.getRequestId());
             asyncReq.setUsedFreePoints(dto.getUsedFreePoints());
             asyncReq.setUsedPaidPoints(dto.getUsedPaidPoints());
 

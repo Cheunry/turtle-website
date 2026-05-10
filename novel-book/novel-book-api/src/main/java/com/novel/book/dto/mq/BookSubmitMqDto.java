@@ -80,5 +80,9 @@ public class BookSubmitMqDto {
      */
     private Boolean auditEnable;
 
-}
+    /**
+     * 书籍版本号
+     */
+    private Integer version;
 
+}

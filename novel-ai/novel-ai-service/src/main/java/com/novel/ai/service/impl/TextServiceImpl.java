@@ -42,13 +42,15 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Semaphore;
 
 /**
  * 文本相关 AI 能力入口。书籍审核、章节审核已经下沉到
  * {@code com.novel.ai.agent} 下的 Agent 流水线，本类仅做：
  * <ol>
- *     <li>组装审核请求上下文并交给对应 {@link AuditPipeline} 执行；书籍/章节审核在
- *         {@link com.novel.ai.config.AuditPipelineExecutorConfig} 的虚拟线程执行器上跑整条链（含等 ES、调模型等阻塞）；</li>
+ *     <li>组装审核请求上下文并交给对应 {@link AuditPipeline} 执行；书籍/章节审核经
+ *         {@link com.novel.ai.config.AuditPipelineExecutorConfig#AUDIT_CONCURRENCY_SEMAPHORE} 限并发后，
+ *         在虚拟线程执行器上跑整条链（含等 ES、调模型等阻塞）；</li>
  *     <li>承载流程较轻的能力：润色、封面提示词生成、审核经验规则抽取。</li>
  * </ol>
  */
@@ -72,6 +74,7 @@ public class TextServiceImpl implements TextService {
      * 见 {@link com.novel.ai.config.AuditPipelineExecutorConfig}。
      */
     private final Executor auditPipelineExecutor;
+    private final Semaphore auditConcurrencySemaphore;
     private final ObjectMapper objectMapper;
 
     public TextServiceImpl(
@@ -81,6 +84,7 @@ public class TextServiceImpl implements TextService {
             AuditPipeline<BookAuditContext> bookAuditPipeline,
             AuditPipeline<ChapterAuditContext> chapterAuditPipeline,
             @Qualifier(AuditPipelineExecutorConfig.AUDIT_PIPELINE_EXECUTOR) Executor auditPipelineExecutor,
+            @Qualifier(AuditPipelineExecutorConfig.AUDIT_CONCURRENCY_SEMAPHORE) Semaphore auditConcurrencySemaphore,
             ObjectMapper objectMapper) {
         this.textChatClient = textChatClient;
         this.promptLoader = promptLoader;
@@ -88,6 +92,7 @@ public class TextServiceImpl implements TextService {
         this.bookAuditPipeline = bookAuditPipeline;
         this.chapterAuditPipeline = chapterAuditPipeline;
         this.auditPipelineExecutor = auditPipelineExecutor;
+        this.auditConcurrencySemaphore = auditConcurrencySemaphore;
         this.objectMapper = objectMapper;
     }
 
@@ -434,9 +439,16 @@ public class TextServiceImpl implements TextService {
     }
 
     /**
-     * 在 {@link #auditPipelineExecutor} 上跑流水线；异常语义与同步 {@code execute} 一致。
+     * 先 {@link Semaphore#acquire()}（满则阻塞直至有许可），再在 {@link #auditPipelineExecutor} 上跑流水线，
+     * {@code finally} 中 {@link Semaphore#release()}；异常语义与同步 {@code execute} 一致。
      */
     private void runAuditPipeline(Runnable pipeline) {
+        try {
+            auditConcurrencySemaphore.acquire();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("审核排队被中断", e);
+        }
         try {
             CompletableFuture.runAsync(pipeline, auditPipelineExecutor).join();
         } catch (CompletionException e) {
@@ -448,6 +460,8 @@ public class TextServiceImpl implements TextService {
                 throw re;
             }
             throw new RuntimeException(c);
+        } finally {
+            auditConcurrencySemaphore.release();
         }
     }
 }

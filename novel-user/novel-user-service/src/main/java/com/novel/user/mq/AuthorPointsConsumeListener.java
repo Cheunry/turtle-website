@@ -1,17 +1,13 @@
 package com.novel.user.mq;
 
 import com.novel.common.constant.AmqpConsts;
-import com.novel.common.constant.CacheConsts;
-import com.novel.user.dao.entity.AuthorInfo;
 import com.novel.user.dao.entity.AuthorPointsConsumeLog;
-import com.novel.user.dao.mapper.AuthorInfoMapper;
 import com.novel.user.dao.mapper.AuthorPointsConsumeLogMapper;
 import com.novel.user.dto.mq.AuthorPointsConsumeMqDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.spring.annotation.RocketMQMessageListener;
 import org.apache.rocketmq.spring.core.RocketMQListener;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -31,9 +27,7 @@ import java.time.LocalDateTime;
 )
 public class AuthorPointsConsumeListener implements RocketMQListener<AuthorPointsConsumeMqDto> {
 
-    private final AuthorInfoMapper authorInfoMapper;
     private final AuthorPointsConsumeLogMapper logMapper;
-    private final StringRedisTemplate stringRedisTemplate;
     private final TransactionTemplate transactionTemplate;
 
     @Override
@@ -43,16 +37,7 @@ public class AuthorPointsConsumeListener implements RocketMQListener<AuthorPoint
         try {
             Long authorId = dto.getAuthorId();
 
-            String freeKey = String.format(CacheConsts.AUTHOR_FREE_POINTS_KEY, authorId);
-            String paidKey = String.format(CacheConsts.AUTHOR_PAID_POINTS_KEY, authorId);
-
-            String freeValue = stringRedisTemplate.opsForValue().get(freeKey);
-            String paidValue = stringRedisTemplate.opsForValue().get(paidKey);
-
-            int redisFree = parseRedisInt(freeValue, authorId, "免费");
-            int redisPaid = parseRedisInt(paidValue, authorId, "付费");
-
-            transactionTemplate.executeWithoutResult(status -> persistConsume(dto, authorId, redisFree, redisPaid));
+            transactionTemplate.executeWithoutResult(status -> persistConsume(dto, authorId));
 
             log.info("作者[{}]积分消费记录已持久化，免费: {}, 付费: {}",
                     authorId, dto.getUsedFreePoints(), dto.getUsedPaidPoints());
@@ -63,39 +48,7 @@ public class AuthorPointsConsumeListener implements RocketMQListener<AuthorPoint
         }
     }
 
-    private static int parseRedisInt(String value, Long authorId, String label) {
-        if (value == null) {
-            return 0;
-        }
-        try {
-            return Integer.parseInt(value);
-        } catch (NumberFormatException e) {
-            log.warn("解析 Redis {}积分失败，作者ID: {}, 值: {}", label, authorId, value);
-            return 0;
-        }
-    }
-
-    private void persistConsume(AuthorPointsConsumeMqDto dto, Long authorId, int redisFree, int redisPaid) {
-        AuthorInfo author = authorInfoMapper.selectById(authorId);
-        if (author != null) {
-            int oldFree = author.getFreePoints() != null ? author.getFreePoints() : 0;
-            int oldPaid = author.getPaidPoints() != null ? author.getPaidPoints() : 0;
-
-            author.setFreePoints(redisFree);
-            author.setPaidPoints(redisPaid);
-            author.setUpdateTime(LocalDateTime.now());
-
-            if (dto.getUsedFreePoints() > 0) {
-                author.setFreePointsUpdateTime(LocalDateTime.now());
-            }
-
-            authorInfoMapper.updateById(author);
-            log.debug("作者[{}]积分已从 Redis 同步到数据库，免费: {} -> {}, 付费: {} -> {}",
-                    authorId, oldFree, redisFree, oldPaid, redisPaid);
-        } else {
-            log.warn("作者[{}]不存在，跳过积分更新", authorId);
-        }
-
+    private void persistConsume(AuthorPointsConsumeMqDto dto, Long authorId) {
         if (dto.getUsedFreePoints() > 0) {
             try {
                 AuthorPointsConsumeLog freeLog = new AuthorPointsConsumeLog();

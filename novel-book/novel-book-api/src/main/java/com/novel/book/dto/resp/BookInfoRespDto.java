@@ -129,6 +129,12 @@ public class BookInfoRespDto {
     private Integer auditStatus;
 
     /**
+     * 书籍版本号
+     */
+    @Schema(description = "书籍版本号")
+    private Integer version;
+
+    /**
      * 审核不通过原因（简要）
      */
     @Schema(description = "审核不通过原因")

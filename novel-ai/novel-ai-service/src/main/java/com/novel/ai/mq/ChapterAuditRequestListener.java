@@ -65,6 +65,7 @@ public class ChapterAuditRequestListener implements RocketMQListener<ChapterAudi
                         .taskId(requestDto.getTaskId())
                         .chapterId(requestDto.getChapterId())
                         .bookId(requestDto.getBookId())
+                        .version(requestDto.getVersion())
                         .auditStatus(auditResult.getAuditStatus())
                         .aiConfidence(auditResult.getAiConfidence())
                         .auditReason(auditResult.getAuditReason())
@@ -80,6 +81,7 @@ public class ChapterAuditRequestListener implements RocketMQListener<ChapterAudi
                         .taskId(requestDto.getTaskId())
                         .chapterId(requestDto.getChapterId())
                         .bookId(requestDto.getBookId())
+                        .version(requestDto.getVersion())
                         .auditStatus(0) // 待审核
                         .aiConfidence(new BigDecimal("0.0"))
                         .auditReason(auditResp.getMessage() != null ? 
@@ -108,6 +110,7 @@ public class ChapterAuditRequestListener implements RocketMQListener<ChapterAudi
                         .taskId(requestDto.getTaskId())
                         .chapterId(requestDto.getChapterId())
                         .bookId(requestDto.getBookId())
+                        .version(requestDto.getVersion())
                         .auditStatus(0) // 待审核
                         .aiConfidence(new BigDecimal("0.0"))
                         .auditReason("AI审核服务异常: " + e.getMessage())
@@ -124,4 +127,3 @@ public class ChapterAuditRequestListener implements RocketMQListener<ChapterAudi
         }
     }
 }
-

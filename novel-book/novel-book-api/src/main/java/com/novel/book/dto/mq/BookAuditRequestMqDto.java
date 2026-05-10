@@ -49,5 +49,9 @@ public class BookAuditRequestMqDto {
      */
     private Long authorId;
 
-}
+    /**
+     * 书籍版本号
+     */
+    private Integer version;
 
+}

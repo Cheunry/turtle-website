@@ -110,6 +110,11 @@ public class BookInfo {
     private Integer isVip;
 
     /**
+     * 书籍版本号
+     */
+    private Integer version;
+
+    /**
      * 创建时间
      */
     private LocalDateTime createTime;

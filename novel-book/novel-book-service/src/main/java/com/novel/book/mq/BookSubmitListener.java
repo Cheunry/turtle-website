@@ -21,7 +21,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Objects;
-import java.util.UUID;
 
 /**
  * 书籍提交MQ消费者（统一处理书籍新增和更新的所有数据库操作）
@@ -92,6 +91,7 @@ public class BookSubmitListener implements RocketMQListener<BookSubmitMqDto> {
                 .bookDesc(submitDto.getBookDesc())
                 .score(0)
                 .isVip(submitDto.getIsVip())
+                .version(0)
                 .auditStatus(Boolean.TRUE.equals(submitDto.getAuditEnable()) ? 0 : 1) // 根据审核开关决定初始状态
                 .createTime(LocalDateTime.now())
                 .updateTime(LocalDateTime.now())
@@ -124,12 +124,12 @@ public class BookSubmitListener implements RocketMQListener<BookSubmitMqDto> {
             return;
         }
 
-        // 2. 更新信息（needAudit 仅当书名/简介相对库中数据实际变更，避免仅改封面等全量提交触发重复 AI 审核）
+        // 2. 更新信息（needAudit 仅当送审内容真实变更，避免仅改封面等全量提交触发重复 AI 审核）
         BookInfo updateBook = new BookInfo();
         updateBook.setId(submitDto.getBookId());
         
         boolean hasUpdate = false;
-        boolean needAudit = false; // 仅书名或简介真实变化时为 true，用于重置审核状态与发送审书 MQ
+        boolean needAudit = false; // 书名/简介/分类真实变化时为 true，用于递增版本、重置审核状态与发送审书 MQ
         
         if (StringUtils.isNotBlank(submitDto.getBookName())
                 && textAuditFieldChanged(bookInfo.getBookName(), submitDto.getBookName())) {
@@ -150,10 +150,16 @@ public class BookSubmitListener implements RocketMQListener<BookSubmitMqDto> {
         if (submitDto.getCategoryId() != null) {
             updateBook.setCategoryId(submitDto.getCategoryId());
             hasUpdate = true;
+            if (!Objects.equals(bookInfo.getCategoryId(), submitDto.getCategoryId())) {
+                needAudit = true;
+            }
         }
         if (StringUtils.isNotBlank(submitDto.getCategoryName())) {
             updateBook.setCategoryName(submitDto.getCategoryName());
             hasUpdate = true;
+            if (textAuditFieldChanged(bookInfo.getCategoryName(), submitDto.getCategoryName())) {
+                needAudit = true;
+            }
         }
         if (submitDto.getWorkDirection() != null) {
             updateBook.setWorkDirection(submitDto.getWorkDirection());
@@ -170,7 +176,10 @@ public class BookSubmitListener implements RocketMQListener<BookSubmitMqDto> {
 
         if (hasUpdate) {
             // 如果小说名或简介有变更，且开启了审核，重置审核状态为待审核
+            Integer newVersion = bookInfo.getVersion() != null ? bookInfo.getVersion() : 0;
             if (needAudit && Boolean.TRUE.equals(submitDto.getAuditEnable())) {
+                newVersion++;
+                updateBook.setVersion(newVersion);
                 updateBook.setAuditStatus(0);
                 updateBook.setAuditReason(null);
             }
@@ -195,9 +204,6 @@ public class BookSubmitListener implements RocketMQListener<BookSubmitMqDto> {
                 if (fresh != null) {
                     insertPendingBookContentAudit(fresh);
                 }
-                // 需要发送最新的书籍信息进行审核
-                // 这里重新查询一次或者合并 updateBook 和 bookInfo 都可以
-                // 为保险起见，使用 updateBook 中的关键信息（如果有）和原 bookInfo 中的信息
                 BookInfo auditBookInfo = new BookInfo();
                 auditBookInfo.setId(submitDto.getBookId());
                 auditBookInfo.setBookName(StringUtils.isNotBlank(submitDto.getBookName())
@@ -208,6 +214,9 @@ public class BookSubmitListener implements RocketMQListener<BookSubmitMqDto> {
                     auditBookInfo.setCategoryId(fresh.getCategoryId());
                     auditBookInfo.setCategoryName(fresh.getCategoryName());
                     auditBookInfo.setAuthorId(fresh.getAuthorId());
+                    auditBookInfo.setVersion(fresh.getVersion());
+                } else {
+                    auditBookInfo.setVersion(newVersion);
                 }
                 
                 sendAuditRequest(auditBookInfo);
@@ -247,7 +256,8 @@ public class BookSubmitListener implements RocketMQListener<BookSubmitMqDto> {
      * 发送审核请求到AI服务
      */
     private void sendAuditRequest(BookInfo bookInfo) {
-        String taskId = generateTaskId(bookInfo.getId());
+        Integer version = bookInfo.getVersion() != null ? bookInfo.getVersion() : 0;
+        String taskId = generateTaskId(bookInfo.getId(), version);
         
         BookAuditRequestMqDto auditRequest = BookAuditRequestMqDto.builder()
                 .taskId(taskId)
@@ -257,6 +267,7 @@ public class BookSubmitListener implements RocketMQListener<BookSubmitMqDto> {
                 .categoryId(bookInfo.getCategoryId())
                 .categoryName(bookInfo.getCategoryName())
                 .authorId(bookInfo.getAuthorId())
+                .version(version)
                 .build();
 
         String destination = AmqpConsts.BookAuditRequestMq.TOPIC + ":"
@@ -268,11 +279,8 @@ public class BookSubmitListener implements RocketMQListener<BookSubmitMqDto> {
     /**
      * 生成任务ID
      */
-    private String generateTaskId(Long bookId) {
-        return String.format("audit_book_%s_%s_%s", 
-                bookId, 
-                System.currentTimeMillis(), 
-                UUID.randomUUID().toString().substring(0, 8));
+    private String generateTaskId(Long bookId, Integer version) {
+        return String.format("audit_book_%s_v%s", bookId, version);
     }
 
     /**
@@ -287,4 +295,3 @@ public class BookSubmitListener implements RocketMQListener<BookSubmitMqDto> {
         return !normDb.equals(normNew);
     }
 }
-

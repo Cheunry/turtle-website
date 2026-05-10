@@ -97,6 +97,9 @@ public class ChapterSubmitListener implements RocketMQListener<ChapterSubmitMqDt
         
         // 2. 记录旧字数
         int oldWordCount = chapter.getWordCount() == null ? 0 : chapter.getWordCount();
+        boolean auditContentChanged = !Objects.equals(chapter.getChapterNum(), submitDto.getChapterNum())
+                || !Objects.equals(chapter.getChapterName(), submitDto.getChapterName())
+                || !Objects.equals(chapter.getContent(), submitDto.getContent());
 
         // 3. 校验章节号是否变更且已存在
         if (!Objects.equals(chapter.getChapterNum(), submitDto.getChapterNum())) {
@@ -119,8 +122,9 @@ public class ChapterSubmitListener implements RocketMQListener<ChapterSubmitMqDt
         int newWordCount = submitDto.getContent() != null ? submitDto.getContent().length() : 0;
         chapter.setWordCount(newWordCount);
         
-        // 如果开启审核，重置审核状态为待审核
-        if (Boolean.TRUE.equals(submitDto.getAuditEnable())) {
+        // 如果送审内容发生变化且开启审核，递增版本并重置审核状态为待审核
+        if (auditContentChanged && Boolean.TRUE.equals(submitDto.getAuditEnable())) {
+            chapter.setVersion((chapter.getVersion() != null ? chapter.getVersion() : 0) + 1);
             chapter.setAuditStatus(0);
             chapter.setAuditReason(null);
         }
@@ -132,13 +136,13 @@ public class ChapterSubmitListener implements RocketMQListener<ChapterSubmitMqDt
         updateBookInfo(bookInfo, oldWordCount, newWordCount, false);
 
         // 6. 如果开启审核，写入待审快照并发审核请求 MQ（异步处理）
-        if (Boolean.TRUE.equals(submitDto.getAuditEnable())) {
+        if (auditContentChanged && Boolean.TRUE.equals(submitDto.getAuditEnable())) {
             insertPendingChapterContentAudit(chapter);
             sendAuditRequest(chapter, bookInfo);
         }
 
         // 7. 仅在不走审核或关闭审核时通知订阅用户（审核通过后的通知在 BookAuditServiceImpl 中发送）
-        if (!Boolean.TRUE.equals(submitDto.getAuditEnable())) {
+        if (!auditContentChanged || !Boolean.TRUE.equals(submitDto.getAuditEnable())) {
             sendBookChapterUpdateNotice(bookInfo, chapter);
         }
     }
@@ -167,6 +171,7 @@ public class ChapterSubmitListener implements RocketMQListener<ChapterSubmitMqDt
         int newWordCount = submitDto.getContent() != null ? submitDto.getContent().length() : 0;
         chapter.setWordCount(newWordCount);
         chapter.setIsVip(submitDto.getIsVip());
+        chapter.setVersion(0);
         chapter.setAuditStatus(Boolean.TRUE.equals(submitDto.getAuditEnable()) ? 0 : 1);
         chapter.setCreateTime(LocalDateTime.now());
         chapter.setUpdateTime(LocalDateTime.now());
@@ -263,7 +268,8 @@ public class ChapterSubmitListener implements RocketMQListener<ChapterSubmitMqDt
      * 发送审核请求MQ
      */
     private void sendAuditRequest(BookChapter chapter, BookInfo bookInfo) {
-        String taskId = generateTaskId(chapter.getId());
+        Integer version = chapter.getVersion() != null ? chapter.getVersion() : 0;
+        String taskId = generateTaskId(chapter.getId(), version);
         ChapterAuditRequestMqDto auditRequest = ChapterAuditRequestMqDto.builder()
                 .taskId(taskId)
                 .chapterId(chapter.getId())
@@ -274,6 +280,7 @@ public class ChapterSubmitListener implements RocketMQListener<ChapterSubmitMqDt
                 .categoryId(bookInfo != null ? bookInfo.getCategoryId() : null)
                 .categoryName(bookInfo != null ? bookInfo.getCategoryName() : null)
                 .authorId(bookInfo != null ? bookInfo.getAuthorId() : null)
+                .version(version)
                 .build();
         String destination = AmqpConsts.BookAuditRequestMq.TOPIC + ":"
                 + AmqpConsts.BookAuditRequestMq.TAG_AUDIT_CHAPTER_REQUEST;
@@ -307,10 +314,7 @@ public class ChapterSubmitListener implements RocketMQListener<ChapterSubmitMqDt
     /**
      * 生成任务ID（用于关联审核请求和结果，保证幂等性）
      */
-    private String generateTaskId(Long chapterId) {
-        return String.format("audit_chapter_%s_%s_%s", 
-                chapterId, 
-                System.currentTimeMillis(), 
-                java.util.UUID.randomUUID().toString().substring(0, 8));
+    private String generateTaskId(Long chapterId, Integer version) {
+        return String.format("audit_chapter_%s_v%s", chapterId, version);
     }
 }

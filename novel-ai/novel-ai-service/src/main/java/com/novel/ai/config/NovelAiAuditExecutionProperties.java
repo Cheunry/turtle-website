@@ -14,11 +14,25 @@ public class NovelAiAuditExecutionProperties {
      */
     private boolean virtualThreadExecution = true;
 
+    /**
+     * 全实例内同时执行的审核 Pipeline 上限（书籍 + 章节共用同一把信号量）。
+     * ≤0 表示不限制（内部用极大许可数，等价于不设闸门）。
+     */
+    private int maxConcurrent = 16;
+
     public boolean isVirtualThreadExecution() {
         return virtualThreadExecution;
     }
 
     public void setVirtualThreadExecution(boolean virtualThreadExecution) {
         this.virtualThreadExecution = virtualThreadExecution;
+    }
+
+    public int getMaxConcurrent() {
+        return maxConcurrent;
+    }
+
+    public void setMaxConcurrent(int maxConcurrent) {
+        this.maxConcurrent = maxConcurrent;
     }
 }

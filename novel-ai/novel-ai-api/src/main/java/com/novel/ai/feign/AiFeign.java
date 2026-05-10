@@ -53,10 +53,10 @@ public interface AiFeign {
     RestResp<TextPolishRespDto> polishText(@RequestBody TextPolishReqDto req);
 
     /**
-     * 根据提示词生成图片
+     * 根据提示词提交生图任务，立即返回 jobId。
      */
     @PostMapping(ApiRouterConsts.API_INNER_AI_URL_PREFIX + "/generate/image")
-    RestResp<String> generateImage(@RequestParam("prompt") String prompt);
+    RestResp<ImageGenJobSubmitRespDto> generateImage(@RequestParam("prompt") String prompt);
 
     /**
      * 异步生图：立即返回 jobId，进度见 {@link #getImageGenJob(String)}。
@@ -105,7 +105,7 @@ public interface AiFeign {
         }
 
         @Override
-        public RestResp<String> generateImage(String prompt) {
+        public RestResp<ImageGenJobSubmitRespDto> generateImage(String prompt) {
             // 降级处理：返回失败响应
             return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR);
         }

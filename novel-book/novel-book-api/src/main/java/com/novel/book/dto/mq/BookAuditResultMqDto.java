@@ -27,6 +27,11 @@ public class BookAuditResultMqDto {
     private Long bookId;
 
     /**
+     * 书籍版本号
+     */
+    private Integer version;
+
+    /**
      * 审核状态;0-待审核 1-审核通过 2-审核不通过
      */
     private Integer auditStatus;
@@ -57,4 +62,3 @@ public class BookAuditResultMqDto {
     private List<String> sensitiveWordHits;
 
 }
-

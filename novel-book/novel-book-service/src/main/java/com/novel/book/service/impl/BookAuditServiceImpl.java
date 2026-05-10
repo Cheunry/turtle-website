@@ -39,6 +39,7 @@ import com.novel.ai.feign.AiFeign;
 import com.novel.ai.dto.req.AuditRuleReqDto;
 import com.novel.ai.dto.resp.AuditRuleRespDto;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -145,6 +146,13 @@ public class BookAuditServiceImpl implements BookAuditService {
             log.warn("章节不存在，忽略审核结果，chapterId: {}", chapterId);
             return;
         }
+        Integer currentChapterVersion = bookChapter.getVersion() != null ? bookChapter.getVersion() : 0;
+        Integer resultChapterVersion = resultDto.getVersion() != null ? resultDto.getVersion() : 0;
+        if (!Objects.equals(currentChapterVersion, resultChapterVersion)) {
+            log.info("章节[{}]审核结果版本已过期，忽略。taskId: {}, resultVersion: {}, currentVersion: {}",
+                    chapterId, resultDto.getTaskId(), resultChapterVersion, currentChapterVersion);
+            return;
+        }
 
         // 2. 如果AI处理失败，更新审核表记录失败原因
         if (!Boolean.TRUE.equals(resultDto.getSuccess())) {
@@ -236,7 +244,7 @@ public class BookAuditServiceImpl implements BookAuditService {
             }
 
             try {
-                updateChapterDirectly(chapterId, AUDIT_STATUS_PASSED, null, null);
+                updateChapterDirectly(chapterId, currentChapterVersion, AUDIT_STATUS_PASSED, null, null);
                 log.info("[AI-Audit] 章节[{}] BookChapter 更新为 PASSED", chapterId);
             } catch (Exception e) {
                 log.error("[AI-Audit] 章节[{}] 更新 BookChapter 失败", chapterId, e);
@@ -308,7 +316,7 @@ public class BookAuditServiceImpl implements BookAuditService {
             }
 
             try {
-                updateChapterDirectly(chapterId, AUDIT_STATUS_REJECTED, shortReason, resultDto.getSensitiveWordHits());
+                updateChapterDirectly(chapterId, currentChapterVersion, AUDIT_STATUS_REJECTED, shortReason, resultDto.getSensitiveWordHits());
                 log.info("[AI-Audit] 章节[{}] BookChapter 更新为 REJECTED", chapterId);
             } catch (Exception e) {
                 log.error("[AI-Audit] 章节[{}] 更新 BookChapter 失败", chapterId, e);
@@ -372,6 +380,13 @@ public class BookAuditServiceImpl implements BookAuditService {
         BookInfo bookInfo = bookInfoMapper.selectById(bookId);
         if (bookInfo == null) {
             log.warn("书籍不存在，忽略审核结果，bookId: {}", bookId);
+            return;
+        }
+        Integer currentBookVersion = bookInfo.getVersion() != null ? bookInfo.getVersion() : 0;
+        Integer resultBookVersion = resultDto.getVersion() != null ? resultDto.getVersion() : 0;
+        if (!Objects.equals(currentBookVersion, resultBookVersion)) {
+            log.info("书籍[{}]审核结果版本已过期，忽略。taskId: {}, resultVersion: {}, currentVersion: {}",
+                    bookId, resultDto.getTaskId(), resultBookVersion, currentBookVersion);
             return;
         }
 
@@ -464,7 +479,7 @@ public class BookAuditServiceImpl implements BookAuditService {
             }
             
             try {
-                updateBookFromAudit(bookId, AUDIT_STATUS_PASSED, null, null);
+                updateBookFromAudit(bookId, currentBookVersion, AUDIT_STATUS_PASSED, null, null);
                 log.info("[AI-Audit] 书籍[{}] BookInfo 更新为 PASSED", bookId);
             } catch (Exception e) {
                 log.error("[AI-Audit] 书籍[{}] 更新 BookInfo 失败", bookId, e);
@@ -505,7 +520,7 @@ public class BookAuditServiceImpl implements BookAuditService {
             }
 
             try {
-                updateBookFromAudit(bookId, AUDIT_STATUS_REJECTED, shortReason, resultDto.getSensitiveWordHits());
+                updateBookFromAudit(bookId, currentBookVersion, AUDIT_STATUS_REJECTED, shortReason, resultDto.getSensitiveWordHits());
                 log.info("[AI-Audit] 书籍[{}] BookInfo 更新为 REJECTED", bookId);
             } catch (Exception e) {
                 log.error("[AI-Audit] 书籍[{}] 更新 BookInfo 失败", bookId, e);
@@ -536,7 +551,7 @@ public class BookAuditServiceImpl implements BookAuditService {
             }
 
             try {
-                updateBookAuditReasonOnly(bookId, shortReason);
+                updateBookAuditReasonOnly(bookId, currentBookVersion, shortReason);
                 log.info("[AI-Audit] 书籍[{}] BookInfo 审核原因已写入，audit_status 保持不变", bookId);
             } catch (Exception e) {
                 log.error("[AI-Audit] 书籍[{}] 更新 BookInfo 原因失败", bookId, e);
@@ -609,7 +624,7 @@ public class BookAuditServiceImpl implements BookAuditService {
         // 4. 根据数据来源同步更新对应的业务表
         if (DATA_SOURCE_BOOK_INFO.equals(audit.getDataSource())) {
             // 更新书籍表
-            updateBookFromAudit(audit.getDataSourceId(), auditStatus, auditReason, null);
+            updateBookFromAudit(audit.getDataSourceId(), null, auditStatus, auditReason, null);
             
             if (AUDIT_STATUS_PASSED.equals(auditStatus)) {
                 sendBookChangeMsg(audit.getDataSourceId());
@@ -697,7 +712,7 @@ public class BookAuditServiceImpl implements BookAuditService {
     /**
      * 直接更新章节表
      */
-    private void updateChapterDirectly(Long chapterId, Integer auditStatus, String rejectReason,
+    private void updateChapterDirectly(Long chapterId, Integer expectedVersion, Integer auditStatus, String rejectReason,
             List<String> sensitiveWordHits) {
         log.info("updateChapterDirectly 开始执行，chapterId: {}, auditStatus: {}, rejectReason: {}",
                 chapterId, auditStatus, rejectReason);
@@ -710,6 +725,9 @@ public class BookAuditServiceImpl implements BookAuditService {
                 .set("audit_reason", rejectReason)
                 .set("reject_sensitive_words", rejectWordsCol)
                 .set("update_time", LocalDateTime.now());
+        if (expectedVersion != null) {
+            updateWrapper.eq("version", expectedVersion);
+        }
 
         int updateCount = bookChapterMapper.update(null, updateWrapper);
         log.info("updateChapterDirectly 执行完成，chapterId: {}, 更新行数: {}", chapterId, updateCount);
@@ -785,7 +803,7 @@ public class BookAuditServiceImpl implements BookAuditService {
     /**
      * 根据审核结果更新书籍表（审核通过时清空 audit_reason 与 reject_sensitive_words）
      */
-    private void updateBookFromAudit(Long bookId, Integer auditStatus, String auditReason,
+    private void updateBookFromAudit(Long bookId, Integer expectedVersion, Integer auditStatus, String auditReason,
             List<String> sensitiveWordHits) {
         String shortReason = AUDIT_STATUS_REJECTED.equals(auditStatus)
                 ? extractShortReason(auditReason, null) : null;
@@ -798,7 +816,14 @@ public class BookAuditServiceImpl implements BookAuditService {
                 .set(BookInfo::getAuditReason, shortReason)
                 .set(BookInfo::getRejectSensitiveWords, rejectWords)
                 .set(BookInfo::getUpdateTime, LocalDateTime.now());
-        bookInfoMapper.update(null, uw);
+        if (expectedVersion != null) {
+            uw.eq(BookInfo::getVersion, expectedVersion);
+        }
+        int rows = bookInfoMapper.update(null, uw);
+        if (rows == 0 && expectedVersion != null) {
+            log.info("书籍[{}]审核状态回写版本不匹配，expectedVersion: {}", bookId, expectedVersion);
+            return;
+        }
 
         runAfterCommit(() -> {
             try {
@@ -814,12 +839,19 @@ public class BookAuditServiceImpl implements BookAuditService {
     /**
      * 仅更新 book_info.audit_reason，不改 audit_status。用于 AI 返回 pending 时把原因回填给前端。
      */
-    private void updateBookAuditReasonOnly(Long bookId, String auditReason) {
-        BookInfo updateBook = new BookInfo();
-        updateBook.setId(bookId);
-        updateBook.setAuditReason(auditReason);
-        updateBook.setUpdateTime(LocalDateTime.now());
-        bookInfoMapper.updateById(updateBook);
+    private void updateBookAuditReasonOnly(Long bookId, Integer expectedVersion, String auditReason) {
+        LambdaUpdateWrapper<BookInfo> uw = new LambdaUpdateWrapper<>();
+        uw.eq(BookInfo::getId, bookId)
+                .set(BookInfo::getAuditReason, auditReason)
+                .set(BookInfo::getUpdateTime, LocalDateTime.now());
+        if (expectedVersion != null) {
+            uw.eq(BookInfo::getVersion, expectedVersion);
+        }
+        int rows = bookInfoMapper.update(null, uw);
+        if (rows == 0 && expectedVersion != null) {
+            log.info("书籍[{}]审核原因回写版本不匹配，expectedVersion: {}", bookId, expectedVersion);
+            return;
+        }
 
         runAfterCommit(() -> {
             try {

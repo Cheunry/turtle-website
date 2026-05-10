@@ -70,7 +70,7 @@ create table author_points_consume_log
     consume_date   date             not null comment '消费日期（用于统计和查询）',
     create_time    datetime         null comment '创建时间',
     update_time    datetime         null comment '更新时间',
-    idempotent_key varchar(64)      null comment '幂等性Key（MQ消费去重）',
+    idempotent_key varchar(128)     null comment '幂等性Key（MQ消费去重，对应消费requestId）',
     constraint pk_id
         unique (id),
     constraint uk_idempotentKey
@@ -141,6 +141,7 @@ create table book_chapter
     word_count             int unsigned     default '0' not null comment '章节字数',
     content                mediumtext                   not null comment '小说章节内容',
     is_vip                 tinyint unsigned default '0' not null comment '是否收费;1-收费 0-免费',
+    version                int unsigned     default '0' not null comment '章节版本号',
     create_time            datetime                     null,
     update_time            datetime                     null,
     audit_status           tinyint unsigned default '0' not null comment '审核状态;0-待审核 1-审核通过 2-审核不通过',
@@ -193,6 +194,7 @@ create table book_info
     last_chapter_name        varchar(50)                    null comment '最新章节名',
     last_chapter_update_time datetime                       null comment '最新章节更新时间',
     is_vip                   tinyint unsigned default '0'   not null comment '是否收费;1-收费 0-免费',
+    version                  int unsigned     default '0'   not null comment '书籍版本号',
     create_time              datetime                       null comment '创建时间',
     update_time              datetime                       null comment '更新时间',
     last_chapter_num         smallint unsigned              null comment '最新章节号',
@@ -360,4 +362,3 @@ create table user_info
         unique (username)
 )
     comment '用户信息';
-

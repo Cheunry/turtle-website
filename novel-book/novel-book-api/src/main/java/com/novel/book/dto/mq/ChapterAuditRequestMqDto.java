@@ -59,5 +59,9 @@ public class ChapterAuditRequestMqDto {
      */
     private Long authorId;
 
-}
+    /**
+     * 章节版本号
+     */
+    private Integer version;
 
+}

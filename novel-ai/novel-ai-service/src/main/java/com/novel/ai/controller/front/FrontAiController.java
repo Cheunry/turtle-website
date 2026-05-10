@@ -1,6 +1,8 @@
 package com.novel.ai.controller.front;
 
 import com.novel.ai.dto.req.TextPolishReqDto;
+import com.novel.ai.dto.resp.ImageGenJobStatusRespDto;
+import com.novel.ai.dto.resp.ImageGenJobSubmitRespDto;
 import com.novel.ai.dto.resp.TextPolishRespDto;
 import com.novel.ai.service.ImageGenerationGate;
 import com.novel.book.dto.req.BookCoverReqDto;
@@ -14,6 +16,8 @@ import com.novel.ai.service.TextService;
 import com.novel.common.constant.ApiRouterConsts;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -41,9 +45,15 @@ public class FrontAiController {
 
     @Operation(summary = "根据提示词生成图片")
     @PostMapping("generate-image")
-    public RestResp<String> generateImage(
+    public RestResp<ImageGenJobSubmitRespDto> generateImage(
             @Parameter(description = "提示词") @RequestParam("prompt") String prompt) {
         return imageGenerationGate.generateImage(prompt);
+    }
+
+    @Operation(summary = "查询生图任务状态")
+    @GetMapping("generate-image/jobs/{jobId}")
+    public RestResp<ImageGenJobStatusRespDto> getImageGenJob(@PathVariable("jobId") String jobId) {
+        return imageGenerationGate.getJob(jobId);
     }
 
 }

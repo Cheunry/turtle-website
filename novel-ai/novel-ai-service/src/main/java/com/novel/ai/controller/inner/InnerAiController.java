@@ -97,7 +97,7 @@ public class InnerAiController {
      */
     @Operation(summary = "根据提示词生成图片")
     @PostMapping("/generate/image")
-    public RestResp<String> generateImage(@RequestParam("prompt") String prompt) {
+    public RestResp<ImageGenJobSubmitRespDto> generateImage(@RequestParam("prompt") String prompt) {
         return imageGenerationGate.generateImage(prompt);
     }
 

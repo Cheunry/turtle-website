@@ -32,15 +32,27 @@ public class ImageAsyncGenerationService {
     private final ThreadPoolTaskExecutor imageGenerationExecutor;
     private final AuthorFeign authorFeign;
 
+    public RestResp<ImageGenJobSubmitRespDto> submit(String prompt) {
+        return submit(prompt, null, null);
+    }
+
     public RestResp<ImageGenJobSubmitRespDto> submit(CoverImageAsyncSubmitReqDto req) {
         String prompt = req.getPrompt() != null ? req.getPrompt().trim() : "";
+        return submit(prompt, req.getAuthorId(), req);
+    }
+
+    private RestResp<ImageGenJobSubmitRespDto> submit(
+            String rawPrompt,
+            Long authorId,
+            CoverImageAsyncSubmitReqDto rollbackContext) {
+        String prompt = rawPrompt != null ? rawPrompt.trim() : "";
         if (prompt.isEmpty()) {
             return RestResp.fail(ErrorCodeEnum.USER_REQUEST_PARAM_ERROR, "提示词不能为空");
         }
 
         String jobId = UUID.randomUUID().toString().replace("-", "");
         try {
-            imageJobRedisStore.createQueued(jobId, req.getAuthorId(), req);
+            imageJobRedisStore.createQueued(jobId, authorId, rollbackContext);
         } catch (JsonProcessingException e) {
             log.error("创建异步生图任务失败", e);
             return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR, "创建任务失败");
@@ -98,6 +110,7 @@ public class ImageAsyncGenerationService {
                 .consumePoints(s.getConsumePoints())
                 .relatedId(s.getRelatedId())
                 .relatedDesc(s.getRelatedDesc())
+                .requestId(s.getRequestId())
                 .usedFreePoints(s.getUsedFreePoints())
                 .usedPaidPoints(s.getUsedPaidPoints())
                 .build();

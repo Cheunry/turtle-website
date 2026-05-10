@@ -34,8 +34,12 @@ public class ImageJobRedisStore {
         Map<String, String> map = new HashMap<>();
         map.put("status", ImageGenJobStatus.QUEUED.name());
         map.put("message", "排队中");
-        map.put("authorId", String.valueOf(authorId));
-        map.put("rollbackJson", objectMapper.writeValueAsString(rollback));
+        if (authorId != null) {
+            map.put("authorId", String.valueOf(authorId));
+        }
+        if (rollback != null) {
+            map.put("rollbackJson", objectMapper.writeValueAsString(rollback));
+        }
         stringRedisTemplate.opsForHash().putAll(key, map);
         stringRedisTemplate.expire(key, DEFAULT_TTL);
     }

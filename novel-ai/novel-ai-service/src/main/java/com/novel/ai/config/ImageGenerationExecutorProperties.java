@@ -28,11 +28,6 @@ public class ImageGenerationExecutorProperties {
      */
     private int keepAliveSeconds = 60;
 
-    /**
-     * 单任务从提交到返回的最长等待（须与网关/Feign 超时链协调，略小于下游 read-timeout）。
-     */
-    private long awaitTimeoutMs = 175_000L;
-
     public int getCorePoolSize() {
         return corePoolSize;
     }
@@ -65,11 +60,4 @@ public class ImageGenerationExecutorProperties {
         this.keepAliveSeconds = keepAliveSeconds;
     }
 
-    public long getAwaitTimeoutMs() {
-        return awaitTimeoutMs;
-    }
-
-    public void setAwaitTimeoutMs(long awaitTimeoutMs) {
-        this.awaitTimeoutMs = awaitTimeoutMs;
-    }
 }
