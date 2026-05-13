@@ -8,6 +8,8 @@ import com.novel.ai.dto.resp.AuditRuleRespDto;
 import com.novel.ai.dto.resp.ImageGenJobStatusRespDto;
 import com.novel.ai.dto.resp.ImageGenJobSubmitRespDto;
 import com.novel.ai.image.job.ImageAsyncGenerationService;
+import com.novel.ai.ratelimit.AiRateLimitScene;
+import com.novel.ai.ratelimit.annotation.AiRateLimit;
 import com.novel.ai.rag.AuditExperienceIndexer;
 import com.novel.book.dto.req.BookAuditReqDto;
 import com.novel.book.dto.req.BookCoverReqDto;
@@ -50,6 +52,7 @@ public class InnerAiController {
      */
     @Operation(summary = "审核书籍内容")
     @PostMapping("/audit/book")
+    @AiRateLimit(AiRateLimitScene.AUDIT_BOOK)
     public RestResp<BookAuditRespDto> auditBook(@RequestBody BookAuditReqDto req) {
         return textService.auditBook(req);
     }
@@ -59,6 +62,7 @@ public class InnerAiController {
      */
     @Operation(summary = "审核章节内容")
     @PostMapping("/audit/chapter")
+    @AiRateLimit(AiRateLimitScene.AUDIT_CHAPTER)
     public RestResp<ChapterAuditRespDto> auditChapter(@RequestBody ChapterAuditReqDto req) {
         return textService.auditChapter(req);
     }
@@ -68,6 +72,7 @@ public class InnerAiController {
      */
     @Operation(summary = "获取图片生成提示词")
     @PostMapping("/generate/image/prompt")
+    @AiRateLimit(AiRateLimitScene.COVER_PROMPT)
     public RestResp<String> generateImagePrompt(@RequestBody BookCoverReqDto req) {
         return textService.getBookCoverPrompt(req);
     }
@@ -77,6 +82,7 @@ public class InnerAiController {
      */
     @Operation(summary = "文本润色")
     @PostMapping("/polish")
+    @AiRateLimit(AiRateLimitScene.POLISH)
     public RestResp<com.novel.ai.dto.resp.TextPolishRespDto> polishText(@RequestBody com.novel.ai.dto.req.TextPolishReqDto req) {
         return textService.polishText(req);
     }
@@ -86,6 +92,7 @@ public class InnerAiController {
      */
     @Operation(summary = "文本润色（SSE流式）")
     @PostMapping(value = "/polish/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @AiRateLimit(AiRateLimitScene.POLISH_STREAM)
     public SseEmitter polishTextStream(@RequestBody com.novel.ai.dto.req.TextPolishReqDto req) {
         SseEmitter emitter = new SseEmitter(300_000L);
         textService.streamPolishText(req, emitter);
@@ -97,12 +104,14 @@ public class InnerAiController {
      */
     @Operation(summary = "根据提示词生成图片")
     @PostMapping("/generate/image")
+    @AiRateLimit(AiRateLimitScene.IMAGE_GENERATE)
     public RestResp<ImageGenJobSubmitRespDto> generateImage(@RequestParam("prompt") String prompt) {
         return imageGenerationGate.generateImage(prompt);
     }
 
     @Operation(summary = "异步根据提示词生成图片（立即返回 jobId）")
     @PostMapping("/generate/image/async")
+    @AiRateLimit(AiRateLimitScene.IMAGE_GENERATE)
     public RestResp<ImageGenJobSubmitRespDto> generateImageAsync(@Valid @RequestBody CoverImageAsyncSubmitReqDto req) {
         return imageAsyncGenerationService.submit(req);
     }
@@ -118,6 +127,7 @@ public class InnerAiController {
      */
     @Operation(summary = "提取审核经验规则")
     @PostMapping("/audit/extractRule")
+    @AiRateLimit(AiRateLimitScene.AUDIT_RULE_EXTRACT)
     public RestResp<AuditRuleRespDto> extractAuditRule(@RequestBody AuditRuleReqDto req) {
         return textService.extractAuditRule(req);
     }

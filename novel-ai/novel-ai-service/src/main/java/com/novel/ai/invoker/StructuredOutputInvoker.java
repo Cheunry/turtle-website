@@ -1,6 +1,7 @@
 package com.novel.ai.invoker;
 
 import lombok.extern.slf4j.Slf4j;
+import com.novel.ai.ratelimit.AiTokenRateLimitContext;
 import org.apache.skywalking.apm.toolkit.trace.ActiveSpan;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.api.Advisor;
@@ -8,6 +9,7 @@ import org.springframework.ai.converter.BeanOutputConverter;
 import org.springframework.ai.retry.NonTransientAiException;
 import org.springframework.ai.retry.TransientAiException;
 import org.springframework.stereotype.Component;
+import com.novel.config.exception.BusinessException;
 
 /**
  * 结构化输出调用器——Novel AI "两级重试"架构的内层。
@@ -105,7 +107,11 @@ public class StructuredOutputInvoker {
                 if (hasExtraAdvisors) {
                     spec = spec.advisors(extraAdvisors);
                 }
-                T result = spec.call().entity(outputConverter);
+                T result;
+                try (AiTokenRateLimitContext.Scope ignored =
+                             AiTokenRateLimitContext.use(AiTokenRateLimitContext.sceneFromLogContext(logContext))) {
+                    result = spec.call().entity(outputConverter);
+                }
 
                 if (attempt > 1) {
                     log.info("[{}] 结构化解析重试成功: attempt={}/{}", logContext, attempt, maxAttempts);
@@ -113,6 +119,9 @@ public class StructuredOutputInvoker {
                     ActiveSpan.tag("ai.structured.attempts", String.valueOf(attempt));
                 }
                 return result;
+
+            } catch (BusinessException e) {
+                throw e;
 
             } catch (NonTransientAiException | TransientAiException e) {
                 // 通信类异常（Transient 已被 Advisor 耗尽重试 / NonTransient 不可恢复）都透传给上层决策

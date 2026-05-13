@@ -5,6 +5,7 @@ import com.alibaba.cloud.ai.dashscope.image.DashScopeImageModel;
 import com.novel.ai.advisor.NovelAiAdvisorProperties;
 import com.novel.ai.advisor.RetryTransientAiAdvisor;
 import com.novel.ai.advisor.StructuredOutputLogAdvisor;
+import com.novel.ai.ratelimit.advisor.AiTokenRateLimitAdvisor;
 import com.novel.ai.tool.AuditTools;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor;
@@ -47,10 +48,11 @@ public class AiConfig {
     @Primary
     public ChatClient chatClient(DashScopeChatModel chatModel,
                                  RetryTransientAiAdvisor retryAdvisor,
+                                 AiTokenRateLimitAdvisor tokenRateLimitAdvisor,
                                  StructuredOutputLogAdvisor logAdvisor,
                                  AuditTools auditTools) {
         return ChatClient.builder(chatModel)
-                .defaultAdvisors(retryAdvisor, logAdvisor, new SimpleLoggerAdvisor())
+                .defaultAdvisors(retryAdvisor, tokenRateLimitAdvisor, logAdvisor, new SimpleLoggerAdvisor())
                 .defaultTools(auditTools)
                 .build();
     }
@@ -61,9 +63,10 @@ public class AiConfig {
     @Bean
     public ChatClient textChatClient(DashScopeChatModel chatModel,
                                      RetryTransientAiAdvisor retryAdvisor,
+                                     AiTokenRateLimitAdvisor tokenRateLimitAdvisor,
                                      StructuredOutputLogAdvisor logAdvisor) {
         return ChatClient.builder(chatModel)
-                .defaultAdvisors(retryAdvisor, logAdvisor, new SimpleLoggerAdvisor())
+                .defaultAdvisors(retryAdvisor, tokenRateLimitAdvisor, logAdvisor, new SimpleLoggerAdvisor())
                 .build();
     }
 

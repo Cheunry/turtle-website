@@ -172,6 +172,11 @@ public enum ErrorCodeEnum {
     AI_AUTHOR_RATE_LIMIT("C4003", "操作过于频繁，请稍后再试"),
 
     /**
+     * AI 服务端全局限流（模型调用、生图等资源保护）
+     */
+    AI_SERVICE_RATE_LIMIT("C4004", "AI服务请求过于频繁，请稍后再试"),
+
+    /**
      * 小说名已存在
      */
     AUTHOR_BOOK_NAME_EXIST("A3001", "小说名已存在"),

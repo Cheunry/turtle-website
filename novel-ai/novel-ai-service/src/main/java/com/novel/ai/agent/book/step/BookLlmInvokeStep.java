@@ -51,6 +51,11 @@ public class BookLlmInvokeStep implements AuditStep<BookAuditContext> {
         RetrievalAugmentationAdvisor ragAdvisor = ragAdvisorProvider.getIfAvailable();
         Advisor[] extras = (learning || ragAdvisor == null) ? null : new Advisor[]{ragAdvisor};
 
+        log.info("[BookLlmInvoke] 准备调用模型 bookId={} authorId={} learning={} ragEnabled={}",
+                req != null ? req.getId() : null,
+                req != null ? req.getAuthorId() : null,
+                learning,
+                extras != null);
         AuditDecisionAiOutput output = invoker.invoke(
                 chatClient,
                 ctx.getSystemPrompt(),
@@ -58,6 +63,10 @@ public class BookLlmInvokeStep implements AuditStep<BookAuditContext> {
                 promptStep.converter(),
                 learning ? "book-audit-learning" : "book-audit",
                 extras);
+        log.info("[BookLlmInvoke] 模型调用完成 bookId={} auditStatus={} confidence={}",
+                req != null ? req.getId() : null,
+                output != null ? output.auditStatus() : null,
+                output != null ? output.aiConfidence() : null);
         ctx.setAiOutput(output);
         return StepResult.CONTINUE;
     }

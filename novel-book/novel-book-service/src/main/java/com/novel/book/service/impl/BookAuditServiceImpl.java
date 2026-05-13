@@ -147,10 +147,10 @@ public class BookAuditServiceImpl implements BookAuditService {
             return;
         }
         Integer currentChapterVersion = bookChapter.getVersion() != null ? bookChapter.getVersion() : 0;
-        Integer resultChapterVersion = resultDto.getVersion() != null ? resultDto.getVersion() : 0;
+        Integer resultChapterVersion = resolveResultVersion(resultDto.getTaskId(), resultDto.getVersion());
         if (!Objects.equals(currentChapterVersion, resultChapterVersion)) {
-            log.info("章节[{}]审核结果版本已过期，忽略。taskId: {}, resultVersion: {}, currentVersion: {}",
-                    chapterId, resultDto.getTaskId(), resultChapterVersion, currentChapterVersion);
+            log.info("章节[{}]审核结果版本已过期，忽略。taskId: {}, dtoVersion: {}, resolvedVersion: {}, currentVersion: {}",
+                    chapterId, resultDto.getTaskId(), resultDto.getVersion(), resultChapterVersion, currentChapterVersion);
             return;
         }
 
@@ -383,10 +383,10 @@ public class BookAuditServiceImpl implements BookAuditService {
             return;
         }
         Integer currentBookVersion = bookInfo.getVersion() != null ? bookInfo.getVersion() : 0;
-        Integer resultBookVersion = resultDto.getVersion() != null ? resultDto.getVersion() : 0;
+        Integer resultBookVersion = resolveResultVersion(resultDto.getTaskId(), resultDto.getVersion());
         if (!Objects.equals(currentBookVersion, resultBookVersion)) {
-            log.info("书籍[{}]审核结果版本已过期，忽略。taskId: {}, resultVersion: {}, currentVersion: {}",
-                    bookId, resultDto.getTaskId(), resultBookVersion, currentBookVersion);
+            log.info("书籍[{}]审核结果版本已过期，忽略。taskId: {}, dtoVersion: {}, resolvedVersion: {}, currentVersion: {}",
+                    bookId, resultDto.getTaskId(), resultDto.getVersion(), resultBookVersion, currentBookVersion);
             return;
         }
 
@@ -1172,6 +1172,33 @@ public class BookAuditServiceImpl implements BookAuditService {
             }
         } catch (Exception e) {
             log.warn("书籍布隆增量写入失败，bookId={}", bookId, e);
+        }
+    }
+
+    /**
+     * 结果版本优先从 taskId 的 _vN 后缀解析，解析失败时回退到 DTO version。
+     * <p>
+     * 某些旧消息或跨服务版本不一致时，可能出现 taskId=audit_xxx_v1 但 DTO version=0。
+     * taskId 是生产者生成的幂等键，更接近本次审核快照，应作为版本判断的权威来源。
+     */
+    private static Integer resolveResultVersion(String taskId, Integer dtoVersion) {
+        Integer parsed = parseVersionFromTaskId(taskId);
+        return parsed != null ? parsed : (dtoVersion != null ? dtoVersion : 0);
+    }
+
+    private static Integer parseVersionFromTaskId(String taskId) {
+        if (!StringUtils.hasText(taskId)) {
+            return null;
+        }
+        int idx = taskId.lastIndexOf("_v");
+        if (idx < 0 || idx + 2 >= taskId.length()) {
+            return null;
+        }
+        String raw = taskId.substring(idx + 2);
+        try {
+            return Integer.valueOf(raw);
+        } catch (NumberFormatException e) {
+            return null;
         }
     }
 

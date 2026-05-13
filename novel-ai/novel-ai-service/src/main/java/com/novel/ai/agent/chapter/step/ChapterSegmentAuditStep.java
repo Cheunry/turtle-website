@@ -14,6 +14,8 @@ import com.novel.ai.prompt.NovelAiPromptKey;
 import com.novel.ai.prompt.NovelAiPromptLoader;
 import com.novel.book.dto.req.ChapterAuditReqDto;
 import com.novel.book.dto.resp.ChapterAuditRespDto;
+import com.novel.common.constant.ErrorCodeEnum;
+import com.novel.config.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.skywalking.apm.toolkit.trace.ActiveSpan;
@@ -122,6 +124,11 @@ public class ChapterSegmentAuditStep implements AuditStep<ChapterAuditContext> {
                         req.getBookId(), req.getChapterNum(), index, segments.size(), duration, aiOutput);
 
                 ctx.getSegmentResults().add(buildSegmentResp(aiOutput, req));
+            } catch (BusinessException e) {
+                if (e.getErrorCodeEnum() == ErrorCodeEnum.AI_SERVICE_RATE_LIMIT) {
+                    throw e;
+                }
+                throw e;
             } catch (Exception e) {
                 if (errorClassifier.isContentInspectionFailed(e)) {
                     if (isMultiSegment) {

@@ -4,6 +4,8 @@ import com.novel.ai.dto.req.TextPolishReqDto;
 import com.novel.ai.dto.resp.ImageGenJobStatusRespDto;
 import com.novel.ai.dto.resp.ImageGenJobSubmitRespDto;
 import com.novel.ai.dto.resp.TextPolishRespDto;
+import com.novel.ai.ratelimit.AiRateLimitScene;
+import com.novel.ai.ratelimit.annotation.AiRateLimit;
 import com.novel.ai.service.ImageGenerationGate;
 import com.novel.book.dto.req.BookCoverReqDto;
 import com.novel.common.resp.RestResp;
@@ -33,18 +35,21 @@ public class FrontAiController {
 
     @Operation(summary = "文本润色")
     @PostMapping("polish")
+    @AiRateLimit(AiRateLimitScene.POLISH)
     public RestResp<TextPolishRespDto> polishText(@Valid @RequestBody TextPolishReqDto reqDto) {
         return textService.polishText(reqDto);
     }
 
     @Operation(summary = "生成小说封面提示词")
     @PostMapping("cover-prompt")
+    @AiRateLimit(AiRateLimitScene.COVER_PROMPT)
     public RestResp<String> generateCoverPrompt(@Valid @RequestBody BookCoverReqDto reqDto) {
         return textService.getBookCoverPrompt(reqDto);
     }
 
     @Operation(summary = "根据提示词生成图片")
     @PostMapping("generate-image")
+    @AiRateLimit(AiRateLimitScene.IMAGE_GENERATE)
     public RestResp<ImageGenJobSubmitRespDto> generateImage(
             @Parameter(description = "提示词") @RequestParam("prompt") String prompt) {
         return imageGenerationGate.generateImage(prompt);

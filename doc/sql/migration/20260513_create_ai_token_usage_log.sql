@@ -1,0 +1,23 @@
+CREATE TABLE IF NOT EXISTS `ai_token_usage_log` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `trace_id` VARCHAR(128) DEFAULT NULL COMMENT '链路追踪ID',
+  `scene` VARCHAR(64) NOT NULL COMMENT 'AI业务场景：audit-book/audit-chapter/polish等',
+  `model` VARCHAR(128) NOT NULL COMMENT '模型名称',
+  `estimated_prompt_tokens` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '预估输入Token数',
+  `reserved_completion_tokens` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '预留输出Token数',
+  `estimated_total_tokens` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '预估总Token数',
+  `actual_prompt_tokens` INT UNSIGNED DEFAULT NULL COMMENT '实际输入Token数',
+  `actual_completion_tokens` INT UNSIGNED DEFAULT NULL COMMENT '实际输出Token数',
+  `actual_total_tokens` INT UNSIGNED DEFAULT NULL COMMENT '实际总Token数',
+  `estimate_delta_tokens` INT DEFAULT NULL COMMENT '实际总Token - 预估总Token，正数表示低估，负数表示高估',
+  `status` VARCHAR(32) NOT NULL COMMENT '调用状态：SUCCESS/FAILED/RATE_LIMITED',
+  `error_type` VARCHAR(128) DEFAULT NULL COMMENT '异常类型',
+  `error_message` VARCHAR(512) DEFAULT NULL COMMENT '异常摘要',
+  `duration_ms` BIGINT UNSIGNED DEFAULT NULL COMMENT '模型调用耗时毫秒',
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_scene_created_at` (`scene`, `created_at`),
+  KEY `idx_model_created_at` (`model`, `created_at`),
+  KEY `idx_status_created_at` (`status`, `created_at`),
+  KEY `idx_trace_id` (`trace_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI模型Token使用流水表';

@@ -13,6 +13,7 @@ import com.novel.ai.model.AuditRuleAiOutput;
 import com.novel.ai.model.TextPolishAiOutput;
 import com.novel.ai.prompt.NovelAiPromptKey;
 import com.novel.ai.prompt.NovelAiPromptLoader;
+import com.novel.ai.ratelimit.AiTokenRateLimitContext;
 import com.novel.ai.service.TextService;
 import com.novel.book.dto.req.BookAuditReqDto;
 import com.novel.book.dto.req.BookCoverReqDto;
@@ -23,6 +24,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.novel.common.constant.ErrorCodeEnum;
 import com.novel.common.resp.RestResp;
+import com.novel.config.exception.BusinessException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.skywalking.apm.toolkit.trace.ActiveSpan;
 import org.apache.skywalking.apm.toolkit.trace.Trace;
@@ -177,6 +179,8 @@ public class TextServiceImpl implements TextService {
 
             log.info("AI润色响应，耗时: {}ms, aiOutput: {}", duration, aiOutput);
             return RestResp.ok(buildTextPolishResp(aiOutput, selectedText));
+        } catch (BusinessException e) {
+            throw e;
         } catch (Exception e) {
             long duration = System.currentTimeMillis() - startTime;
             ActiveSpan.tag("ai.duration.ms", String.valueOf(duration));
@@ -219,8 +223,11 @@ public class TextServiceImpl implements TextService {
                 reqDto.getRequirement() != null ? reqDto.getRequirement() : "保持原意，提升文学性");
         String userPrompt = promptLoader.renderUser(NovelAiPromptKey.TEXT_POLISH_STREAM, userVars);
 
-        Flux<String> contentFlux =
-                textChatClient.prompt().system(systemPrompt).user(userPrompt).stream().content();
+        Flux<String> contentFlux;
+        try (AiTokenRateLimitContext.Scope ignored =
+                     AiTokenRateLimitContext.use(AiTokenRateLimitContext.POLISH_STREAM)) {
+            contentFlux = textChatClient.prompt().system(systemPrompt).user(userPrompt).stream().content();
+        }
 
         Disposable disposable =
                 contentFlux
@@ -328,11 +335,15 @@ public class TextServiceImpl implements TextService {
             String userPrompt = promptLoader.renderUser(NovelAiPromptKey.COVER_PROMPT, userVars);
             ActiveSpan.tag("prompt.length", String.valueOf(systemPrompt.length() + userPrompt.length()));
 
-            String aiResponse = textChatClient.prompt()
-                    .system(systemPrompt)
-                    .user(userPrompt)
-                    .call()
-                    .content();
+            String aiResponse;
+            try (AiTokenRateLimitContext.Scope ignored =
+                         AiTokenRateLimitContext.use(AiTokenRateLimitContext.COVER_PROMPT)) {
+                aiResponse = textChatClient.prompt()
+                        .system(systemPrompt)
+                        .user(userPrompt)
+                        .call()
+                        .content();
+            }
 
             long duration = System.currentTimeMillis() - startTime;
             ActiveSpan.tag("ai.duration.ms", String.valueOf(duration));
@@ -341,6 +352,8 @@ public class TextServiceImpl implements TextService {
 
             String finalPrompt = aiResponse + "，高品质插画，书籍装帧风格，黄金比例构图，极致细节，最高解析度，(无文字，无水印：1.5)";
             return RestResp.ok(finalPrompt);
+        } catch (BusinessException e) {
+            throw e;
         } catch (Exception e) {
             long duration = System.currentTimeMillis() - startTime;
             ActiveSpan.tag("ai.duration.ms", String.valueOf(duration));
@@ -385,6 +398,8 @@ public class TextServiceImpl implements TextService {
             log.info("AI提取审核经验规则响应，耗时: {}ms, aiOutput: {}", duration, aiOutput);
 
             return RestResp.ok(buildAuditRuleResp(aiOutput, statusStr, reason, content));
+        } catch (BusinessException e) {
+            throw e;
         } catch (Exception e) {
             log.error("AI提取审核经验规则异常", e);
             return RestResp.fail(ErrorCodeEnum.SYSTEM_ERROR, "AI提取服务暂时不可用");
