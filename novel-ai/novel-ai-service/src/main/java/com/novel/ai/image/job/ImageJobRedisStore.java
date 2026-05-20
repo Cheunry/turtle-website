@@ -28,7 +28,7 @@ public class ImageJobRedisStore {
     private final StringRedisTemplate stringRedisTemplate;
     private final ObjectMapper objectMapper;
 
-    public void createQueued(String jobId, Long authorId, CoverImageAsyncSubmitReqDto rollback)
+    public void createQueued(String jobId, Long authorId, CoverImageAsyncSubmitReqDto submitRequest)
             throws JsonProcessingException {
         String key = KEY_PREFIX + jobId;
         Map<String, String> map = new HashMap<>();
@@ -37,8 +37,8 @@ public class ImageJobRedisStore {
         if (authorId != null) {
             map.put("authorId", String.valueOf(authorId));
         }
-        if (rollback != null) {
-            map.put("rollbackJson", objectMapper.writeValueAsString(rollback));
+        if (submitRequest != null) {
+            map.put("submitJson", objectMapper.writeValueAsString(submitRequest));
         }
         stringRedisTemplate.opsForHash().putAll(key, map);
         stringRedisTemplate.expire(key, DEFAULT_TTL);
@@ -69,6 +69,13 @@ public class ImageJobRedisStore {
         stringRedisTemplate.expire(key, DEFAULT_TTL);
     }
 
+    public void delete(String jobId) {
+        if (jobId == null || jobId.isBlank()) {
+            return;
+        }
+        stringRedisTemplate.delete(KEY_PREFIX + jobId);
+    }
+
     public Optional<ImageGenJobStatusRespDto> find(String jobId) {
         String key = KEY_PREFIX + jobId;
         Map<Object, Object> entries = stringRedisTemplate.opsForHash().entries(key);
@@ -92,16 +99,19 @@ public class ImageJobRedisStore {
         return Optional.of(dto);
     }
 
-    public Optional<CoverImageAsyncSubmitReqDto> readRollback(String jobId) {
+    public Optional<CoverImageAsyncSubmitReqDto> readSubmitRequest(String jobId) {
         String key = KEY_PREFIX + jobId;
-        Object raw = stringRedisTemplate.opsForHash().get(key, "rollbackJson");
+        Object raw = stringRedisTemplate.opsForHash().get(key, "submitJson");
+        if (raw == null) {
+            raw = stringRedisTemplate.opsForHash().get(key, "rollbackJson");
+        }
         if (raw == null) {
             return Optional.empty();
         }
         try {
             return Optional.of(objectMapper.readValue(raw.toString(), CoverImageAsyncSubmitReqDto.class));
         } catch (JsonProcessingException e) {
-            log.warn("解析 rollbackJson 失败 jobId={}", jobId, e);
+            log.warn("解析生图提交上下文失败 jobId={}", jobId, e);
             return Optional.empty();
         }
     }

@@ -3,6 +3,7 @@ package com.novel.user.feign;
 import com.novel.common.constant.ApiRouterConsts;
 import com.novel.common.resp.RestResp;
 import com.novel.user.dto.req.AuthorPointsConsumeReqDto;
+import com.novel.user.dto.req.CoverGenerationFailedReqDto;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -25,5 +26,10 @@ public interface AuthorFeign {
     @PostMapping(ApiRouterConsts.API_INNER_AUTHOR_URL_PREFIX + "/points/rollback")
     RestResp<Void> rollbackPoints(@RequestBody AuthorPointsConsumeReqDto dto);
 
-}
+    /**
+     * AI 封面生图失败回调：由作家服务统一判断并回滚积分。
+     */
+    @PostMapping(ApiRouterConsts.API_INNER_AUTHOR_URL_PREFIX + "/ai/cover/jobs/fail")
+    RestResp<Void> notifyCoverGenerationFailed(@RequestBody CoverGenerationFailedReqDto dto);
 
+}

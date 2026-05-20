@@ -8,7 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * 异步封面生图提交（内部接口）：生图完成后凭 {@link #rollbackContext} 在失败时回滚积分。
+ * 异步封面生图提交（内部接口）：novel-ai 只负责生图任务，失败时凭 requestId 通知 novel-user 做补偿。
  */
 @Data
 @NoArgsConstructor
@@ -44,9 +44,9 @@ public class CoverImageAsyncSubmitReqDto {
     @Schema(description = "原积分扣减业务幂等号")
     private String requestId;
 
-    @Schema(description = "已扣免费积分（回滚用）")
+    @Schema(description = "已扣免费积分（兼容字段；回滚由 novel-user 按 requestId 查询事务）")
     private Integer usedFreePoints;
 
-    @Schema(description = "已扣付费积分（回滚用）")
+    @Schema(description = "已扣付费积分（兼容字段；回滚由 novel-user 按 requestId 查询事务）")
     private Integer usedPaidPoints;
 }

@@ -5,6 +5,7 @@ import com.novel.user.dao.entity.UserInfo;
 import com.novel.user.dto.AuthorInfoDto;
 import com.novel.user.dto.req.AuthorPointsConsumeReqDto;
 import com.novel.user.dto.req.AuthorRegisterReqDto;
+import com.novel.user.dto.req.CoverGenerationFailedReqDto;
 import com.novel.user.dto.req.MessagePageReqDto;
 import com.novel.user.dto.resp.MessageRespDto;
 import com.novel.book.dto.req.*;
@@ -37,6 +38,11 @@ public interface AuthorService {
      * @return Void
      */
     RestResp<Void> rollbackPoints(AuthorPointsConsumeReqDto dto);
+
+    /**
+     * AI 封面生图失败回调补偿入口。
+     */
+    RestResp<Void> handleCoverGenerationFailed(CoverGenerationFailedReqDto dto);
 
     /**
      * 发布书籍（异步化版本：发送MQ后立即返回）
@@ -166,4 +172,3 @@ public interface AuthorService {
     AuthorInfoDto getAuthorInfoByUserId(Long userId);
 
 }
-

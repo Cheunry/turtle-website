@@ -1,6 +1,9 @@
 package com.novel.ai.service.impl;
 
 import com.alibaba.cloud.ai.dashscope.image.DashScopeImageOptions;
+import com.novel.ai.image.exception.ImageGenerationException;
+import com.novel.ai.image.exception.ImageGenerationExceptionClassifier;
+import com.novel.ai.image.exception.ImageGenerationTransientException;
 import com.novel.ai.image.job.ImageGenJobStatus;
 import com.novel.ai.image.job.ImageJobRedisStore;
 import com.novel.ai.service.ImageService;
@@ -39,9 +42,10 @@ public class ImageServiceImpl implements ImageService {
 
     /**
      * 生成图片（带 SkyWalking 监控）
-     * 增加重试机制：当遇到异常（如超时、Pending、限流）时自动重试
+     * 增加重试机制：仅当遇到瞬时异常（如超时、Pending、限流、网关 5xx）时自动重试。
+     * 参数错误、鉴权失败、余额/配额不足、内容安全拦截、未知错误不重试。
      * 策略优化：采用指数退避（Exponential Backoff）以符合 DashScope 的轮询建议
-     * maxAttempts = 15: 覆盖约 1-2 分钟的等待时间
+     * maxAttempts = 3: 避免不可恢复错误长时间占用生图线程池。
      * backoff: 初始间隔 3000ms (3秒)，倍率 1.5，最大间隔 10000ms (10秒)
      * 参考链接：https://bailian.console.aliyun.com/?spm=5176.30510405.J_bQ9d6wtWdX1_RtKN0y7Ar.1.d05159deC7bd3D&tab=doc#/doc/?type=model&url=2848513
      */
@@ -53,7 +57,7 @@ public class ImageServiceImpl implements ImageService {
 
     @Override
     @Trace(operationName = "AI生成图片")
-    @Retryable(retryFor = {Exception.class}, maxAttempts = 15,
+    @Retryable(retryFor = {ImageGenerationTransientException.class}, maxAttempts = 3,
             backoff = @Backoff(delay = 3000, multiplier = 1.5, maxDelay = 10000))
     public RestResp<String> generateImage(String prompt, String jobId) {
         // 设置 SkyWalking 监控标签
@@ -106,9 +110,8 @@ public class ImageServiceImpl implements ImageService {
                 ActiveSpan.tag("ai.duration.ms", String.valueOf(duration));
                 ActiveSpan.tag("ai.status", "pending_or_failed");
                 ActiveSpan.tag("ai.error", "response_is_null");
-                log.warn("AI生图返回结果为空，可能正在生成中或失败，尝试抛出异常以触发重试...");
-                // 抛出异常，触发 @Retryable 重试
-                throw new RuntimeException("AI生图结果为空");
+                log.warn("AI生图返回结果为空，可能正在生成中或失败，触发瞬时异常重试...");
+                throw ImageGenerationExceptionClassifier.transientError(new RuntimeException("AI生图结果为空"));
             }
             
             String tempUrl = response.getResult().getOutput().getUrl();
@@ -158,12 +161,19 @@ public class ImageServiceImpl implements ImageService {
             }
             ActiveSpan.tag("ai.error.message", errorMsg != null ? errorMsg : "unknown");
             
-            // 记录异常（重试时会多次记录，这是正常的）
             ActiveSpan.error(e);
-            
-            log.warn("AI生图调用异常，耗时: {}ms, 准备重试 (如果未达到最大重试次数). 异常信息: {}", duration, e.getMessage());
-            // 继续抛出异常，让 @Retryable 捕获并重试
-            throw e; 
+
+            ImageGenerationException classified = ImageGenerationExceptionClassifier.classify(e);
+            ActiveSpan.tag("ai.error.category", classified.getCategory().name());
+
+            if (classified instanceof ImageGenerationTransientException) {
+                log.warn("AI生图瞬时异常，耗时: {}ms, 将按策略重试。异常信息: {}",
+                        duration, e.getMessage(), e);
+            } else {
+                log.warn("AI生图非重试异常，category={}, 耗时: {}ms, 用户提示: {}, 原始异常: {}",
+                        classified.getCategory(), duration, classified.getUserMessage(), e.getMessage(), e);
+            }
+            throw classified;
         }
     }
 

@@ -3,8 +3,10 @@ package com.novel.user.controller.inner;
 import com.novel.common.constant.ApiRouterConsts;
 import com.novel.common.resp.RestResp;
 import com.novel.user.dto.req.AuthorPointsConsumeReqDto;
+import com.novel.user.dto.req.CoverGenerationFailedReqDto;
 import com.novel.user.service.AuthorService;
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -37,5 +39,10 @@ public class InnerAuthorController {
     public RestResp<Void> rollbackPoints(@RequestBody AuthorPointsConsumeReqDto dto) {
         return authorService.rollbackPoints(dto);
     }
-}
 
+    @Operation(summary = "AI封面生图失败回调")
+    @PostMapping("ai/cover/jobs/fail")
+    public RestResp<Void> notifyCoverGenerationFailed(@Valid @RequestBody CoverGenerationFailedReqDto dto) {
+        return authorService.handleCoverGenerationFailed(dto);
+    }
+}

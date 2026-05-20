@@ -11,6 +11,7 @@ import com.novel.user.dto.AuthorInfoDto;
 import com.novel.user.dto.mq.AuthorPointsConsumeMqDto;
 import com.novel.user.dto.req.AuthorPointsConsumeReqDto;
 import com.novel.user.dto.req.AuthorRegisterReqDto;
+import com.novel.user.dto.req.CoverGenerationFailedReqDto;
 import com.novel.user.service.AuthorService;
 import com.novel.user.service.CacheService;
 import com.novel.user.service.MessageService;
@@ -369,6 +370,35 @@ public class AuthorServiceImpl implements AuthorService {
         }
 
         return RestResp.ok();
+    }
+
+    @Override
+    public RestResp<Void> handleCoverGenerationFailed(CoverGenerationFailedReqDto dto) {
+        if (dto == null || dto.getAuthorId() == null || dto.getRequestId() == null || dto.getRequestId().isBlank()) {
+            return RestResp.fail(ErrorCodeEnum.USER_REQUEST_PARAM_ERROR);
+        }
+
+        String requestId = dto.getRequestId().trim();
+        String reason = dto.getFailureReason();
+        if (reason != null && reason.length() > 300) {
+            reason = reason.substring(0, 300);
+        }
+
+        log.warn("收到AI封面生图失败回调，准备统一回滚积分。authorId={}, jobId={}, requestId={}, reason={}",
+                dto.getAuthorId(), dto.getJobId(), requestId, reason);
+
+        AuthorPointsConsumeReqDto rollbackReq = AuthorPointsConsumeReqDto.builder()
+                .authorId(dto.getAuthorId())
+                .requestId(requestId)
+                .consumeType(2)
+                .consumePoints(0)
+                .build();
+        RestResp<Void> rollbackResp = rollbackPoints(rollbackReq);
+        if (!rollbackResp.isOk()) {
+            log.error("AI封面生图失败回调触发积分回滚失败，authorId={}, jobId={}, requestId={}, msg={}",
+                    dto.getAuthorId(), dto.getJobId(), requestId, rollbackResp.getMessage());
+        }
+        return rollbackResp;
     }
 
     /**
@@ -1088,8 +1118,6 @@ public class AuthorServiceImpl implements AuthorService {
             asyncReq.setRelatedId(dto.getRelatedId());
             asyncReq.setRelatedDesc(dto.getRelatedDesc());
             asyncReq.setRequestId(dto.getRequestId());
-            asyncReq.setUsedFreePoints(dto.getUsedFreePoints());
-            asyncReq.setUsedPaidPoints(dto.getUsedPaidPoints());
 
             RestResp<ImageGenJobSubmitRespDto> submitResp = aiFeign.submitImageGenerationAsync(asyncReq);
             if (!submitResp.isOk()) {
